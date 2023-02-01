@@ -181,8 +181,8 @@ _step_deps() {
 
     if command -v pip3 &>/dev/null; then
         _info "Instalando dependências Python..."
-        if [[ -f "$ZDOTDIR_TARGET/requirements.txt" ]]; then
-            _run pip3 install --user -r "$ZDOTDIR_TARGET/requirements.txt" --quiet
+        if [[ -f "$SCRIPT_DIR/requirements.txt" ]]; then
+            _run pip3 install --user -r "$SCRIPT_DIR/requirements.txt" --quiet
         else
             _run pip3 install --user pandas openpyxl --quiet
         fi
@@ -307,27 +307,44 @@ _step_gen_config() {
 
     _info "Gerando config.local.zsh..."
 
+    # Pre-capturar valores do usuário para interpolação no heredoc
+    local _name="${_TUI_GIT_NAME:-SeuNome}"
+    local _email="${_TUI_GIT_EMAIL:-voce@email.com}"
+    local _name_mec="${_TUI_GIT_NAME_MEC:-}"
+    local _email_mec="${_TUI_GIT_EMAIL_MEC:-}"
+    local _remote_host="${_TUI_REMOTE_HOST:-}"
+    local _remote_user="${_TUI_REMOTE_USER:-}"
+
+    # Normalizar paths: substituir $HOME literal por ${HOME} portável
+    local _dev_dir="${_TUI_DEV_DIR:-${HOME}/Desenvolvimento}"
+    local _mec_root="${_TUI_MEC_ROOT:-${HOME}/Desenvolvimento/MEC/pipelines-main}"
+    _dev_dir="${_dev_dir//$HOME/\${HOME}}"
+    _mec_root="${_mec_root//$HOME/\${HOME}}"
+
     _run cat > "$config_file" << EOF
 # config.local.zsh — Variáveis desta máquina
 # Gerado pelo install.sh. Editável manualmente. Gitignored.
 
 # --- Git: identidade pessoal ---
-export ZSH_GIT_NAME_PESSOAL="${_TUI_GIT_NAME:-SeuNome}"
-export ZSH_GIT_EMAIL_PESSOAL="${_TUI_GIT_EMAIL:-voce@email.com}"
+export ZSH_GIT_NAME_PESSOAL="${_name}"
+export ZSH_GIT_EMAIL_PESSOAL="${_email}"
 
 # --- Git: identidade MEC (opcional) ---
-export ZSH_GIT_NAME_MEC="${_TUI_GIT_NAME_MEC:-}"
-export ZSH_GIT_EMAIL_MEC="${_TUI_GIT_EMAIL_MEC:-}"
+export ZSH_GIT_NAME_MEC="${_name_mec}"
+export ZSH_GIT_EMAIL_MEC="${_email_mec}"
 
 # --- Caminhos dos projetos ---
-export DEV_DIR="${_TUI_DEV_DIR:-${HOME}/Desenvolvimento}"
-export MEC_ROOT="${_TUI_MEC_ROOT:-${HOME}/Desenvolvimento/MEC/pipelines-main}"
+export DEV_DIR="${_dev_dir}"
+export MEC_ROOT="${_mec_root}"
 export CONTROLE_BORDO_DIR="\${HOME}/Controle de Bordo"
 export BEHOLDER_DIR="\${HOME}/Beholder"
 
+# --- SSH key alternativa (opcional) ---
+export ZSH_SSH_KEY_ALT=""
+
 # --- Sincronização remota ---
-export ZSH_REMOTE_HOST="${_TUI_REMOTE_HOST:-}"
-export ZSH_REMOTE_USER="${_TUI_REMOTE_USER:-}"
+export ZSH_REMOTE_HOST="${_remote_host}"
+export ZSH_REMOTE_USER="${_remote_user}"
 export ZSH_REMOTE_PASTA_LOCAL="\${BEHOLDER_DIR}"
 
 # --- BigQuery keyfile (dbt) ---
@@ -397,7 +414,31 @@ _step_chsh() {
 }
 
 # ---------------------------------------------------------------------------
-# Etapa 8: Tela final
+# Etapa 8: Validação pós-instalação
+# ---------------------------------------------------------------------------
+
+_step_validate() {
+    local erros=0
+    _info "Validando instalação..."
+
+    grep -q "ZDOTDIR" "$HOME/.zshenv" 2>/dev/null \
+        || { _warn "ZDOTDIR não está em ~/.zshenv"; ((erros++)); }
+
+    [[ -f "$ZDOTDIR_TARGET/.oh-my-zsh/oh-my-zsh.sh" ]] \
+        || { _warn "Oh My Zsh não encontrado em $ZDOTDIR_TARGET/.oh-my-zsh/"; ((erros++)); }
+
+    bash -n "$ZDOTDIR_TARGET/install.sh" 2>/dev/null \
+        || { _warn "Sintaxe do install.sh inválida"; ((erros++)); }
+
+    if [[ $erros -eq 0 ]]; then
+        _ok "Validação pós-instalação: tudo OK"
+    else
+        _warn "$erros problema(s) detectado(s) — verifique os avisos acima"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Etapa 9: Tela final
 # ---------------------------------------------------------------------------
 
 _step_summary() {
@@ -409,6 +450,7 @@ _step_summary() {
 
   [ ] ~/.config/zsh/config.local.zsh
       Preencher: BQ_KEYFILE_PATH (service account BigQuery)
+      Verificar: CONTROLE_BORDO_DIR, BEHOLDER_DIR, ZSH_SSH_KEY_ALT
 
   [ ] ~/.config/zsh/profiles.yml
       Verificar configurações do projeto dbt
@@ -472,6 +514,7 @@ main() {
     _step_templates
     _step_zshenv
     _step_chsh
+    _step_validate
     _step_summary
 }
 

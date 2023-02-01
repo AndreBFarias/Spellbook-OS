@@ -73,7 +73,30 @@ zsh  git  fzf  jq  pv  rsync  tree  python3  pip3  whiptail
 ```
 pandas >= 2.0
 openpyxl >= 3.1
+tabulate >= 0.9
 ```
+
+---
+
+### Scripts Python
+
+| Script | Uso |
+|--------|-----|
+| `mec-dbt-results.py` | Parser de `run_results.json` do dbt — exibe resultado colorido no terminal |
+| `mec-migrar-censo.py` | Migração semi-automatizada de tabelas INEP no BigQuery (scan + apply) |
+| `universal-sanitizer.py` | Detecta rastros de IA em arquivos staged antes do commit |
+| `analisador-dados.py` | Analisa CSV/Excel e gera relatório de qualidade de dados |
+
+Uso: `python3 ~/.config/zsh/scripts/<script>.py --help`
+
+---
+
+### Integrações IA
+
+| Módulo | Descrição |
+|--------|-----------|
+| `claude/` | Sistema de quota semanal para Claude Code: guard, estimativa de tokens, relatório de uso. Alias principal: `claude-safe` |
+| `kimi/` | Wrapper para Kimi AI com controle de sessão e histórico local |
 
 ---
 

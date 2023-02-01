@@ -19,6 +19,9 @@ export MEC_ROOT="${DEV_DIR}/MEC/pipelines-main"
 export CONTROLE_BORDO_DIR="${HOME}/Controle de Bordo"
 export BEHOLDER_DIR="${HOME}/Beholder"
 
+# --- SSH key alternativa (opcional, carregada pelo env.zsh) ---
+export ZSH_SSH_KEY_ALT=""
+
 # --- Sincronização remota (remoto.zsh) ---
 export ZSH_REMOTE_HOST=""
 export ZSH_REMOTE_USER=""
