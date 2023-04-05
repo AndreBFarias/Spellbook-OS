@@ -1,5 +1,18 @@
 #!/bin/zsh
 
+# Proposito: Limpar caches de dev ao abrir terminal (previne pacotes stale e libera disco)
+_limpar_caches_dev() {
+    local dirs=(
+        "$HOME/.npm/_cacache"
+        "$HOME/.cache/pip"
+        "$HOME/.cargo/registry/cache"
+    )
+    for d in "${dirs[@]}"; do
+        [ -d "$d" ] && rm -rf "$d" 2>/dev/null
+    done
+}
+_limpar_caches_dev
+
 # Proposito: Limpeza interativa do Controle de Bordo com FZF
 # Uso: limpeza_interativa
 limpeza_interativa() {
