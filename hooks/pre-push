@@ -1,0 +1,43 @@
+#!/bin/bash
+
+REPO_PATH="$(git rev-parse --show-toplevel)"
+CURRENT_NAME=$(git config --get user.name)
+CURRENT_EMAIL=$(git config --get user.email)
+
+if [[ "$REPO_PATH" == *"/MEC/"* || "$REPO_PATH" == *"/MEC" ]]; then
+    EXPECTED_NAME="andrefariasmec"
+    EXPECTED_EMAIL="andrefarias@mec.gov.br"
+    EXPECTED_SSH_ALIAS="github.com-mec"
+    CONTEXT="MEC"
+elif [[ "$REPO_PATH" == *"/VitoriaMariaDB/"* || "$REPO_PATH" == *"/VitoriaMariaDB" ]]; then
+    EXPECTED_NAME="vitoriamariadb"
+    EXPECTED_EMAIL="vitoriamaria.sds@gmail.com"
+    EXPECTED_SSH_ALIAS="github.com-vit"
+    CONTEXT="VitoriaMariaDB"
+else
+    EXPECTED_NAME="AndreBFarias"
+    EXPECTED_EMAIL="andre.dsbf@gmail.com"
+    EXPECTED_SSH_ALIAS="github.com-personal"
+    CONTEXT="Pessoal"
+fi
+
+if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" || "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
+    echo "[pre-push] BLOQUEADO: Identidade incorreta para contexto $CONTEXT"
+    echo "  Esperado: $EXPECTED_NAME <$EXPECTED_EMAIL>"
+    echo "  Atual:    $CURRENT_NAME <$CURRENT_EMAIL>"
+    exit 1
+fi
+
+REMOTE_URL=$(git remote get-url origin 2>/dev/null)
+
+if [[ -n "$REMOTE_URL" && "$REMOTE_URL" != git@${EXPECTED_SSH_ALIAS}:* ]]; then
+    echo "[pre-push] BLOQUEADO: Remote URL nao usa alias SSH correto para contexto $CONTEXT"
+    echo "  Esperado: git@${EXPECTED_SSH_ALIAS}:..."
+    echo "  Atual:    $REMOTE_URL"
+    echo ""
+    echo "  Corrija com: santuario <projeto>"
+    exit 1
+fi
+
+echo "[pre-push] OK: $CURRENT_NAME ($CONTEXT) via $EXPECTED_SSH_ALIAS"
+exit 0

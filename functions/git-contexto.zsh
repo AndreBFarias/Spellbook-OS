@@ -15,6 +15,48 @@ __definir_contexto_git() {
     echo -e "  ${D_COMMENT}Contexto git:${D_RESET} ${D_CYAN}$user_name${D_RESET}"
 }
 
+__resolver_alias_ssh() {
+    local repo_path="${1:-$(pwd)}"
+
+    if [[ "$repo_path" == *"/MEC/"* || "$repo_path" == *"/MEC" ]]; then
+        echo "github.com-mec"
+    elif [[ "$repo_path" == *"/VitoriaMariaDB/"* || "$repo_path" == *"/VitoriaMariaDB" ]]; then
+        echo "github.com-vit"
+    else
+        echo "github.com-personal"
+    fi
+}
+
+__fixar_remote_ssh() {
+    local remote_url
+    remote_url=$(git remote get-url origin 2>/dev/null)
+    [[ -z "$remote_url" ]] && return 0
+
+    local alias_correto
+    alias_correto=$(__resolver_alias_ssh)
+
+    if [[ "$remote_url" == git@${alias_correto}:* ]]; then
+        return 0
+    fi
+
+    local owner_repo=""
+
+    if [[ "$remote_url" == https://* ]]; then
+        owner_repo=$(echo "$remote_url" | sed -E 's|https://([^@]+@)?github\.com/||')
+    elif [[ "$remote_url" == git@* ]]; then
+        owner_repo=$(echo "$remote_url" | sed -E 's|git@[^:]+:||')
+    fi
+
+    [[ -z "$owner_repo" ]] && return 0
+
+    owner_repo="${owner_repo%.git}.git"
+    owner_repo=$(echo "$owner_repo" | sed 's|\.git\.git|.git|')
+
+    local novo_url="git@${alias_correto}:${owner_repo}"
+    git remote set-url origin "$novo_url"
+    __item "Remote" "${remote_url} -> ${novo_url}" "$D_COMMENT" "$D_GREEN"
+}
+
 __aplicar_contexto_git_automatico() {
     local user_pessoal="${ZSH_GIT_NAME_PESSOAL:-AndreBFarias}"
     local email_pessoal="${ZSH_GIT_EMAIL_PESSOAL:-andre.dsbf@gmail.com}"
@@ -25,13 +67,15 @@ __aplicar_contexto_git_automatico() {
     local user_alt="${ZSH_GIT_NAME_ALT:-vitoriamariadb}"
     local email_alt="${ZSH_GIT_EMAIL_ALT:-vitoriamaria.sds@gmail.com}"
 
-    if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
+    if [[ "$(pwd)" == *"/MEC/"* || "$(pwd)" == *"/MEC" ]]; then
         __definir_contexto_git "$user_mec" "$email_mec"
-    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* ]]; then
+    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* || "$(pwd)" == *"/VitoriaMariaDB" ]]; then
         __definir_contexto_git "$user_alt" "$email_alt"
     else
         __definir_contexto_git "$user_pessoal" "$email_pessoal"
     fi
+
+    __fixar_remote_ssh
 }
 
 # Proposito: Exibir identidade git do repositorio atual (nome, email, branch, remote)
@@ -47,8 +91,12 @@ git_info() {
     __item "Remote" "${remote_url:-(nenhum)}" "$D_COMMENT" "$D_GREEN"
 
     local remote_proto="desconhecido"
-    if [[ "$remote_url" == git@* || "$remote_url" == ssh://* ]]; then
-        remote_proto="SSH"
+    local alias_esperado
+    alias_esperado=$(__resolver_alias_ssh)
+    if [[ "$remote_url" == git@${alias_esperado}:* ]]; then
+        remote_proto="SSH ($alias_esperado)"
+    elif [[ "$remote_url" == git@* || "$remote_url" == ssh://* ]]; then
+        remote_proto="SSH (alias incorreto, esperado: $alias_esperado)"
     elif [[ "$remote_url" == https://* ]]; then
         remote_proto="HTTPS (credential.helper global)"
     fi
@@ -67,9 +115,9 @@ __aplicar_contexto_gh_automatico() {
     fi
 
     local conta_alvo=""
-    if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
+    if [[ "$(pwd)" == *"/MEC/"* || "$(pwd)" == *"/MEC" ]]; then
         conta_alvo="${ZSH_GIT_NAME_MEC:-andrefariasmec}"
-    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* ]]; then
+    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* || "$(pwd)" == *"/VitoriaMariaDB" ]]; then
         conta_alvo="${ZSH_GIT_NAME_ALT:-vitoriamariadb}"
     else
         conta_alvo="${ZSH_GIT_NAME_PESSOAL:-AndreBFarias}"
