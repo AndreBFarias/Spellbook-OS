@@ -144,7 +144,8 @@ __dossie_arquivos_avancado() {
     if [[ -f "$emoji_guardian" ]]; then
         echo -e "\n<details><summary><strong>VERIFICACAO DE EMOJIS</strong></summary>\n\n\`\`\`"
         local emoji_output=$(python3 "$emoji_guardian" check . 2>&1)
-        local emoji_count=$(echo "$emoji_output" | grep -c "ARQUIVO" || echo "0")
+        local emoji_count
+        emoji_count=$(echo "$emoji_output" | grep -c "ARQUIVO") || emoji_count=0
         if [[ "$emoji_count" -gt 0 ]]; then
             echo "[ALERTA] $emoji_count arquivo(s) com emojis encontrado(s)"
             echo "Limpando automaticamente..."

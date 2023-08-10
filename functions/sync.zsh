@@ -314,7 +314,8 @@ sincronizar_controle_de_bordo() {
     if [[ -f "$emoji_guardian" ]]; then
         echo -e "  ${D_COMMENT}Verificando emojis nos arquivos sincronizados...${D_RESET}"
         local emoji_check=$(python3 "$emoji_guardian" check "$doc_dir" 2>&1)
-        local emoji_count=$(echo "$emoji_check" | grep -c "ARQUIVO" || echo "0")
+        local emoji_count
+        emoji_count=$(echo "$emoji_check" | grep -c "ARQUIVO") || emoji_count=0
 
         if [[ "$emoji_count" -gt 0 ]]; then
             echo -e "  ${D_YELLOW}$emoji_count arquivo(s) com emojis encontrado(s)${D_RESET}"

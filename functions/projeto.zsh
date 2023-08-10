@@ -187,7 +187,8 @@ santuario() {
     if [ -f "$emoji_guardian" ]; then
         echo -e "  ${D_COMMENT}Verificando emojis...${D_RESET}"
         local check_output=$(python3 "$emoji_guardian" check . 2>&1)
-        local emoji_files=$(echo "$check_output" | grep -c "ARQUIVO" || echo "0")
+        local emoji_files
+        emoji_files=$(echo "$check_output" | grep -c "ARQUIVO") || emoji_files=0
 
         if [ "$emoji_files" -gt 0 ] && [[ -z "$SANTUARIO_SKIP_EMOJI" ]]; then
             echo -e "  ${D_YELLOW}[ALERTA] $emoji_files arquivo(s) com emojis${D_RESET}"
