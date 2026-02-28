@@ -3,7 +3,7 @@
 # Proposito: Wrapper seguro para Claude Code com quota guard
 # Uso: claude <args>
 claude-safe() {
-    bash "$HOME/.config/zsh/claude/claude_guard.sh" before || return 1
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_guard.sh" before || return 1
 
     local start_time=$(date +%s)
     command claude "$@"
@@ -12,7 +12,7 @@ claude-safe() {
     local duration=$((end_time - start_time))
 
     local estimated_tokens=$((duration * 100))
-    bash "$HOME/.config/zsh/claude/claude_guard.sh" after "$estimated_tokens"
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_guard.sh" after "$estimated_tokens"
 
     return $exit_code
 }
@@ -20,7 +20,7 @@ claude-safe() {
 # Proposito: Verificar quota de uso do Claude Code
 # Uso: claude-quota
 claude-quota() {
-    bash "$HOME/.config/zsh/claude/claude_quota_manager.sh" check
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_quota_manager.sh" check
 }
 
 # Resetar quota (início de nova semana)
@@ -28,7 +28,7 @@ claude-quota-reset() {
     echo "[!] Tem certeza que quer resetar a quota? (y/n)"
     read -r response
     if [ "$response" = "y" ]; then
-        bash "$HOME/.config/zsh/claude/claude_quota_manager.sh" reset
+        bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_quota_manager.sh" reset
     fi
 }
 
@@ -40,7 +40,7 @@ claude-estimate() {
         return 1
     fi
 
-    bash "$HOME/.config/zsh/claude/claude_guard.sh" check-file "$1"
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_guard.sh" check-file "$1"
 }
 
 # Proposito: Preview rapido de arquivo (head/tail) sem consumir quota
@@ -77,7 +77,7 @@ claude-force() {
 # Uso: claude-report
 claude-report() {
     echo "=== RELATÓRIO SEMANAL DE USO ==="
-    bash "$HOME/.config/zsh/claude/claude_quota_manager.sh" check
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_quota_manager.sh" check
     echo ""
     echo "=== DICAS PARA ECONOMIZAR ==="
     echo "1. Use grep/sed/awk para buscas rápidas"
@@ -89,8 +89,8 @@ claude-report() {
 
 # Inicializar sistema de quota
 claude-init() {
-    bash "$HOME/.config/zsh/claude/claude_quota_manager.sh" init
-    bash "$HOME/.config/zsh/claude/claude_guard.sh" init
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_quota_manager.sh" init
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_guard.sh" init
 
     echo "[OK] Sistema de quota inicializado"
     echo "[OK] Guard configurado"
@@ -112,7 +112,7 @@ cca() {
         return 1
     fi
 
-    bash "$HOME/.config/zsh/claude/claude_guard.sh" before || return 1
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_guard.sh" before || return 1
 
     local start_time=$(date +%s)
 
@@ -132,7 +132,7 @@ cca() {
     local duration=$((end_time - start_time))
 
     local estimated_tokens=$((duration * 100))
-    bash "$HOME/.config/zsh/claude/claude_guard.sh" after "$estimated_tokens"
+    bash "${ZDOTDIR:-$HOME/.config/zsh}/claude/claude_guard.sh" after "$estimated_tokens"
 
     return $exit_code
 }
