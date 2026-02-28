@@ -1,0 +1,12 @@
+queries:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: br-mec-segape-dev
+      dataset: "{{ env_var('USER') }}_dev"
+      keyfile: "{{ env_var('BQ_KEYFILE_PATH') }}"
+      threads: 4
+      timeout_seconds: 300
+      location: US

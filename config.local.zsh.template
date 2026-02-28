@@ -1,0 +1,28 @@
+# config.local.zsh — Variáveis por máquina
+# Copiar para config.local.zsh e preencher. Este arquivo é gitignored.
+
+# --- Git: identidade pessoal ---
+export ZSH_GIT_NAME_PESSOAL="SeuNome"
+export ZSH_GIT_EMAIL_PESSOAL="voce@email.com"
+
+# --- Git: identidade MEC (opcional) ---
+export ZSH_GIT_NAME_MEC=""
+export ZSH_GIT_EMAIL_MEC=""
+
+# --- Git: identidade alternativa (opcional) ---
+export ZSH_GIT_NAME_ALT=""
+export ZSH_GIT_EMAIL_ALT=""
+
+# --- Caminhos dos projetos ---
+export DEV_DIR="${HOME}/Desenvolvimento"
+export MEC_ROOT="${DEV_DIR}/MEC/pipelines-main"
+export CONTROLE_BORDO_DIR="${HOME}/Controle de Bordo"
+export BEHOLDER_DIR="${HOME}/Beholder"
+
+# --- Sincronização remota (remoto.zsh) ---
+export ZSH_REMOTE_HOST=""
+export ZSH_REMOTE_USER=""
+export ZSH_REMOTE_PASTA_LOCAL="${BEHOLDER_DIR}"
+
+# --- BigQuery keyfile (dbt) ---
+export BQ_KEYFILE_PATH=""

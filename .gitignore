@@ -1,0 +1,29 @@
+# Caches e compilados
+.aider*
+.zcompdump*
+*.zwc
+.zsh_history
+
+# Framework (instalado pelo install.sh)
+.oh-my-zsh/
+
+# Configuração local por máquina (gerada pelo install.sh)
+config.local.zsh
+
+# Segredos — NUNCA commitar
+.zsh_secrets
+segape-andre.json
+novo_login_de_acesso.json
+meua-ambiente.json
+profiles.yml
+.claude_quota
+
+# Backups gerados pelo Oh My Zsh
+*.pre-oh-my-zsh
+.shell.pre-oh-my-zsh
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
