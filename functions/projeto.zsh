@@ -179,6 +179,7 @@ santuario() {
     fi
 
     __aplicar_contexto_git_automatico
+    __aplicar_contexto_gh_automatico
 
     # Verificacao e limpeza automatica de emojis
     echo ""

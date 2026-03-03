@@ -4,6 +4,11 @@ __definir_contexto_git() {
     local user_name="$1"
     local user_email="$2"
 
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        __warn "Sem repositorio git. Execute 'git init' e reabra o santuario."
+        return 1
+    fi
+
     git config --local user.name "$user_name"
     git config --local user.email "$user_email"
 
@@ -55,6 +60,35 @@ git_info() {
 # Proposito: Alias para git_info (exibir identidade git)
 # Uso: git_status
 alias git_status='git_info'
+
+__aplicar_contexto_gh_automatico() {
+    if ! command -v gh &>/dev/null; then
+        return 0
+    fi
+
+    local conta_alvo=""
+    if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
+        conta_alvo="${ZSH_GIT_NAME_MEC:-andrefariasmec}"
+    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* ]]; then
+        conta_alvo="${ZSH_GIT_NAME_ALT:-vitoriamariadb}"
+    else
+        conta_alvo="${ZSH_GIT_NAME_PESSOAL:-AndreBFarias}"
+    fi
+
+    local conta_ativa
+    conta_ativa=$(gh api user --jq '.login' 2>/dev/null)
+
+    if [[ "$conta_ativa" == "$conta_alvo" ]]; then
+        echo -e "  ${D_COMMENT}gh:${D_RESET} ${D_CYAN}${conta_alvo}${D_RESET}"
+        return 0
+    fi
+
+    if gh auth switch --user "$conta_alvo" >/dev/null 2>&1; then
+        echo -e "  ${D_COMMENT}gh:${D_RESET} ${D_CYAN}${conta_alvo}${D_RESET}"
+    else
+        __warn "gh: conta '${conta_alvo}' nao cadastrada. Ativa: ${conta_ativa:-desconhecida}"
+    fi
+}
 
 __sinc_preservadora() {
     local nome_repo=$(basename "$(pwd)")
