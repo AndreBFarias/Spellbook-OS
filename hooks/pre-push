@@ -39,5 +39,32 @@ if [[ -n "$REMOTE_URL" && "$REMOTE_URL" != git@${EXPECTED_SSH_ALIAS}:* ]]; then
     exit 1
 fi
 
+REMOTE="$1"
+URL="$2"
+
+while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+    [[ -z "$LOCAL_SHA" || "$LOCAL_SHA" == "0000000000000000000000000000000000000000" ]] && continue
+
+    if [[ "$REMOTE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+        RANGE="$LOCAL_SHA"
+    else
+        RANGE="$REMOTE_SHA..$LOCAL_SHA"
+    fi
+
+    BAD_COMMITS=$(git log --format="%H %ae" "$RANGE" 2>/dev/null | grep -v "$EXPECTED_EMAIL" || true)
+    if [[ -n "$BAD_COMMITS" ]]; then
+        echo "[pre-push] BLOQUEADO: Commits com author email incorreto para contexto $CONTEXT"
+        echo "  Esperado: $EXPECTED_EMAIL"
+        echo "$BAD_COMMITS" | while read -r SHA EMAIL; do
+            SHORT=$(echo "$SHA" | cut -c1-8)
+            SUBJECT=$(git log --format="%s" -1 "$SHA")
+            echo "  $SHORT $EMAIL \"$SUBJECT\""
+        done
+        echo ""
+        echo "  Corrija com: git rebase -i --root (ou git commit --amend --author=...)"
+        exit 1
+    fi
+done
+
 echo "[pre-push] OK: $CURRENT_NAME ($CONTEXT) via $EXPECTED_SSH_ALIAS"
 exit 0

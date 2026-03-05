@@ -1,0 +1,140 @@
+#!/bin/bash
+# Hook Universal Pre-Commit - Auto-fix com relatorio
+# Instalado via aplicar_hooks_globais()
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+cd "$REPO_ROOT" || exit 0
+
+# [0] Validacao de identidade por contexto (SEMPRE roda, mesmo com framework pre-commit)
+CURRENT_NAME=$(git config --get user.name)
+CURRENT_EMAIL=$(git config --get user.email)
+
+if [[ "$REPO_ROOT" == *"/MEC/"* || "$REPO_ROOT" == *"/MEC" ]]; then
+    EXPECTED_NAME="andrefariasmec"
+    EXPECTED_EMAIL="andrefarias@mec.gov.br"
+    CONTEXT="MEC"
+elif [[ "$REPO_ROOT" == *"/VitoriaMariaDB/"* || "$REPO_ROOT" == *"/VitoriaMariaDB" ]]; then
+    EXPECTED_NAME="vitoriamariadb"
+    EXPECTED_EMAIL="vitoriamaria.sds@gmail.com"
+    CONTEXT="VitoriaMariaDB"
+else
+    EXPECTED_NAME="AndreBFarias"
+    EXPECTED_EMAIL="andre.dsbf@gmail.com"
+    CONTEXT="Pessoal"
+fi
+
+if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" || "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
+    echo "  [BLOQUEIO] Identidade incorreta para contexto $CONTEXT"
+    echo "    Esperado: $EXPECTED_NAME <$EXPECTED_EMAIL>"
+    echo "    Atual:    $CURRENT_NAME <$CURRENT_EMAIL>"
+    echo "    Corrija com: santuario <projeto>"
+    exit 1
+fi
+
+# Se projeto usa framework pre-commit, sair apos validacao de identidade
+if [ -f ".pre-commit-config.yaml" ]; then
+    exit 0
+fi
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+[ -z "$STAGED" ] && exit 0
+
+# Filtrar binarios, venv, lock files, etc.
+filter_files() {
+    local result=""
+    for file in $1; do
+        case "$file" in
+            venv/*|.venv/*|node_modules/*|__pycache__/*) continue ;;
+            .git/*|.mypy_cache/*|.pytest_cache/*|.ruff_cache/*) continue ;;
+            dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
+            *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
+            *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;
+            *.zip|*.tar|*.gz|*.bz2|*.xz|*.7z|*.rar) continue ;;
+            *.woff|*.woff2|*.ttf|*.eot|*.otf) continue ;;
+            *.pdf|*.doc|*.docx|*.xls|*.xlsx) continue ;;
+            *.pyc|*.pyo|*.so|*.dylib|*.dll|*.class) continue ;;
+            *.pt|*.onnx|*.safetensors|*.gguf) continue ;;
+            *.lock|package-lock.json|yarn.lock|poetry.lock|Pipfile.lock) continue ;;
+            *.min.js|*.min.css|*.map) continue ;;
+            my-mailmap|.mailmap|.env|.env.*) continue ;;
+            *) result="$result $file" ;;
+        esac
+    done
+    echo "$result" | xargs 2>/dev/null
+}
+
+FILES=$(filter_files "$STAGED")
+[ -z "$FILES" ] && exit 0
+
+FIXES=0
+BLOCKS=0
+FIX_DETAILS=""
+
+# [1/4] Anti-emoji (auto-fix + re-stage)
+EMOJI_RE='[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}]'
+EMOJI_COUNT=0
+for file in $FILES; do
+    if [ -f "$file" ] && grep -qP "$EMOJI_RE" "$file" 2>/dev/null; then
+        perl -i -CSD -pe "s/$EMOJI_RE//g" "$file" 2>/dev/null
+        git add "$file" 2>/dev/null
+        EMOJI_COUNT=$((EMOJI_COUNT + 1))
+    fi
+done
+[ $EMOJI_COUNT -gt 0 ] && { FIXES=$((FIXES + EMOJI_COUNT)); FIX_DETAILS="$FIX_DETAILS emojis($EMOJI_COUNT)"; }
+
+# [2/4] Whitespace: trailing spaces + newline final (auto-fix + re-stage)
+WS_COUNT=0
+for file in $FILES; do
+    if [ -f "$file" ]; then
+        CHANGED=0
+        if grep -qP '[\t ]+$' "$file" 2>/dev/null; then
+            sed -i 's/[[:space:]]*$//' "$file"
+            CHANGED=1
+        fi
+        if [ -n "$(tail -c 1 "$file" 2>/dev/null)" ]; then
+            echo "" >> "$file"
+            CHANGED=1
+        fi
+        if [ $CHANGED -eq 1 ]; then
+            git add "$file" 2>/dev/null
+            WS_COUNT=$((WS_COUNT + 1))
+        fi
+    fi
+done
+[ $WS_COUNT -gt 0 ] && { FIXES=$((FIXES + WS_COUNT)); FIX_DETAILS="$FIX_DETAILS whitespace($WS_COUNT)"; }
+
+# [3/4] Secrets (BLOQUEIA - nao tem auto-fix seguro)
+SECRET_RE='(sk-[a-zA-Z0-9]{20,}|sk-ant-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}|AKIA[0-9A-Z]{16})'
+for file in $FILES; do
+    case "$file" in
+        .env|.env.*|*.key|*.pem|*.cert|*.crt) continue ;;
+    esac
+    if [ -f "$file" ] && grep -qP "$SECRET_RE" "$file" 2>/dev/null; then
+        echo "  [BLOQUEIO] Secret detectado: $file"
+        BLOCKS=$((BLOCKS + 1))
+    fi
+done
+
+# [4/4] Python: syntax check (BLOQUEIA)
+for file in $FILES; do
+    case "$file" in
+        *.py)
+            if [ -f "$file" ] && ! python3 -m py_compile "$file" 2>/dev/null; then
+                echo "  [BLOQUEIO] Sintaxe invalida: $file"
+                BLOCKS=$((BLOCKS + 1))
+            fi
+            ;;
+    esac
+done
+
+# Relatorio
+if [ $FIXES -gt 0 ]; then
+    echo "  [auto-fix]$FIX_DETAILS -> re-staged"
+fi
+
+if [ $BLOCKS -gt 0 ]; then
+    echo "  [pre-commit] $BLOCKS problemas bloqueantes. Corrija antes de commitar."
+    exit 1
+fi
+
+exit 0
