@@ -35,13 +35,15 @@ aplicar_hooks_globais() {
 
         cp "$hooks_source/pre-commit" "$repo_path/.git/hooks/pre-commit" 2>/dev/null
         cp "$hooks_source/pre-push" "$repo_path/.git/hooks/pre-push" 2>/dev/null
+        cp "$hooks_source/commit-msg" "$repo_path/.git/hooks/commit-msg" 2>/dev/null
         chmod +x "$repo_path/.git/hooks/pre-commit" 2>/dev/null
         chmod +x "$repo_path/.git/hooks/pre-push" 2>/dev/null
+        chmod +x "$repo_path/.git/hooks/commit-msg" 2>/dev/null
 
         printf "  ${D_GREEN}[%02d/%02d]${D_RESET} %s\n" "$count" "$total" "$repo_name"
     done
 
     echo ""
-    __ok "Hooks aplicados: pre-commit (sanitizer) + pre-push (contexto git)"
+    __ok "Hooks aplicados: pre-commit (sanitizer + identidade) + commit-msg (anonimato) + pre-push (contexto + author)"
     echo ""
 }
