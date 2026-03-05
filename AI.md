@@ -3,16 +3,16 @@
 
 ## REGRA DE OURO
 
-Antes de modificar QUALQUER arquivo, leia o codigo existente e entenda o contexto completo.
+Antes de modificar QUALQUER arquivo, leia o código existente e entenda o contexto completo.
 
 ---
 
-## 1. COMUNICACAO
+## 1. COMUNICAÇÃO
 
-- PT-BR direto e tecnico (acentuacao correta obrigatoria)
-- **ZERO emojis** em codigo, commits, docs, respostas
+- PT-BR direto e técnico (acentuação correta obrigatória)
+- **ZERO emojis** em código, commits, docs, respostas
 - Sem formalidades vazias
-- Explicacoes tecnicas e concisas
+- Explicações técnicas e concisas
 
 ---
 
@@ -20,35 +20,35 @@ Antes de modificar QUALQUER arquivo, leia o codigo existente e entenda o context
 
 **PROIBIDO em qualquer arquivo ou commit:**
 - Nomes de IAs: "Claude", "GPT", "Gemini", "Copilot", "Anthropic", "OpenAI"
-- Atribuicoes: "by AI", "AI-generated", "Gerado por", "Co-Authored-By"
+- Atribuições: "by AI", "AI-generated", "Gerado por", "Co-Authored-By"
 - **NUNCA** incluir `Co-Authored-By:` em commits
-- Commits devem ser totalmente limpos e anonimos
+- Commits devem ser totalmente limpos e anônimos
 
-**Excecoes permitidas:**
-- Strings tecnicas: `api_key`, `provider`, `model`, `config`, `client`
-- Documentacao de API de terceiros
-- Variaveis de ambiente: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+**Exceções permitidas:**
+- Strings técnicas: `api_key`, `provider`, `model`, `config`, `client`
+- Documentação de API de terceiros
+- Variáveis de ambiente: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
 
 ---
 
-## 3. CODIGO LIMPO
+## 3. CÓDIGO LIMPO
 
 - Type hints quando a linguagem suportar
 - Arquivo completo, nunca fragmentos
 - Nunca use `# TODO` ou `# FIXME` inline (crie issue no GitHub)
-- Logging rotacionado obrigatorio (nunca `print()` / `console.log()`)
-- Zero comentarios desnecessarios dentro do codigo
+- Logging rotacionado obrigatório (nunca `print()` / `console.log()`)
+- Zero comentários desnecessários dentro do código
 - Paths relativos via Path/equivalente (nunca hardcoded absolutos)
-- Error handling explicito (nunca silent failures)
+- Error handling explícito (nunca silent failures)
 
 ### SQL e YAML
 
-- Comentarios de migracao PROIBIDOS inline (ex: `-- migracao: alias para compatibilidade`).
-  Se precisar registrar a mudanca, use o corpo do commit.
-- Descriptions em `source.yml` devem ser neutras e tecnicas. PROIBIDO codificar
-  historico de implementacao (ex: "substituindo tabela X"). Descrever o dado em si.
-- Comentarios Jinja (`{# ... #}`) adicionados durante desenvolvimento devem ser
-  removidos antes do commit — eles aparecem no codigo-fonte, nao no SQL compilado.
+- Comentários de migração PROIBIDOS inline (ex: `-- migração: alias para compatibilidade`).
+  Se precisar registrar a mudança, use o corpo do commit.
+- Descriptions em `source.yml` devem ser neutras e técnicas. PROIBIDO codificar
+  histórico de implementação (ex: "substituindo tabela X"). Descrever o dado em si.
+- Comentários Jinja (`{# ... #}`) adicionados durante desenvolvimento devem ser
+  removidos antes do commit — eles aparecem no código-fonte, não no SQL compilado.
 
 ---
 
@@ -77,22 +77,22 @@ Exemplos corretos: `migração`, `correção`, `padrões`, `revisão`, `atualiza
 
 ---
 
-## 5. PROTECOES
+## 5. PROTEÇÕES
 
-- **NUNCA** remover codigo funcional sem autorizacao explicita
-- Se usuario pedir refatoracao, perguntar: "Quer adicionar novo ou melhorar o existente?"
-- Perguntar antes de alterar arquivos criticos ou de alto impacto
+- **NUNCA** remover código funcional sem autorização explícita
+- Se usuário pedir refatoração, perguntar: "Quer adicionar novo ou melhorar o existente?"
+- Perguntar antes de alterar arquivos críticos ou de alto impacto
 
 ---
 
 ## 6. LIMITES
 
-- **800 linhas** por arquivo (excecoes: config, testes, registries)
-- Se ultrapassar: extrair para modulos separados, manter imports limpos
+- **800 linhas** por arquivo (exceções: config, testes, registries)
+- Se ultrapassar: extrair para módulos separados, manter imports limpos
 
 ---
 
-## 7. GITIGNORE OBRIGATORIO
+## 7. GITIGNORE OBRIGATÓRIO
 
 ```gitignore
 # Caches
@@ -106,7 +106,7 @@ venv/
 logs/
 *.log
 
-# Evidencias de IA
+# Evidências de IA
 Task_Final/
 IMPORTANT.md
 *.claude.md
@@ -130,22 +130,22 @@ Thumbs.db
 
 ---
 
-## 8. PRINCIPIOS
+## 8. PRINCÍPIOS
 
-- **Simplicidade** - Codigo simples > codigo "elegante". Evitar over-engineering.
-- **Observabilidade** - Tudo tem log. Se nao pode medir, nao pode melhorar.
-- **Graceful Degradation** - Falha parcial != crash total. Sempre fallback minimo.
-- **Local First** - Tudo funciona offline por padrao. APIs pagas sao opcionais.
+- **Simplicidade** - Código simples > código "elegante". Evitar over-engineering.
+- **Observabilidade** - Tudo tem log. Se não pode medir, não pode melhorar.
+- **Graceful Degradation** - Falha parcial != crash total. Sempre fallback mínimo.
+- **Local First** - Tudo funciona offline por padrão. APIs pagas são opcionais.
 
 ---
 
-## 9. META-REGRAS ANTI-REGRESSAO
+## 9. META-REGRAS ANTI-REGRESSÃO
 
-1. **Sincronizacao N-para-N** - Se um valor existe em N lugares, atualizar TODOS ou nenhum.
-2. **Filtros sem falso-positivo** - Todo regex/filtro DEVE ser testado contra inputs que NAO devem casar.
+1. **Sincronização N-para-N** - Se um valor existe em N lugares, atualizar TODOS ou nenhum.
+2. **Filtros sem falso-positivo** - Todo regex/filtro DEVE ser testado contra inputs que NÃO devem casar.
 3. **Soberania de subsistema** - Subsistema A NUNCA descarrega/mata recurso de subsistema B.
-4. **Observabilidade adaptativa** - Sistema adaptativo sem metrica de saude = bomba-relogio.
-5. **Scope atomico** - Bug encontrado ao testar feature Y NAO e fixado inline. Registrar como nova issue.
+4. **Observabilidade adaptativa** - Sistema adaptativo sem métrica de saúde = bomba-relógio.
+5. **Scope atômico** - Bug encontrado ao testar feature Y NÃO é fixado inline. Registrar como nova issue.
 
 ---
 
@@ -157,28 +157,28 @@ Thumbs.db
 3. Procurar testes existentes
 4. Implementar mantendo compatibilidade
 5. Testar incrementalmente
-6. Documentar mudancas
+6. Documentar mudanças
 ```
 
 ---
 
-## 11. CHECKLIST PRE-COMMIT
+## 11. CHECKLIST PRÉ-COMMIT
 
 - [ ] Testes passando
-- [ ] Zero emojis no codigo
-- [ ] Zero mencoes a IA
+- [ ] Zero emojis no código
+- [ ] Zero menções a IA
 - [ ] Zero hardcoded values introduzidos
 - [ ] Commit message descritivo (PT-BR)
-- [ ] Sincronizacao N-para-N verificada
-- [ ] Documentacao atualizada se necessario
+- [ ] Sincronização N-para-N verificada
+- [ ] Documentação atualizada se necessário
 
 ---
 
 ## 12. ASSINATURA
 
-Todo script finalizado recebe uma citacao de filosofo/estoico/libertario como comentario final.
+Todo script finalizado recebe uma citação de filósofo/estoico/libertário como comentário final.
 
 ---
 
-*"Codigo que nao pode ser entendido nao pode ser mantido."*
+*"Código que não pode ser entendido não pode ser mantido."*
 *"Local First. Zero Emojis. Zero Bullshit."*
