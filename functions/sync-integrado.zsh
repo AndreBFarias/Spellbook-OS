@@ -215,7 +215,8 @@ __check_emojis() {
 
     # Verificar emojis
     local check_output=$(python3 "$emoji_guardian" check "$VAULT_DIR" 2>&1)
-    local emoji_count=$(echo "$check_output" | grep -c "ARQUIVO" || echo "0")
+    local emoji_count
+    emoji_count=$(echo "$check_output" | grep -c "ARQUIVO") || emoji_count=0
 
     if (( emoji_count > 0 )); then
         echo -e "  ${D_YELLOW}Encontrados $emoji_count arquivo(s) com emojis${D_RESET}"
@@ -224,7 +225,8 @@ __check_emojis() {
         # Limpar automaticamente
         echo -e "  ${D_COMMENT}Limpando emojis...${D_RESET}"
         local clean_output=$(python3 "$emoji_guardian" clean "$VAULT_DIR" --apply 2>&1)
-        local cleaned=$(echo "$clean_output" | grep -c "LIMPO\|Arquivos processados" || echo "0")
+        local cleaned
+        cleaned=$(echo "$clean_output" | grep -c "LIMPO\|Arquivos processados") || cleaned=0
 
         if (( cleaned > 0 )); then
             echo -e "  ${D_GREEN}Emojis removidos com sucesso${D_RESET}"
