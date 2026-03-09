@@ -63,7 +63,7 @@ echo ""
 
 # 3. Verificar emojis em scripts
 echo "[3/10] Verificando ausência de emojis em scripts..."
-EMOJI_COUNT=$(grep -rn "️\|\|\|\|\|🟡\|🟢\|\|\|\|" ~/.config/zsh/{claude,gemini,aider}/*.sh 2>/dev/null | wc -l)
+EMOJI_COUNT=$(grep -rn "\|\|\|\|\|🟡\|🟢\|\|\|\|" ~/.config/zsh/{claude,gemini,aider}/*.sh 2>/dev/null | wc -l)
 if [ "$EMOJI_COUNT" -eq 0 ]; then
     log_pass "Nenhum emoji em scripts .sh"
 else

@@ -28,7 +28,7 @@ Você está estourando o limite semanal do Claude Pro em 3 dias porque:
 
 Sistema de **throttling inteligente** que:
 
-- ️ **AVISA** quando arquivo é grande (> 50KB)
+-  **AVISA** quando arquivo é grande (> 50KB)
 -  **BLOQUEIA** quando arquivo é enorme (> 100KB)
 -  **RASTREIA** uso semanal automaticamente
 -  **SUGERE** alternativas mais baratas
@@ -41,7 +41,7 @@ User: claude "read big_file.py"
          ↓
     [PRE-CHECK]
          ↓
-  Quota OK? (80% usado) ️
+  Quota OK? (80% usado)
          ↓
   File OK? (150KB)  BLOQUEADO
          ↓
@@ -81,7 +81,7 @@ Week start: 2026-01-20
 ### 2. Estimar Custo (`claude-estimate`)
 ```bash
 $ claude-estimate logs/debug.log
-️  AVISO: Arquivo grande detectado
+  AVISO: Arquivo grande detectado
    Arquivo: logs/debug.log (87KB)
    Isso consumirá ~348 tokens estimados
    Continuar? (y/n)
@@ -146,7 +146,7 @@ ALTERNATIVAS:
 ```bash
 $ claude "help me debug"
 
-️  ZONA CRITICA: 50000 tokens restantes
+  ZONA CRITICA: 50000 tokens restantes
    Deseja continuar? (y/n)
 n
 ```

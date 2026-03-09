@@ -531,7 +531,7 @@ vinstall_emoji_hook() {
 vcheck_file() {
     local file="$1"
     if [[ -f "$file" ]]; then
-        if grep -q "['''''️''''️''''''''''''️''''''''''''''️''''''️''''''''''''''''''️''''''''🟡''🟢''''''''''']" "$file" 2>/dev/null; then
+        if grep -q "['''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''🟡''🟢''''''''''']" "$file" 2>/dev/null; then
             __err "Emojis encontrados em: $file"
             return 1
         else
@@ -543,4 +543,3 @@ vcheck_file() {
         return 1
     fi
 }
-

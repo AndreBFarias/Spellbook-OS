@@ -5,7 +5,7 @@
 
 **ZERO EMOJIS** em TODAS as interacoes, respostas, codigo, commits e documentacao.
 
-Exemplos proibidos:    ️      ⭐
+Exemplos proibidos:
 Use apenas texto puro com marcadores (-, *, >) quando necessario.
 
 ## REGRA DE OURO

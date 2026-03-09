@@ -140,7 +140,7 @@ Week start: 2026-01-20
 
 ```bash
 $ claude-estimate Luna/src/soul/response_pipeline.py
-️  AVISO: Arquivo grande detectado
+  AVISO: Arquivo grande detectado
    Arquivo: Luna/src/soul/response_pipeline.py (87KB)
    Isso consumirá ~348 tokens estimados
    Continuar? (y/n)
@@ -187,7 +187,7 @@ ALTERNATIVAS:
 ```bash
 $ claude-safe "help me debug this"
 
-️  ZONA CRITICA: 50000 tokens restantes
+  ZONA CRITICA: 50000 tokens restantes
    Deseja continuar? (y/n)
 n
 
@@ -262,7 +262,7 @@ Tokens restantes: 155000
 Requests esta semana: 87
 Week start: 2026-01-20
 
-️  AVISO: 69% do limite usado!
+  AVISO: 69% do limite usado!
     Cuidado com contextos grandes.
 
 === DICAS PARA ECONOMIZAR ===
@@ -277,7 +277,7 @@ Week start: 2026-01-20
 
 ```bash
 $ claude-quota-reset
-️  Tem certeza que quer resetar a quota? (y/n)
+  Tem certeza que quer resetar a quota? (y/n)
 y
 Quota resetada.
 ```

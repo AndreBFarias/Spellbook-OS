@@ -217,6 +217,36 @@ git commit -m "fix: corrigir memory leak no parser"
 git commit -m "refactor: extrair lógica de validação"
 ```
 
+### Higiene de PR (obrigatorio antes de qualquer PR)
+
+Sequencia obrigatoria antes de qualquer `git push` ou abertura de PR:
+
+```bash
+# 1. Rodar pre-commit em todos os arquivos
+pre-commit run --all-files
+
+# 2. Verificar escopo — so arquivos da feature devem aparecer
+git diff origin/<branch-base>...HEAD --name-only
+
+# 3. Se aparecer arquivo inesperado, restaurar
+git checkout origin/<branch-base> -- <arquivo>
+```
+
+- Nunca abrir PR sem executar `pre-commit run --all-files` antes
+- Nunca abrir PR com arquivos fora do escopo declarado da feature
+
+Nunca usar `git pull` sem `--rebase` em feature branches:
+
+```bash
+# ERRADO — pode trazer commits de outras branches simultaneas
+git pull
+
+# CORRETO — mantem historico linear
+git pull --rebase
+```
+
+---
+
 ### Workflow com Issues
 
 ```bash
@@ -662,6 +692,8 @@ grep -rniE "claude|anthropic" R/          # Anonimato
 - [ ] Mensagem de commit é descritiva?
 - [ ] Verifiquei anonimato (grep)?
 - [ ] Código passa no linter?
+- [ ] `pre-commit run --all-files` executado e passou?
+- [ ] `git diff origin/<base>...HEAD --name-only` mostra apenas arquivos do escopo?
 
 ---
 

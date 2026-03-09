@@ -59,7 +59,7 @@ Durante trabalho:
 
 Depois de trabalhar:
   $ cq
-  ️ AVISO: 85% do limite usado!
+   AVISO: 85% do limite usado!
 
 =================================================================================
 VOCÊ ECONOMIZA TOKENS ASSIM

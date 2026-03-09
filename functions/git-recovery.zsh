@@ -3,6 +3,11 @@
 # Proposito: Investigar branch ou commit para recuperacao (log, diff, sugestoes)
 # Uso: grecuperar [branch_ou_commit]
 grecuperar() {
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        __err "Nao e um repositorio git."
+        return 1
+    fi
+
     if [[ -z "$1" ]]; then
         __header "RECUPERACAO GIT" "$D_ORANGE"
         echo -e "  ${D_COMMENT}Uso: grecuperar <branch_ou_commit>${D_RESET}"
@@ -35,6 +40,11 @@ grecuperar() {
 # Proposito: Painel de emergencia git (status, branches, reflog, stashes)
 # Uso: gsos
 gsos() {
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        __err "Nao e um repositorio git."
+        return 1
+    fi
+
     __header "SOS GIT" "$D_RED"
 
     echo -e "  ${D_PURPLE}Status${D_RESET}"
@@ -68,6 +78,11 @@ gsos() {
 # Proposito: Reset hard para um ponto do reflog (com confirmacao e preview)
 # Uso: grestore <ref>
 grestore() {
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        __err "Nao e um repositorio git."
+        return 1
+    fi
+
     if [[ -z "$1" ]]; then
         echo -e "  ${D_COMMENT}Uso: grestore HEAD@{N}${D_RESET}"
         echo ""

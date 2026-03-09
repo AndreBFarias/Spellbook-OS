@@ -30,7 +30,7 @@ claude-init              # Inicializar sistema
 claude-force "..."       # Forçar (ignora limites)
 ```
 
-## ️ Configuração
+##  Configuração
 
 ### Limites de Quota (`claude_quota_manager.sh`)
 ```bash
