@@ -1,15 +1,15 @@
 #!/bin/zsh
-# Funcoes integradas do Controle de Bordo v2.0
-# Sistema completo de automacao, sync e QOL
+# Funções integradas do Controle de Bordo v2.0
+# Sistema completo de automação, sync e QOL
 
-# Configuracoes
+# Configurações
 VAULT_DIR="${BORDO_DIR:-$HOME/Controle de Bordo}"
 SISTEMA_DIR="$VAULT_DIR/.sistema"
 SCRIPTS_DIR="$SISTEMA_DIR/scripts"
 HOOKS_DIR="$SISTEMA_DIR/hooks"
 LOGS_DIR="$SISTEMA_DIR/logs"
 
-# Garantir diretorios existam
+# Garantir diretórios existam
 mkdir -p "$LOGS_DIR"
 
 # ============================================
@@ -33,27 +33,36 @@ __cdb_header() {
 }
 
 # ============================================
-# NAVEGACAO
+# NAVEGAÇÃO
 # ============================================
 
 # Ir para o vault
 cdb() {
     cd "$VAULT_DIR"
-    __ok "Diretorio: $VAULT_DIR"
+    __ok "Diretório: $VAULT_DIR"
 }
 
 # Abrir no Obsidian
 vopen() {
+    local uri="obsidian://open?vault=Controle%20de%20Bordo"
+
     if command -v obsidian &> /dev/null; then
-        obsidian "obsidian://open?vault=Controle%20de%20Bordo" &
+        obsidian "$uri" &> /dev/null &
+        disown
+    elif flatpak list --app 2>/dev/null | grep -q md.obsidian.Obsidian; then
+        flatpak run md.obsidian.Obsidian "$uri" &> /dev/null &
+        disown
+    elif command -v xdg-open &> /dev/null; then
+        xdg-open "$uri" &> /dev/null &
+        disown
     else
-        __err "Obsidian nao encontrado"
+        __err "Obsidian não encontrado (nem binário, nem Flatpak)"
         return 1
     fi
 }
 
 # ============================================
-# CRIACAO DE NOTAS
+# CRIAÇÃO DE NOTAS
 # ============================================
 
 __nova_nota_template() {
@@ -62,19 +71,19 @@ __nova_nota_template() {
     local template_file="$SISTEMA_DIR/templates/$tipo.md"
 
     if [[ ! -f "$template_file" ]]; then
-        __err "Template nao encontrado: $tipo"
+        __err "Template não encontrado: $tipo"
         return 1
     fi
 
-    # Determinar diretorio
+    # Determinar diretório
     local target_dir
     case "$tipo" in
-        daily) target_dir="$VAULT_DIR/05_Diario/2026" ;;
-        projeto) target_dir="$VAULT_DIR/03_Projetos" ;;
-        trabalho) target_dir="$VAULT_DIR/02_Trabalho" ;;
-        conceito) target_dir="$VAULT_DIR/04_Conceitos" ;;
-        pessoal) target_dir="$VAULT_DIR/01_Pessoal" ;;
-        *) target_dir="$VAULT_DIR/00_Inbox" ;;
+        daily) target_dir="$VAULT_DIR/Diario/$(date +%Y)" ;;
+        projeto) target_dir="$VAULT_DIR/Projetos" ;;
+        trabalho) target_dir="$VAULT_DIR/Trabalho" ;;
+        conceito) target_dir="$VAULT_DIR/Conceitos" ;;
+        pessoal) target_dir="$VAULT_DIR/Pessoal" ;;
+        *) target_dir="$VAULT_DIR/Inbox" ;;
     esac
 
     mkdir -p "$target_dir"
@@ -127,7 +136,7 @@ alias vpess='novo_pessoal'
 
 vinbox() {
     if [[ ! -f "$SCRIPTS_DIR/inbox_processor.py" ]]; then
-        __err "Processador de inbox nao encontrado"
+        __err "Processador de inbox não encontrado"
         return 1
     fi
 
@@ -136,22 +145,22 @@ vinbox() {
 }
 
 # ============================================
-# AUTOMACAO
+# AUTOMAÇÃO
 # ============================================
 
 vauto() {
     if [[ ! -f "$SCRIPTS_DIR/automatizar_vault.py" ]]; then
-        __err "Script de automacao nao encontrado"
+        __err "Script de automação não encontrado"
         return 1
     fi
 
-    __cdb_header "AUTO-TAGS E RELACOES" "$D_CYAN"
+    __cdb_header "AUTO-TAGS E RELAÇÕES" "$D_CYAN"
     python3 "$SCRIPTS_DIR/automatizar_vault.py" "$@"
 }
 
 vpad() {
     if [[ ! -f "$SCRIPTS_DIR/padronizar_documentos.py" ]]; then
-        __err "Script de padronizacao nao encontrado"
+        __err "Script de padronização não encontrado"
         return 1
     fi
 
@@ -161,17 +170,17 @@ vpad() {
 
 vcheck() {
     if [[ ! -f "$SCRIPTS_DIR/verificar_consistencia.py" ]]; then
-        __err "Script de consistencia nao encontrado"
+        __err "Script de consistência não encontrado"
         return 1
     fi
 
-    __cdb_header "VERIFICANDO CONSISTENCIA" "$D_CYAN"
+    __cdb_header "VERIFICANDO CONSISTÊNCIA" "$D_CYAN"
     python3 "$SCRIPTS_DIR/verificar_consistencia.py" "$@"
 }
 
 vhealth() {
     if [[ ! -f "$SCRIPTS_DIR/health_check.py" ]]; then
-        __err "Script de health check nao encontrado"
+        __err "Script de health check não encontrado"
         return 1
     fi
 
@@ -179,7 +188,7 @@ vhealth() {
 }
 
 # ============================================
-# SINCRONIZACAO INTEGRADA
+# SINCRONIZAÇÃO INTEGRADA
 # ============================================
 
 SYNC_LOCK_FILE="/tmp/cdb_sync.lock"
@@ -225,8 +234,8 @@ vsync() {
     __cdb_acquire_lock
     trap __cdb_release_lock EXIT
 
-    __cdb_header "SINCRONIZACAO INTEGRADA" "$D_CYAN"
-    echo -e "  ${D_COMMENT}Inicio:${D_RESET} $(date '+%H:%M:%S')"
+    __cdb_header "SINCRONIZAÇÃO INTEGRADA" "$D_CYAN"
+    echo -e "  ${D_COMMENT}Início:${D_RESET} $(date '+%H:%M:%S')"
     echo ""
 
     local start_time=$(date +%s)
@@ -249,8 +258,8 @@ vsync() {
     # 2. Processar Inbox
     if (( ! skip_inbox )); then
         echo -e "${D_COMMENT}[2/6] Processando Inbox...${D_RESET}"
-        if [[ -d "$VAULT_DIR/00_Inbox" ]]; then
-            local inbox_count=$(find "$VAULT_DIR/00_Inbox" -name "*.md" -type f 2>/dev/null | wc -l)
+        if [[ -d "$VAULT_DIR/Inbox" ]]; then
+            local inbox_count=$(find "$VAULT_DIR/Inbox" -name "*.md" -type f 2>/dev/null | wc -l)
             if (( inbox_count > 0 )); then
                 python3 "$SCRIPTS_DIR/inbox_processor.py" --auto-merge > /dev/null 2>&1
                 echo -e "  ${D_GREEN}OK${D_RESET} ($inbox_count arquivos)"
@@ -262,7 +271,7 @@ vsync() {
     fi
 
     # 3. Automacoes
-    echo -e "${D_COMMENT}[3/6] Auto-tags e relacoes...${D_RESET}"
+    echo -e "${D_COMMENT}[3/6] Auto-tags e relações...${D_RESET}"
     python3 "$SCRIPTS_DIR/automatizar_vault.py" --auto > /dev/null 2>&1
     echo -e "  ${D_GREEN}OK${D_RESET}"
 
@@ -283,15 +292,15 @@ vsync() {
             git push > /dev/null 2>&1 || true
             echo -e "  ${D_GREEN}OK${D_RESET}"
         else
-            echo -e "  ${D_COMMENT}Sem mudancas${D_RESET}"
+            echo -e "  ${D_COMMENT}Sem mudanças${D_RESET}"
         fi
     fi
 
     # 6. Update Dashboards
     echo -e "${D_COMMENT}[6/6] Atualizando dashboards...${D_RESET}"
-    for dash in Home.md 01_Pessoal/Dashboard_Pessoal.md 02_Trabalho/Dashboard_Trabalho.md \
-                03_Projetos/Dashboard_Projetos.md 04_Conceitos/Dashboard_Conceitos.md \
-                05_Diario/Dashboard_Diario.md; do
+    for dash in home.md Pessoal/dashboard-pessoal.md Trabalho/dashboard-trabalho.md \
+                Projetos/dashboard-projetos.md Conceitos/dashboard-conceitos.md \
+                Diario/dashboard-diario.md; do
         local dash_path="$VAULT_DIR/$dash"
         if [[ -f "$dash_path" ]]; then
             sed -i "s/modified: .*/modified: $(date +%Y-%m-%d)/" "$dash_path" 2>/dev/null
@@ -300,16 +309,16 @@ vsync() {
     done
     echo -e "  ${D_GREEN}OK${D_RESET}"
 
-    # Relatorio
+    # Relatório
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
 
     echo ""
-    __cdb_header "SINCRONIZACAO CONCLUIDA" "$D_GREEN"
-    echo -e "  ${D_COMMENT}Duracao:${D_RESET} ${duration}s"
+    __cdb_header "SINCRONIZAÇÃO CONCLUÍDA" "$D_GREEN"
+    echo -e "  ${D_COMMENT}Duração:${D_RESET} ${duration}s"
 
-    local total_notes=$(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/99_Arquivo/*" 2>/dev/null | wc -l)
-    local sync_size=$(du -sh --exclude=99_Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" 2>/dev/null | cut -f1)
+    local total_notes=$(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/Arquivo/*" 2>/dev/null | wc -l)
+    local sync_size=$(du -sh --exclude=Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" 2>/dev/null | cut -f1)
 
     echo -e "  ${D_FG}Notas:${D_RESET} $total_notes"
     echo -e "  ${D_FG}Tamanho sync:${D_RESET} $sync_size"
@@ -325,15 +334,15 @@ alias sync_full='vsync'
 alias sync_quick='vquick'
 
 # ============================================
-# ESTATISTICAS E BUSCA
+# ESTATÍSTICAS E BUSCA
 # ============================================
 
 vstats() {
-    __cdb_header "ESTATISTICAS DO VAULT" "$D_CYAN"
+    __cdb_header "ESTATÍSTICAS DO VAULT" "$D_CYAN"
 
-    local total_notes=$(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/99_Arquivo/*" 2>/dev/null | wc -l)
+    local total_notes=$(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/Arquivo/*" 2>/dev/null | wc -l)
     local vault_size=$(du -sh "$VAULT_DIR" 2>/dev/null | cut -f1)
-    local sync_size=$(du -sh --exclude=99_Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" 2>/dev/null | cut -f1)
+    local sync_size=$(du -sh --exclude=Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" 2>/dev/null | cut -f1)
 
     echo ""
     echo -e "  ${D_COMMENT}Notas:${D_RESET} ${D_FG}$total_notes${D_RESET}"
@@ -342,14 +351,14 @@ vstats() {
     echo ""
 
     echo -e "${D_PURPLE}Por Hub:${D_RESET}"
-    for hub in 01_Pessoal 02_Trabalho 03_Projetos 04_Conceitos 05_Diario; do
+    for hub in Pessoal Trabalho Projetos Conceitos Diario; do
         local count=$(find "$VAULT_DIR/$hub" -name "*.md" 2>/dev/null | wc -l)
         printf "  ${D_COMMENT}|${D_RESET} ${D_FG}%-15s${D_RESET} %4d notas\n" "$hub:" $count
     done
     echo ""
 
     echo -e "${D_PURPLE}Recentes (7 dias):${D_RESET}"
-    find "$VAULT_DIR" -name "*.md" -mtime -7 -not -path "*/\.*" -not -path "*/99_Arquivo/*" 2>/dev/null | head -5 | while read f; do
+    find "$VAULT_DIR" -name "*.md" -mtime -7 -not -path "*/\.*" -not -path "*/Arquivo/*" 2>/dev/null | head -5 | while read f; do
         echo -e "  ${D_COMMENT}|${D_RESET} $(basename "$f")"
     done
     echo ""
@@ -362,24 +371,24 @@ vault_buscar() {
     __cdb_header "BUSCANDO: $query" "$D_CYAN"
 
     echo -e "${D_PURPLE}Em titulos:${D_RESET}"
-    find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/99_Arquivo/*" 2>/dev/null | while read f; do
+    find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/Arquivo/*" 2>/dev/null | while read f; do
         basename "$f" .md | grep -i "$query" && echo -e "  ${D_COMMENT}->${D_RESET} $f"
     done | head -10
 
     echo ""
     echo -e "${D_PURPLE}Em conteudo:${D_RESET}"
-    grep -r -l -i "$query" "$VAULT_DIR" --include="*.md" 2>/dev/null | grep -v "/\." | grep -v "/99_Arquivo/" | head -10 | while read f; do
+    grep -r -l -i "$query" "$VAULT_DIR" --include="*.md" 2>/dev/null | grep -v "/\." | grep -v "/Arquivo/" | head -10 | while read f; do
         echo -e "  ${D_COMMENT}|${D_RESET} $(basename "$f")"
     done
     echo ""
 }
 
 # ============================================
-# MANUTENCAO
+# MANUTENÇÃO
 # ============================================
 
 vmaint() {
-    __cdb_header "MANUTENCAO COMPLETA" "$D_CYAN"
+    __cdb_header "MANUTENÇÃO COMPLETA" "$D_CYAN"
     echo ""
 
     # 1. Health
@@ -397,9 +406,9 @@ vmaint() {
     vauto --auto
     echo ""
 
-    # 4. Padronizacao
-    echo -e "${D_COMMENT}[4/5] Padronizacao...${D_RESET}"
-    read -q "REPLY?Executar padronizacao? (s/N) "
+    # 4. Padronização
+    echo -e "${D_COMMENT}[4/5] Padronização...${D_RESET}"
+    read -q "REPLY?Executar padronização? (s/N) "
     echo ""
     if [[ "$REPLY" == "s" ]]; then
         vpad
@@ -412,7 +421,7 @@ vmaint() {
 }
 
 # ============================================
-# EXPORTACAO
+# EXPORTAÇÃO
 # ============================================
 
 vexport() {
@@ -421,7 +430,7 @@ vexport() {
     if [[ -f "$SCRIPTS_DIR/export_to_other_devices.py" ]]; then
         python3 "$SCRIPTS_DIR/export_to_other_devices.py" "$device"
     else
-        __err "Script de exportacao nao encontrado"
+        __err "Script de exportação não encontrado"
         return 1
     fi
 }
@@ -430,9 +439,54 @@ vmobile() {
     if [[ -f "$SCRIPTS_DIR/mobile_sync.sh" ]]; then
         bash "$SCRIPTS_DIR/mobile_sync.sh"
     else
-        __err "Script mobile nao encontrado"
+        __err "Script mobile não encontrado"
         return 1
     fi
+}
+
+# ============================================
+# LIMPEZA E TAMANHO
+# ============================================
+
+vinbox_clean() {
+    __cdb_header "LIMPANDO INBOX" "$D_CYAN"
+    local inbox_dir="$VAULT_DIR/Inbox"
+    local attach_dir="$VAULT_DIR/_Attachments"
+
+    mkdir -p "$attach_dir"
+
+    local img_count=0
+    for ext in png jpg jpeg gif svg webp; do
+        for f in "$inbox_dir"/*."$ext"(N); do
+            mv "$f" "$attach_dir/"
+            ((img_count++))
+        done
+    done
+
+    if (( img_count > 0 )); then
+        __ok "$img_count imagens movidas para _Attachments"
+    else
+        echo -e "  ${D_COMMENT}Nenhuma imagem encontrada${D_RESET}"
+    fi
+    __cdb_log "INFO" "Inbox cleanup: $img_count images moved"
+}
+
+vsize() {
+    __cdb_header "TAMANHO POR PASTA" "$D_CYAN"
+    echo ""
+    for dir in Pessoal Trabalho Projetos Conceitos Diario Inbox _Attachments Arquivo; do
+        local dir_path="$VAULT_DIR/$dir"
+        if [[ -d "$dir_path" ]]; then
+            local size=$(du -sh "$dir_path" 2>/dev/null | cut -f1)
+            printf "  ${D_COMMENT}|${D_RESET} ${D_FG}%-15s${D_RESET} %s\n" "$dir:" "$size"
+        fi
+    done
+    echo ""
+    local total=$(du -sh "$VAULT_DIR" 2>/dev/null | cut -f1)
+    local sync=$(du -sh --exclude=Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" 2>/dev/null | cut -f1)
+    echo -e "  ${D_COMMENT}Total:${D_RESET} $total"
+    echo -e "  ${D_COMMENT}Sync:${D_RESET} $sync"
+    echo ""
 }
 
 # ============================================
@@ -445,8 +499,8 @@ vhelp() {
 CONTROLE DE BORDO - AJUDA
 =========================
 
-NAVEGACAO
-  cdb                    Ir para o diretorio do vault
+NAVEGAÇÃO
+  cdb                    Ir para o diretório do vault
   vopen                  Abrir no Obsidian
 
 CRIAR NOTAS
@@ -460,29 +514,67 @@ INBOX
   vinbox                 Processar inbox
   vinbox --dry-run       Simular
   vinbox --auto-merge    Auto-agregar
+  vinbox_clean           Mover imagens para _Attachments
 
-AUTOMACAO
-  vauto                  Auto-tags e relacoes
+AUTOMAÇÃO
+  vauto                  Auto-tags e relações
   vpad                   Padronizar documentos
-  vcheck                 Verificar consistencia
+  vcheck                 Verificar consistência
   vhealth                Health check
+
+AUTOMAÇÃO COMPLETA
+  controle_de_bordo      Executa pipeline completo de automação
+  cbordo                 Alias para controle_de_bordo
+    --dry-run            Simula sem alterar
+    --no-open            Não abre Obsidian ao final
+    --verbose            Modo verboso
+
+BACKUP E RECUPERAÇÃO
+  vbackups               Lista todos os backups
+  vbackups "termo"       Filtra backups por nome
+  vrestore "caminho"     Restaura arquivo do backup mais recente
 
 SYNC
   vsync                  Sync completo
-  vquick                 Sync rapido (sem git/dev)
-  vmaint                 Manutencao completa
+  vquick                 Sync rápido (sem git/dev)
+  vmaint                 Manutenção completa
 
 INFO
-  vstats                 Estatisticas
+  vstats                 Estatísticas
+  vsize                  Tamanho por pasta
   vault_buscar "termo"   Buscar no vault
 
-EXPORTACAO
+EXPORTAÇÃO
   vexport <device>       Exportar para dispositivo
   vmobile                Preparar pacote mobile
 
-Para mais detalhes: cat "$HOME/Controle de Bordo/SISTEMA_INTEGRACAO.md"
+Para mais detalhes: cat "$HOME/Controle de Bordo/.sistema/docs/INTEGRACAO.md"
 
 EOF
+}
+
+# ============================================
+# BACKUP E RECUPERAÇÃO
+# ============================================
+
+vrestore() {
+    if [[ ! -f "$SCRIPTS_DIR/vault_backup.py" ]]; then
+        __err "Script de backup não encontrado"
+        return 1
+    fi
+    python3 "$SCRIPTS_DIR/vault_backup.py" --restore "$@"
+}
+
+vbackups() {
+    if [[ ! -f "$SCRIPTS_DIR/vault_backup.py" ]]; then
+        __err "Script de backup não encontrado"
+        return 1
+    fi
+    local args=("--list")
+    if [[ -n "$1" ]]; then
+        args+=("--file" "$1")
+    fi
+    python3 "$SCRIPTS_DIR/vault_backup.py" "${args[@]}"
 }
 
 # ============================================
@@ -497,7 +589,115 @@ fi
 __cdb_log "INFO" "Controle de Bordo functions loaded"
 
 # ============================================
-# PROTECAO CONTRA EMOJIS
+# AUTOMAÇÃO COMPLETA
+# ============================================
+
+__sync_spellbook() {
+    local spellbook="$HOME/Desenvolvimento/Spellbook-OS"
+    [[ ! -d "$spellbook" ]] && { __warn "Spellbook-OS não encontrado"; return 0; }
+
+    local src="$HOME/.config/zsh/functions"
+    local dst="$spellbook/functions"
+
+    for f in controle-de-bordo.zsh sync-integrado.zsh sync.zsh; do
+        if [[ -f "$src/$f" ]]; then
+            cp "$src/$f" "$dst/$f"
+        fi
+    done
+
+    [[ -f "$dst/vault-automation.zsh" ]] && rm "$dst/vault-automation.zsh"
+
+    if [[ -d "$spellbook/.git" ]]; then
+        cd "$spellbook"
+        if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+            git add -A > /dev/null 2>&1
+            git commit -m "chore: sincronização automática controle-de-bordo" > /dev/null 2>&1
+            __ok "Spellbook-OS sincronizado e commitado"
+        else
+            __ok "Spellbook-OS sem alterações"
+        fi
+        cd - > /dev/null 2>&1
+    else
+        __ok "Spellbook-OS sincronizado"
+    fi
+}
+
+controle_de_bordo() {
+    local skip_open=0 dry_run=0 verbose=0
+    for arg in "$@"; do
+        case "$arg" in
+            --no-open)   skip_open=1 ;;
+            --dry-run)   dry_run=1 ;;
+            --verbose)   verbose=1 ;;
+        esac
+    done
+
+    __cdb_header "CONTROLE DE BORDO - AUTOMAÇÃO COMPLETA" "$D_CYAN"
+
+    local apply_flag="--fix"
+    (( dry_run )) && apply_flag="--check"
+
+    echo -e "${D_COMMENT}[1/10] Limpando backups antigos...${D_RESET}"
+    python3 "$SCRIPTS_DIR/vault_backup.py" --cleanup
+
+    echo -e "${D_COMMENT}[2/10] Sanitizando atribuições de IA...${D_RESET}"
+    python3 "$SCRIPTS_DIR/sanitizar_ia.py" $apply_flag
+
+    echo -e "${D_COMMENT}[3/10] Removendo emojis...${D_RESET}"
+    if (( dry_run )); then
+        python3 "$SCRIPTS_DIR/emoji_guardian.py" check "$VAULT_DIR"
+    else
+        python3 "$SCRIPTS_DIR/emoji_guardian.py" clean "$VAULT_DIR" --apply
+    fi
+
+    echo -e "${D_COMMENT}[4/10] Auto-tags e relações...${D_RESET}"
+    if (( dry_run )); then
+        python3 "$SCRIPTS_DIR/automatizar_vault.py" --dry-run
+    else
+        python3 "$SCRIPTS_DIR/automatizar_vault.py" --auto
+    fi
+
+    echo -e "${D_COMMENT}[5/10] Normalizando nomes de arquivos...${D_RESET}"
+    python3 "$SCRIPTS_DIR/renomear_arquivos.py" $apply_flag
+
+    echo -e "${D_COMMENT}[6/10] Renomeando imagens...${D_RESET}"
+    python3 "$SCRIPTS_DIR/renomear_imagens.py" $apply_flag
+
+    echo -e "${D_COMMENT}[7/10] Processando Inbox...${D_RESET}"
+    if (( dry_run )); then
+        python3 "$SCRIPTS_DIR/inbox_processor.py" --dry-run
+    else
+        python3 "$SCRIPTS_DIR/inbox_processor.py" --auto-merge
+    fi
+
+    echo -e "${D_COMMENT}[8/10] Padronizando frontmatter...${D_RESET}"
+    if (( dry_run )); then
+        python3 "$SCRIPTS_DIR/padronizar_documentos.py" --merge-only --dry-run
+    else
+        python3 "$SCRIPTS_DIR/padronizar_documentos.py" --merge-only
+    fi
+
+    echo -e "${D_COMMENT}[9/10] Verificando configs Obsidian...${D_RESET}"
+    if (( dry_run )); then
+        python3 "$SCRIPTS_DIR/verificar_obsidian.py" --check
+    else
+        python3 "$SCRIPTS_DIR/verificar_obsidian.py" --fix
+    fi
+
+    echo -e "${D_COMMENT}[10/10] Sincronizando com Spellbook-OS...${D_RESET}"
+    __sync_spellbook
+
+    __cdb_header "AUTOMAÇÃO CONCLUÍDA" "$D_GREEN"
+
+    if (( ! skip_open )); then
+        vopen
+    fi
+}
+
+alias cbordo='controle_de_bordo'
+
+# ============================================
+# PROTEÇÃO CONTRA EMOJIS
 # ============================================
 
 # Verificar emojis no vault
@@ -531,7 +731,7 @@ vinstall_emoji_hook() {
 vcheck_file() {
     local file="$1"
     if [[ -f "$file" ]]; then
-        if grep -q "['''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''🟡''🟢''''''''''']" "$file" 2>/dev/null; then
+        if grep -q "['''''️''''️''''''''''''️''''''''''''''️''''''️''''''''''''''''''️''''''''🟡''🟢''''''''''']" "$file" 2>/dev/null; then
             __err "Emojis encontrados em: $file"
             return 1
         else
@@ -539,7 +739,8 @@ vcheck_file() {
             return 0
         fi
     else
-        __err "Arquivo nao encontrado: $file"
+        __err "Arquivo não encontrado: $file"
         return 1
     fi
 }
+

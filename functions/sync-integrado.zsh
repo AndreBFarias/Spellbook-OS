@@ -1,18 +1,18 @@
 #!/bin/zsh
-# Sistema Integrado de Sincronizacao do Controle de Bordo
-# Combina sync de repos, processamento de inbox, automacao e health checks
+# Sistema Integrado de Sincronização do Controle de Bordo
+# Combina sync de repos, processamento de inbox, automação e health checks
 
 VAULT_DIR="${BORDO_DIR:-$HOME/Controle de Bordo}"
 DEV_DIR="${DEV_DIR:-$HOME/Desenvolvimento}"
 SISTEMA_DIR="$VAULT_DIR/.sistema"
 SCRIPTS_DIR="$SISTEMA_DIR/scripts"
 
-# Configuracoes de sync
+# Configurações de sync
 VAULT_GIT_DIR="$VAULT_DIR/.git"
 SYNC_LOCK_FILE="/tmp/controle_de_bordo_sync.lock"
 SYNC_LOG_FILE="$VAULT_DIR/.sistema/logs/sync.log"
 
-# Criar diretorio de logs
+# Criar diretório de logs
 mkdir -p "$VAULT_DIR/.sistema/logs"
 
 __log() {
@@ -27,7 +27,7 @@ __check_sync_lock() {
     if [[ -f "$SYNC_LOCK_FILE" ]]; then
         local pid=$(cat "$SYNC_LOCK_FILE")
         if ps -p "$pid" > /dev/null 2>&1; then
-            __warn "Sync ja em andamento (PID: $pid)"
+            __warn "Sync já em andamento (PID: $pid)"
             return 1
         else
             rm -f "$SYNC_LOCK_FILE"
@@ -63,14 +63,14 @@ __vault_health_check() {
 
     # Verificar estrutura
     local missing_dirs=()
-    for dir in 01_Pessoal 02_Trabalho 03_Projetos 04_Conceitos 05_Diario 99_Arquivo; do
+    for dir in Pessoal Trabalho Projetos Conceitos Diario Arquivo; do
         if [[ ! -d "$VAULT_DIR/$dir" ]]; then
             missing_dirs+=("$dir")
         fi
     done
 
     if (( ${#missing_dirs[@]} > 0 )); then
-        __warn "Diretorios ausentes: ${missing_dirs[@]}"
+        __warn "Diretórios ausentes: ${missing_dirs[@]}"
         __log "WARN" "Missing directories: ${missing_dirs[@]}"
     else
         echo -e "  ${D_GREEN}Estrutura OK${D_RESET}"
@@ -94,12 +94,12 @@ __vault_health_check() {
 __process_inbox() {
     __header "PROCESSANDO INBOX" "$D_CYAN"
 
-    if [[ ! -d "$VAULT_DIR/00_Inbox" ]]; then
-        mkdir -p "$VAULT_DIR/00_Inbox"
+    if [[ ! -d "$VAULT_DIR/Inbox" ]]; then
+        mkdir -p "$VAULT_DIR/Inbox"
         echo -e "  ${D_COMMENT}Inbox criado${D_RESET}"
     fi
 
-    local inbox_count=$(find "$VAULT_DIR/00_Inbox" -name "*.md" -type f 2>/dev/null | wc -l)
+    local inbox_count=$(find "$VAULT_DIR/Inbox" -name "*.md" -type f 2>/dev/null | wc -l)
 
     if (( inbox_count == 0 )); then
         echo -e "  ${D_COMMENT}Inbox vazio${D_RESET}"
@@ -116,7 +116,7 @@ __process_inbox() {
         done
         __log "INFO" "Inbox processing completed"
     else
-        __err "Processador de inbox nao encontrado"
+        __err "Processador de inbox não encontrado"
         __log "ERROR" "Inbox processor not found"
         return 1
     fi
@@ -124,18 +124,18 @@ __process_inbox() {
 
 # Executar automacoes
 __run_automations() {
-    __header "EXECUTANDO AUTOMACOES" "$D_CYAN"
+    __header "EXECUTANDO AUTOMAÇÕES" "$D_CYAN"
 
-    # 1. Auto-tags e relacoes
-    echo -e "  ${D_COMMENT}[1/3] Auto-tags e relacoes...${D_RESET}"
+    # 1. Auto-tags e relações
+    echo -e "  ${D_COMMENT}[1/3] Auto-tags e relações...${D_RESET}"
     if [[ -f "$SCRIPTS_DIR/automatizar_vault.py" ]]; then
         python3 "$SCRIPTS_DIR/automatizar_vault.py" --auto > /dev/null 2>&1
         echo -e "  ${D_GREEN}OK${D_RESET}"
         __log "INFO" "Auto-tags completed"
     fi
 
-    # 2. Verificar consistencia (apenas log)
-    echo -e "  ${D_COMMENT}[2/3] Verificando consistencia...${D_RESET}"
+    # 2. Verificar consistência (apenas log)
+    echo -e "  ${D_COMMENT}[2/3] Verificando consistência...${D_RESET}"
     if [[ -f "$SCRIPTS_DIR/verificar_consistencia.py" ]]; then
         local broken_links=$(python3 "$SCRIPTS_DIR/verificar_consistencia.py" 2>&1 | grep -c "links quebrados")
         if (( broken_links > 0 )); then
@@ -147,20 +147,20 @@ __run_automations() {
         fi
     fi
 
-    # 3. Padronizacao leve (apenas notas sem frontmatter)
-    echo -e "  ${D_COMMENT}[3/3] Padronizacao...${D_RESET}"
+    # 3. Padronização leve (apenas notas sem frontmatter)
+    echo -e "  ${D_COMMENT}[3/3] Padronização...${D_RESET}"
     if [[ -f "$SCRIPTS_DIR/padronizar_documentos.py" ]]; then
-        python3 "$SCRIPTS_DIR/padronizar_documentos.py" --filter="00_Inbox" --auto > /dev/null 2>&1
+        python3 "$SCRIPTS_DIR/padronizar_documentos.py" --filter="Inbox" --auto > /dev/null 2>&1
         echo -e "  ${D_GREEN}OK${D_RESET}"
         __log "INFO" "Standardization completed"
     fi
 }
 
-# Sync com repositorios de desenvolvimento
+# Sync com repositórios de desenvolvimento
 __sync_dev_repos() {
-    __header "SINCRONIZANDO REPOSITORIOS" "$D_CYAN"
+    __header "SINCRONIZANDO REPOSITÓRIOS" "$D_CYAN"
 
-    # Usar a funcao existente mas integrada
+    # Usar a função existente mas integrada
     sincronizar_controle_de_bordo --auto --stats 2>&1 | tail -20
     __log "INFO" "Dev repos sync completed"
 }
@@ -175,9 +175,9 @@ __sync_git() {
 
     cd "$VAULT_DIR"
 
-    # Verificar se ha mudancas
+    # Verificar se ha mudanças
     if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
-        echo -e "  ${D_COMMENT}Nenhuma mudanca para commit${D_RESET}"
+        echo -e "  ${D_COMMENT}Nenhuma mudança para commit${D_RESET}"
         return 0
     fi
 
@@ -247,12 +247,12 @@ __update_dashboards() {
     # Os dashboards usam dataview, entao apenas tocamos no arquivo
     # para atualizar a data de modificacao
     local dashboards=(
-        "Home.md"
-        "01_Pessoal/Dashboard_Pessoal.md"
-        "02_Trabalho/Dashboard_Trabalho.md"
-        "03_Projetos/Dashboard_Projetos.md"
-        "04_Conceitos/Dashboard_Conceitos.md"
-        "05_Diario/Dashboard_Diario.md"
+        "home.md"
+        "Pessoal/dashboard-pessoal.md"
+        "Trabalho/dashboard-trabalho.md"
+        "Projetos/dashboard-projetos.md"
+        "Conceitos/dashboard-conceitos.md"
+        "Diario/dashboard-diario.md"
     )
 
     for dash in "${dashboards[@]}"; do
@@ -268,7 +268,7 @@ __update_dashboards() {
     __log "INFO" "Dashboards updated"
 }
 
-# Funcao principal de sincronizacao integrada
+# Função principal de sincronização integrada
 sincronizar_controle_de_bordo_full() {
     local skip_health=0
     local skip_inbox=0
@@ -284,12 +284,12 @@ sincronizar_controle_de_bordo_full() {
             --skip-dev) skip_dev=1 ;;
             --verbose) verbose=1 ;;
             --help)
-                echo "Uso: sincronizar_controle_de_bordo_full [opcoes]"
+                echo "Uso: sincronizar_controle_de_bordo_full [opções]"
                 echo ""
-                echo "Opcoes:"
+                echo "Opções:"
                 echo "  --skip-health    Pula health check"
                 echo "  --skip-inbox     Pula processamento de inbox"
-                echo "  --skip-git       Pula sincronizacao git"
+                echo "  --skip-git       Pula sincronização git"
                 echo "  --skip-dev       Pula sync de repos de desenvolvimento"
                 echo "  --verbose        Modo verboso"
                 echo "  --help           Mostra esta ajuda"
@@ -308,10 +308,10 @@ sincronizar_controle_de_bordo_full() {
 
     __log "INFO" "Starting full sync"
 
-    __header "SINCRONIZACAO INTEGRADA DO CONTROLE DE BORDO" "$D_CYAN"
+    __header "SINCRONIZAÇÃO INTEGRADA DO CONTROLE DE BORDO" "$D_CYAN"
     echo ""
     echo -e "  ${D_COMMENT}Vault:${D_RESET} $VAULT_DIR"
-    echo -e "  ${D_COMMENT}Inicio:${D_RESET} $(date '+%Y-%m-%d %H:%M:%S')"
+    echo -e "  ${D_COMMENT}Início:${D_RESET} $(date '+%Y-%m-%d %H:%M:%S')"
     echo ""
 
     local start_time=$(date +%s)
@@ -352,20 +352,20 @@ sincronizar_controle_de_bordo_full() {
     __update_dashboards
     echo ""
 
-    # Relatorio final
+    # Relatório final
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
 
-    __header "SINCRONIZACAO CONCLUIDA" "$D_GREEN"
+    __header "SINCRONIZAÇÃO CONCLUÍDA" "$D_GREEN"
     echo ""
-    echo -e "  ${D_COMMENT}Duracao:${D_RESET} ${duration}s"
+    echo -e "  ${D_COMMENT}Duração:${D_RESET} ${duration}s"
     echo -e "  ${D_COMMENT}Log:${D_RESET} $SYNC_LOG_FILE"
     echo ""
 
-    # Estatisticas
-    local total_notes=$(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/99_Arquivo/*" | wc -l)
+    # Estatísticas
+    local total_notes=$(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/Arquivo/*" | wc -l)
     local vault_size=$(du -sh "$VAULT_DIR" | cut -f1)
-    local sync_size=$(du -sh --exclude=99_Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" | cut -f1)
+    local sync_size=$(du -sh --exclude=Arquivo --exclude=_reorganizacao_backup "$VAULT_DIR" | cut -f1)
 
     echo -e "  ${D_FG}Notas:${D_RESET} $total_notes"
     echo -e "  ${D_FG}Tamanho total:${D_RESET} $vault_size"
@@ -375,9 +375,9 @@ sincronizar_controle_de_bordo_full() {
     __ok "Vault sincronizado com sucesso!"
     __log "INFO" "Full sync completed in ${duration}s"
 
-    # Notificacao desktop
+    # Notificação desktop
     if command -v notify-send > /dev/null 2>&1; then
-        notify-send "Controle de Bordo" "Sincronizacao concluida em ${duration}s" -i dialog-information
+        notify-send "Controle de Bordo" "Sincronização concluída em ${duration}s" -i dialog-information
     fi
 }
 

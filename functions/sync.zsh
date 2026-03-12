@@ -18,28 +18,45 @@ sincronizar_controle_de_bordo() {
 
     local base_dir="${DEV_DIR:-$HOME/Desenvolvimento}"
     local bordo_dir="${BORDO_DIR:-$HOME/Controle de Bordo}"
-    local doc_dir="$bordo_dir/Documentacao"
-    local arquivo_dir="$bordo_dir/99_Arquivo"
 
     if [[ ! -d "$base_dir" ]]; then
-        __err "Diretorio de desenvolvimento nao encontrado: $base_dir"
+        __err "Diretório de desenvolvimento não encontrado: $base_dir"
         return 1
     fi
-    [[ ! -d "$doc_dir" ]] && mkdir -p "$doc_dir"
+
+    # Mapeamento repo -> destino no vault
+    typeset -A REPO_MAP=(
+        [Luna]="Projetos/Luna/codigo"
+        [FogStripper-Removedor-Background]="Projetos/FogStripper/codigo"
+        [Gaslighting-Is-All-You-Need]="Projetos/Gaslighting/codigo"
+        [QR-Code-Void-Generator]="Projetos/QR_Code/codigo"
+        [stilingue-energisa-etl]="Trabalho/Energisa/codigo/stilingue-energisa-etl"
+        [stilingue-social-listening-etl]="Trabalho/Energisa/codigo/stilingue-social-listening-etl"
+        [dbt-date-harvester]="Trabalho/MEC/codigo/dbt-date-harvester"
+    )
+
+    # Repos com tratamento especial (formato: subdir:origem:destino)
+    typeset -A REPO_SPECIAL=(
+        [MEC]="subdir:pipelines-main:Trabalho/MEC/pipelines-main"
+    )
+
+    # Repos para ignorar
+    local -a REPO_SKIP=(Spellbook-OS)
+
+    # Variaveis de tamanho (inicializadas antes do bloco condicional)
+    local vault_size=0 vault_size_mb=0 limit_mb=1024 warning_threshold=800
 
     # Verificar tamanho atual do vault
     if (( check_size )) || (( ! dry_run )); then
-        local vault_size=$(du -sb "$bordo_dir" 2>/dev/null | cut -f1)
-        local vault_size_mb=$((vault_size / 1024 / 1024))
-        local limit_mb=1024
-        local warning_threshold=800
+        vault_size=$(du -sb "$bordo_dir" 2>/dev/null | cut -f1)
+        vault_size_mb=$((vault_size / 1024 / 1024))
 
         if (( vault_size_mb > limit_mb )); then
             __err "Vault excede 1GB ($vault_size_mb MB). Limpe antes de sincronizar."
-            echo "  Dica: Use --docs-only ou limpe a pasta 99_Arquivo/"
+            echo "  Dica: Use --docs-only ou limpe a pasta Arquivo/"
             return 1
         elif (( vault_size_mb > warning_threshold )); then
-            __warn "Vault proximo do limite: $vault_size_mb MB / $limit_mb MB"
+            __warn "Vault próximo do limite: $vault_size_mb MB / $limit_mb MB"
             if (( ! auto )); then
                 echo "  Continuar mesmo assim? (S/n)"
                 read -k 1 reply
@@ -49,7 +66,7 @@ sincronizar_controle_de_bordo() {
         fi
     fi
 
-    # Limpeza automatica se solicitada
+    # Limpeza automática se solicitada
     if (( cleanup )); then
         __header "LIMPEZA DO VAULT" "$D_CYAN"
 
@@ -57,8 +74,8 @@ sincronizar_controle_de_bordo() {
         find "$bordo_dir" -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".mypy_cache" -o -name ".ruff_cache" -o -name "htmlcov" \) -exec rm -rf {} + 2>/dev/null
         echo "  ${D_GREEN}Caches Python removidos${D_RESET}"
 
-        # Limpar arquivos vazios na Inbox
-        find "$bordo_dir/05_Diario/2026" -type f -size 0 -delete 2>/dev/null
+        # Limpar arquivos vazios no Diário
+        find "$bordo_dir/Diario/2026" -type f -size 0 -delete 2>/dev/null
         echo "  ${D_GREEN}Arquivos vazios removidos${D_RESET}"
 
         # Limpar backups antigos
@@ -75,7 +92,7 @@ sincronizar_controle_de_bordo() {
 
     local -a rsync_filters=()
 
-    # Exclusoes padrao (diretorios)
+    # Exclusões padrão (diretórios)
     local -a exclude_dirs=(
         venv .venv env .env node_modules vendor
         site-packages .tox .nox .eggs
@@ -94,7 +111,7 @@ sincronizar_controle_de_bordo() {
     done
     rsync_filters+=(--exclude='*.egg-info/')
 
-    # Se --docs-only, excluir codigo fonte tambem
+    # Se --docs-only, excluir código fonte
     if (( docs_only )); then
         rsync_filters+=(--exclude='src/')
         rsync_filters+=(--exclude='lib/')
@@ -105,7 +122,7 @@ sincronizar_controle_de_bordo() {
         rsync_filters+=(--exclude='*.c' --exclude='*.cpp' --exclude='*.h')
     fi
 
-    # Exclusoes de arquivos sensiveis
+    # Exclusões de arquivos sensíveis
     rsync_filters+=(
         --exclude='.env'
         --exclude='.env.local'
@@ -121,7 +138,7 @@ sincronizar_controle_de_bordo() {
         --exclude='*.pfx'
     )
 
-    # Limitar tamanho de arquivo (evitar arquivos muito grandes)
+    # Limitar tamanho de arquivo
     rsync_filters+=(--max-size=10M)
 
     rsync_filters+=(--include='*/')
@@ -175,27 +192,105 @@ sincronizar_controle_de_bordo() {
     local current_size=$(du -sh "$bordo_dir" 2>/dev/null | cut -f1)
     echo -e "  ${D_COMMENT}Vault atual: ${D_FG}$current_size${D_RESET}"
     echo -e "  ${D_COMMENT}Origem:  ${D_FG}$base_dir${D_RESET}"
-    echo -e "  ${D_COMMENT}Destino: ${D_FG}$doc_dir${D_RESET}"
 
     if (( docs_only )); then
-        echo -e "  ${D_YELLOW}Modo: Apenas documentacao (sem codigo)${D_RESET}"
+        echo -e "  ${D_YELLOW}Modo: Apenas documentação (sem código)${D_RESET}"
     fi
     echo ""
     echo -e "  ${D_COMMENT}Rastreando...${D_RESET}"
 
-    local preview_output
-    preview_output=$(rsync "${rsync_base[@]}" --dry-run --out-format=$'%l\t%n' \
-        "${rsync_filters[@]}" "$base_dir/" "$doc_dir/" 2>/dev/null)
+    # Resolver origem e destino de cada repo
+    __resolve_repo_sync() {
+        local repo_name="$1"
+        local repo_path="$base_dir/$repo_name"
 
-    local file_list
-    file_list=$(echo "$preview_output" | grep -P '^\d+\t' | grep -v '/$')
+        # Ignorar se nao e diretorio
+        [[ ! -d "$repo_path" ]] && return 1
+
+        # Ignorar repos em REPO_SKIP
+        for skip in "${REPO_SKIP[@]}"; do
+            [[ "$repo_name" == "$skip" ]] && return 1
+        done
+
+        local src dest
+
+        if [[ -n "${REPO_SPECIAL[$repo_name]}" ]]; then
+            local spec="${REPO_SPECIAL[$repo_name]}"
+            local type="${spec%%:*}"
+            local rest="${spec#*:}"
+
+            if [[ "$type" == "subdir" ]]; then
+                local subdir="${rest%%:*}"
+                local target="${rest#*:}"
+                src="$repo_path/$subdir"
+                dest="$bordo_dir/$target"
+
+                [[ ! -d "$src" ]] && return 1
+            else
+                return 1
+            fi
+        elif [[ -n "${REPO_MAP[$repo_name]}" ]]; then
+            src="$repo_path"
+            dest="$bordo_dir/${REPO_MAP[$repo_name]}"
+        else
+            src="$repo_path"
+            dest="$bordo_dir/Projetos/Outros/$repo_name"
+        fi
+
+        echo "${src}|${dest}"
+    }
+
+    # Coletar todos os pares origem:destino
+    local -a sync_pairs=()
+    for entry in "$base_dir"/*(N/); do
+        local repo_name="${entry:t}"
+        local pair
+        pair=$(__resolve_repo_sync "$repo_name") || continue
+        sync_pairs+=("$pair")
+    done
+
+    unfunction __resolve_repo_sync 2>/dev/null
+
+    if [[ ${#sync_pairs[@]} -eq 0 ]]; then
+        __ok "Nenhum repositório encontrado para sincronizar."
+        echo ""
+        return 0
+    fi
+
+    # Dry-run agregado: coletar preview de todos os repos
+    local all_file_list=""
+    local -a sync_destinations=()
+
+    for pair in "${sync_pairs[@]}"; do
+        local src="${pair%%|*}"
+        local dest="${pair#*|}"
+        sync_destinations+=("$dest")
+
+        local repo_preview
+        repo_preview=$(rsync "${rsync_base[@]}" --dry-run --out-format=$'%l\t%n' \
+            "${rsync_filters[@]}" "$src/" "$dest/" 2>/dev/null)
+
+        local repo_files
+        repo_files=$(echo "$repo_preview" | grep -P '^\d+\t' | grep -v '/$')
+
+        if [[ -n "$repo_files" ]]; then
+            # Prefixar com nome legivel do destino relativo ao vault
+            local rel_dest="${dest#$bordo_dir/}"
+            while IFS=$'\t' read -r fsize fname; do
+                all_file_list+="${fsize}\t${rel_dest}/${fname}\n"
+            done <<< "$repo_files"
+        fi
+    done
+
+    # Remover trailing newline e linhas vazias
+    all_file_list=$(echo -e "$all_file_list" | grep -P '^\d+\t')
 
     local file_count=0
     local total_bytes=0
 
-    if [[ -n "$file_list" ]]; then
-        file_count=$(echo "$file_list" | wc -l | tr -d ' ')
-        total_bytes=$(echo "$file_list" | awk -F'\t' '{sum += $1} END {print sum+0}')
+    if [[ -n "$all_file_list" ]]; then
+        file_count=$(echo "$all_file_list" | wc -l | tr -d ' ')
+        total_bytes=$(echo "$all_file_list" | awk -F'\t' '{sum += $1} END {print sum+0}')
     fi
 
     local size_human
@@ -220,18 +315,18 @@ sincronizar_controle_de_bordo() {
     local projected_mb=$((projected_size / 1024 / 1024))
 
     if (( projected_mb > limit_mb )); then
-        __err "Sincronizacao excederia 1GB (projecao: $projected_mb MB)"
+        __err "Sincronização excederia 1GB (projeção: $projected_mb MB)"
         echo "  Arquivos pendentes: $file_count ($size_human)"
-        echo "  Dica: Use --docs-only para sincronizar apenas documentacao"
+        echo "  Dica: Use --docs-only para sincronizar apenas documentação"
         return 1
     fi
 
     echo -e "  ${D_CYAN}${file_count}${D_RESET} ${D_FG}arquivo(s) a sincronizar (${size_human})${D_RESET}"
-    echo -e "  ${D_COMMENT}Projecao: ${vault_size_mb} MB -> $projected_mb MB${D_RESET}"
+    echo -e "  ${D_COMMENT}Projeção: ${vault_size_mb} MB -> $projected_mb MB${D_RESET}"
     echo ""
 
     echo -e "  ${D_PURPLE}Preview (10 maiores):${D_RESET}"
-    echo "$file_list" | sort -t$'\t' -k1 -rn | head -10 | while IFS=$'\t' read -r fsize fname; do
+    echo "$all_file_list" | sort -t$'\t' -k1 -rn | head -10 | while IFS=$'\t' read -r fsize fname; do
         local size_fmt
         if (( fsize >= 1048576 )); then
             size_fmt=$(awk "BEGIN {printf \"%.1f MB\", $fsize/1048576}")
@@ -240,12 +335,12 @@ sincronizar_controle_de_bordo() {
         else
             size_fmt="${fsize} B"
         fi
-        printf "  ${D_COMMENT}|${D_RESET} ${D_GREEN}%-50s${D_RESET} ${D_FG}%8s${D_RESET}\n" "${fname:0:50}" "$size_fmt"
+        printf "  ${D_COMMENT}|${D_RESET} ${D_GREEN}%-60s${D_RESET} ${D_FG}%8s${D_RESET}\n" "${fname:0:60}" "$size_fmt"
     done
     echo ""
 
     if (( dry_run )); then
-        __ok "Dry-run concluido. Nenhum arquivo foi copiado."
+        __ok "Dry-run concluído. Nenhum arquivo foi copiado."
         echo ""
         return 0
     fi
@@ -259,7 +354,7 @@ sincronizar_controle_de_bordo() {
             [Pp])
                 echo ""
                 echo -e "  ${D_PURPLE}Lista completa:${D_RESET}"
-                echo "$file_list" | sort -t$'\t' -k2 | while IFS=$'\t' read -r _ fname; do
+                echo "$all_file_list" | sort -t$'\t' -k2 | while IFS=$'\t' read -r _ fname; do
                     echo -e "  ${D_COMMENT}|${D_RESET} ${D_FG}${fname}${D_RESET}"
                 done
                 echo ""
@@ -285,21 +380,36 @@ sincronizar_controle_de_bordo() {
     local -a rsync_exec=("${rsync_base[@]}")
     (( show_stats )) && rsync_exec+=(--stats)
 
-    local sync_output
-    sync_output=$(rsync "${rsync_exec[@]}" "${rsync_filters[@]}" "$base_dir/" "$doc_dir/" 2>&1)
-    local exit_code=$?
+    # Sincronizar cada repo individualmente
+    local sync_errors=0
+    for pair in "${sync_pairs[@]}"; do
+        local src="${pair%%|*}"
+        local dest="${pair#*|}"
 
-    if [[ $exit_code -ne 0 ]]; then
-        __err "rsync falhou (exit code: $exit_code)"
-        echo "$sync_output" | tail -5
-        return 1
-    fi
+        [[ ! -d "$dest" ]] && mkdir -p "$dest"
 
-    if (( show_stats )); then
-        echo "$sync_output" | grep -E "^(Number|Total|Literal|Matched)" | while IFS= read -r stat_line; do
-            echo -e "  ${D_COMMENT}${stat_line}${D_RESET}"
-        done
-        echo ""
+        local sync_output
+        sync_output=$(rsync "${rsync_exec[@]}" "${rsync_filters[@]}" "$src/" "$dest/" 2>&1)
+        local exit_code=$?
+
+        if [[ $exit_code -ne 0 ]]; then
+            __err "rsync falhou para ${src:t} (exit code: $exit_code)"
+            echo "$sync_output" | tail -3
+            (( sync_errors++ ))
+            continue
+        fi
+
+        if (( show_stats )); then
+            local rel_dest="${dest#$bordo_dir/}"
+            echo -e "  ${D_PURPLE}${rel_dest}:${D_RESET}"
+            echo "$sync_output" | grep -E "^(Number|Total|Literal|Matched)" | while IFS= read -r stat_line; do
+                echo -e "    ${D_COMMENT}${stat_line}${D_RESET}"
+            done
+        fi
+    done
+
+    if (( sync_errors > 0 )); then
+        __warn "$sync_errors repo(s) com erro durante sincronização"
     fi
 
     __ok "${file_count} arquivo(s) sincronizado(s) (${size_human})."
@@ -313,15 +423,23 @@ sincronizar_controle_de_bordo() {
     local emoji_guardian="$bordo_dir/.sistema/scripts/emoji_guardian.py"
     if [[ -f "$emoji_guardian" ]]; then
         echo -e "  ${D_COMMENT}Verificando emojis nos arquivos sincronizados...${D_RESET}"
-        local emoji_check=$(python3 "$emoji_guardian" check "$doc_dir" 2>&1)
-        local emoji_count
-        emoji_count=$(echo "$emoji_check" | grep -c "ARQUIVO") || emoji_count=0
 
-        if [[ "$emoji_count" -gt 0 ]]; then
-            echo -e "  ${D_YELLOW}$emoji_count arquivo(s) com emojis encontrado(s)${D_RESET}"
-            echo -e "  ${D_COMMENT}Limpando...${D_RESET}"
-            python3 "$emoji_guardian" clean "$doc_dir" --apply > /dev/null 2>&1
-            echo -e "  ${D_GREEN}Emojis removidos${D_RESET}"
+        local emoji_total=0
+        for dest in "${sync_destinations[@]}"; do
+            [[ ! -d "$dest" ]] && continue
+            local emoji_check
+            emoji_check=$(python3 "$emoji_guardian" check "$dest" 2>&1)
+            local count
+            count=$(echo "$emoji_check" | grep -c "ARQUIVO") || count=0
+            (( emoji_total += count ))
+
+            if [[ "$count" -gt 0 ]]; then
+                python3 "$emoji_guardian" clean "$dest" --apply > /dev/null 2>&1
+            fi
+        done
+
+        if [[ "$emoji_total" -gt 0 ]]; then
+            echo -e "  ${D_YELLOW}$emoji_total arquivo(s) com emojis limpo(s)${D_RESET}"
         else
             echo -e "  ${D_GREEN}Nenhum emoji encontrado${D_RESET}"
         fi
