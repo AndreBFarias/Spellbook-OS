@@ -14,7 +14,7 @@
 
 ---
 
-Configuração zsh modular e portável. 22 módulos de funções, 9 scripts Python, sistema de quota de IA, menu FZF interativo para projetos dbt/BigQuery, controle automático de identidade git e integração com Oh My Zsh. Instalável em qualquer máquina Linux com um único comando.
+Configuração zsh modular e portável. 22 módulos de funções, 9 scripts Python, menu FZF interativo para projetos dbt/BigQuery, controle automático de identidade git e integração com Oh My Zsh. Instalável em qualquer máquina Linux com um único comando.
 
 ---
 
@@ -33,7 +33,6 @@ Configuração zsh modular e portável. 22 módulos de funções, 9 scripts Pyth
 | `functions/vault-automation.zsh` | Automação de cofre de notas |
 | `functions/limpeza.zsh` | Limpeza de ambiente e temporários |
 | `functions/_helpers.zsh` | Paleta Dracula + utilitários base |
-| `claude/` | Sistema de quota para Claude AI |
 | `kimi/` | Integração Kimi AI |
 | `scripts/` | Scripts Python auxiliares (dbt, migração, análise) |
 
@@ -91,15 +90,6 @@ Uso: `python3 ~/.config/zsh/scripts/<script>.py --help`
 
 ---
 
-### Integrações IA
-
-| Módulo | Descrição |
-|--------|-----------|
-| `claude/` | Sistema de quota semanal para Claude Code: guard, estimativa de tokens, relatório de uso. Alias principal: `claude-safe` |
-| `kimi/` | Wrapper para Kimi AI com controle de sessão e histórico local |
-
----
-
 ### Configuração pós-instalação
 
 Editar os arquivos gerados pelo installer:
@@ -107,7 +97,7 @@ Editar os arquivos gerados pelo installer:
 | Arquivo | Conteúdo |
 |---------|----------|
 | `~/.config/zsh/config.local.zsh` | Caminhos locais, identidades git, `BQ_KEYFILE_PATH` |
-| `~/.config/zsh/.zsh_secrets` | `GITHUB_TOKEN`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` |
+| `~/.config/zsh/.zsh_secrets` | `GITHUB_TOKEN`, `GEMINI_API_KEY` |
 | `~/.config/zsh/profiles.yml` | Configuração dbt BigQuery |
 
 Os templates estão em `*.template` para referência.
@@ -134,14 +124,10 @@ spellbook-OS/
 │   ├── mec.zsh
 │   ├── git-contexto.zsh
 │   └── ...
-├── scripts/                    # Scripts Python
-│   ├── mec-dbt-results.py
-│   ├── mec-migrar-censo.py
-│   └── universal-sanitizer.py
-└── claude/                     # Sistema de quota
-    ├── aliases_claude.zsh
-    ├── claude_guard.sh
-    └── claude_quota_manager.sh
+└── scripts/                    # Scripts Python
+    ├── mec-dbt-results.py
+    ├── mec-migrar-censo.py
+    └── universal-sanitizer.py
 ```
 
 ---

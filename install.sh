@@ -276,7 +276,6 @@ Pressione OK para continuar."
     # Features
     local features
     features=$(_checklist "Features" "Selecione as features a ativar:" \
-        "claude_quota" "Sistema de quota Claude" "on" \
         "mec_tools" "Ferramentas MEC (dbt, FZF menu)" "on" \
         "remoto" "Sincronização remota" "off" \
         "kimi" "Integração Kimi AI" "off")
@@ -446,7 +445,7 @@ _step_summary() {
 "O que ainda precisa ser preenchido manualmente:
 
   [ ] ~/.config/zsh/.zsh_secrets
-      Adicionar: GITHUB_TOKEN, GEMINI_API_KEY, ANTHROPIC_API_KEY
+      Adicionar: GITHUB_TOKEN, GEMINI_API_KEY
 
   [ ] ~/.config/zsh/config.local.zsh
       Preencher: BQ_KEYFILE_PATH (service account BigQuery)
@@ -487,7 +486,6 @@ _step_deploy() {
         --exclude='.aider*' \
         --exclude='__pycache__/' \
         --exclude='*.py[cod]' \
-        --exclude='.claude_quota' \
         --exclude='.git/' \
         "$SCRIPT_DIR/" "$ZDOTDIR_TARGET/"
 
