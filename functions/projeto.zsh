@@ -124,13 +124,36 @@ santuario() {
                 for req in "${req_files[@]}"; do
                     local req_nome=$(basename "$req")
                     local venv_target=""
+                    local sufixo=""
+
+                    # Skip requirements de CI
+                    if [[ "$req_nome" == *"-ci"* || "$req_nome" == *"_ci"* ]]; then
+                        echo -e "  ${D_COMMENT}[SKIP]${D_RESET} $req_nome (CI-only)"
+                        continue
+                    fi
 
                     if [[ "$req_nome" == "requirements.txt" ]]; then
                         venv_target="venv"
                     else
-                        local sufixo=${req_nome#requirements_}
+                        sufixo=${req_nome#requirements[_-]}
                         sufixo=${sufixo%.txt}
                         venv_target="venv_${sufixo}"
+                    fi
+
+                    # Remover symlinks quebrados
+                    if [ -L "$venv_target" ] && [ ! -e "$venv_target" ]; then
+                        __warn "Symlink quebrado '$venv_target' removido."
+                        rm -f "$venv_target"
+                    fi
+
+                    # Delegar para setup script se existir
+                    local setup_script="scripts/${sufixo}_setup.sh"
+                    if [[ -n "$sufixo" && -f "$setup_script" ]]; then
+                        if [ ! -d "$venv_target" ] || [ "$sync_dependencias" = true ]; then
+                            echo -e "  ${D_GREEN}[SETUP]${D_RESET} Delegando '$venv_target' para $setup_script..."
+                            bash "$setup_script" || { __warn "Falha ao executar '$setup_script'"; continue; }
+                        fi
+                        continue
                     fi
 
                     if [ ! -d "$venv_target" ]; then
