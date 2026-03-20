@@ -7,12 +7,13 @@ Antes de modificar QUALQUER arquivo, leia o codigo existente e entenda o context
 
 ---
 
-## 1. COMUNICACAO
+## 1. COMUNICAÇÃO
 
-- PT-BR direto e tecnico (acentuacao correta obrigatoria)
-- **ZERO emojis** em codigo, commits, docs, respostas
+- PT-BR direto e técnico
+- **ACENTUAÇÃO CORRETA É OBRIGATÓRIA** — em TODAS as respostas, código, commits, docs, comentários e variáveis em português. Isso inclui: á, é, í, ó, ú, â, ê, ô, ã, õ, à, ç. NUNCA escreva "funcao", "validacao", "descricao", "comunicacao", "configuracao" — o correto é "função", "validação", "descrição", "comunicação", "configuração". Esta regra NÃO tem exceção. Se a palavra em português exige acento, USE O ACENTO.
+- **ZERO emojis** em código, commits, docs, respostas
 - Sem formalidades vazias
-- Explicacoes tecnicas e concisas
+- Explicações técnicas e concisas
 
 ---
 
@@ -20,8 +21,6 @@ Antes de modificar QUALQUER arquivo, leia o codigo existente e entenda o context
 
 **PROIBIDO em qualquer arquivo ou commit:**
 - Nomes de IAs: "Claude", "GPT", "Gemini", "Copilot", "Anthropic", "OpenAI"
-- Atribuicoes: "by AI", "AI-generated", "Gerado por", "Co-Authored-By"
-- **NUNCA** incluir `Co-Authored-By:` em commits
 - Commits devem ser totalmente limpos e anonimos
 
 **Excecoes permitidas:**
@@ -57,7 +56,6 @@ tipo: descricao imperativa
 
 - Zero emojis em mensagens de commit
 - Zero mencoes a IA
-- Zero `Co-Authored-By`
 - Nunca `--force` sem autorizacao explicita
 
 ---
