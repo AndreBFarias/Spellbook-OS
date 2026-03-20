@@ -355,3 +355,19 @@ alias capturar='sistema_capturar'
 # Proposito: Restaurar sistema a partir de manifesto
 # Uso: restaurar <manifesto.json>
 alias restaurar='sistema_restaurar'
+
+# -- Spellbook Vault -----------------------------------------------------------
+
+# Proposito: Exportar credentials criptografados para o vault do repo
+# Uso: spellbook_export [senha]
+spellbook_export() {
+    local spellbook_dir="${SPELLBOOK_DIR:-$HOME/Desenvolvimento/Spellbook-OS}"
+    bash "$spellbook_dir/scripts/spellbook-secrets.sh" export "$@"
+}
+
+# Proposito: Importar credentials do vault criptografado
+# Uso: spellbook_import [senha]
+spellbook_import() {
+    local spellbook_dir="${SPELLBOOK_DIR:-$HOME/Desenvolvimento/Spellbook-OS}"
+    bash "$spellbook_dir/scripts/spellbook-secrets.sh" import "$@"
+}

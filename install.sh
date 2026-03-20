@@ -66,7 +66,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-TOTAL_STEPS=13
+TOTAL_STEPS=14
 CURRENT_STEP=0
 _EXISTING_CONFIG=false
 
@@ -577,6 +577,58 @@ _step_templates() {
     fi
 }
 
+# --- Etapa 5.5: Restaurar secrets do vault criptografado ---
+_step_secrets_vault() {
+    _step "Restaurando credentials do vault"
+
+    local vault_file="$SCRIPT_DIR/vault/secrets.gpg"
+
+    if [[ ! -f "$vault_file" ]]; then
+        _info "Nenhum vault encontrado — pule e configure manualmente"
+        return 0
+    fi
+
+    # Verificar se já existem credentials
+    local existing=0
+    for f in .zsh_secrets config.local.zsh profiles.yml meua-ambiente.json segape-andre.json; do
+        [[ -f "$ZDOTDIR_TARGET/$f" ]] && existing=$((existing + 1))
+    done
+
+    if [[ $existing -eq 5 ]]; then
+        _ok "Todos os credentials já existem — vault ignorado"
+        return 0
+    fi
+
+    _info "Vault criptografado encontrado ($(du -h "$vault_file" | cut -f1))"
+
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "Pular restauração de vault (dry-run)"
+        return 0
+    fi
+
+    local passphrase=""
+    echo -n "  Senha do vault (Enter para pular): "
+    read -rs passphrase
+    echo
+
+    if [[ -z "$passphrase" ]]; then
+        _info "Vault pulado — configure credentials manualmente"
+        return 0
+    fi
+
+    local result
+    result=$(bash "$SCRIPT_DIR/scripts/spellbook-secrets.sh" import-auto "$passphrase" "$vault_file" 2>/dev/null) || {
+        _warn "Senha incorreta ou vault corrompido — configure manualmente"
+        return 0
+    }
+
+    if [[ -n "$result" && "$result" -gt 0 ]]; then
+        _ok "$result credential(s) restaurado(s) do vault"
+    else
+        _warn "Nenhum credential restaurado do vault"
+    fi
+}
+
 # --- Etapa 6: ~/.zshenv com ZDOTDIR ---
 _step_zshenv() {
     _step "Configurando ZDOTDIR"
@@ -738,6 +790,8 @@ Comandos disponíveis:
   cca                -- claude code (--dangerously-skip-permissions)
   claude-safe        -- claude code com quota guard
   claude-quota       -- verificar quota de uso
+  spellbook_export   -- criptografar credentials no vault
+  spellbook_import   -- restaurar credentials do vault
 
 Para ativar: source ~/.config/zsh/.zshrc
 Ou reinicie o terminal.'
@@ -825,6 +879,7 @@ main() {
     _step_tui
     _step_gen_config
     _step_templates
+    _step_secrets_vault
     _step_zshenv
     _step_chsh
     _step_validate
