@@ -14,6 +14,7 @@ EXCLUDED_DIRS = {
     ".git", "venv", ".venv", "node_modules", "__pycache__",
     ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox",
     ".eggs", "dist", "build", ".next", ".nuxt",
+    "hooks",
 }
 
 EXCLUDED_EXTENSIONS = {

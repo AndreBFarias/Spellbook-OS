@@ -59,8 +59,8 @@ _hook_detect_context() {
         EXPECTED_SSH_ALIAS="github.com-vit"
         CONTEXT="VitoriaMariaDB"
     else
-        EXPECTED_NAME="[REDACTED]"
-        EXPECTED_EMAIL="[REDACTED]"
+        EXPECTED_NAME="AndreBFarias"
+        EXPECTED_EMAIL="andre.dsbf@gmail.com"
         EXPECTED_SSH_ALIAS="github.com-personal"
         CONTEXT="Pessoal"
     fi

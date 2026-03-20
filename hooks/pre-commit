@@ -26,8 +26,8 @@ else
         EXPECTED_EMAIL="vitoriamaria.sds@gmail.com"
         CONTEXT="VitoriaMariaDB"
     else
-        EXPECTED_NAME="[REDACTED]"
-        EXPECTED_EMAIL="[REDACTED]"
+        EXPECTED_NAME="AndreBFarias"
+        EXPECTED_EMAIL="andre.dsbf@gmail.com"
         CONTEXT="Pessoal"
     fi
 
@@ -54,6 +54,7 @@ filter_files() {
         case "$file" in
             venv/*|.venv/*|node_modules/*|__pycache__/*) continue ;;
             .git/*|.mypy_cache/*|.pytest_cache/*|.ruff_cache/*) continue ;;
+            hooks/*|.git/hooks/*) continue ;;
             dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
             *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
             *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;
@@ -92,6 +93,8 @@ for file in $FILES; do
 done
 [ $EMOJI_COUNT -gt 0 ] && { FIXES=$((FIXES + EMOJI_COUNT)); FIX_DETAILS="$FIX_DETAILS emojis($EMOJI_COUNT)"; }
 
+# [2/6] Co-Authored-By em arquivos staged (auto-fix + re-stage)
+_COAUTHOR="${COAUTHOR_RE:-[Cc]o-[Aa]uthored-[Bb]y|[Pp]aired-[Ww]ith|[Aa]ssisted-[Bb]y}"
 COAUTHOR_COUNT=0
 for file in $FILES; do
     if [ -f "$file" ] && grep -qiE "$_COAUTHOR" "$file" 2>/dev/null; then

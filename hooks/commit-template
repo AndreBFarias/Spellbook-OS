@@ -4,6 +4,7 @@
 # Tipos validos: feat, fix, refactor, docs, test, perf, chore
 #
 # PROIBIDO:
+#   - Co-Authored-By / Paired-with / Assisted-by
 #   - Emojis
 #   - Mencoes a ferramentas de IA
 #

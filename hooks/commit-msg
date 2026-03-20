@@ -10,7 +10,10 @@ MSG=$(cat "$MSG_FILE")
 FIXES=0
 BLOCKED=0
 
+# [1/4] Auto-remove linhas Co-Authored-By / Paired-with / Assisted-by
+COAUTHOR_PATTERN='^\s*(Co-Authored-By|co_authored|Paired-with|Assisted-by):.*$'
 if echo "$MSG" | grep -qiE "$COAUTHOR_PATTERN"; then
+    MSG=$(echo "$MSG" | grep -viE '^\s*(Co-Authored-By|co_authored|Paired-with|Assisted-by):')
     # Remover linhas em branco consecutivas no final
     MSG=$(echo "$MSG" | sed -e :a -e '/^\n*$/{$d;N;ba}')
     FIXES=$((FIXES + 1))
