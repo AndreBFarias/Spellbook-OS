@@ -161,7 +161,7 @@ enc_detectar() {
         local contagem=0
         local problemas=0
 
-        find "$alvo" -type f | sort | while IFS= read -r arquivo; do
+        while IFS= read -r arquivo; do
             __enc_em_dir_ignorado "$arquivo" && continue
             __enc_eh_binario "$arquivo" && continue
 
@@ -179,7 +179,7 @@ enc_detectar() {
             [[ "$enc" != "utf-8" && "$enc" != "us-ascii" && "$enc" != "ascii" ]] && ((problemas++))
             [[ "$bom" != "nenhum" ]] && ((problemas++))
             [[ "$le" != "LF" ]] && ((problemas++))
-        done
+        done < <(find "$alvo" -type f | sort)
 
         echo ""
         __ok "${contagem} arquivo(s) analisado(s)"
@@ -273,10 +273,10 @@ enc_fixar_bom() {
     if [[ -f "$alvo" ]]; then
         __enc_processar_bom "$alvo"
     elif [[ -d "$alvo" ]]; then
-        find "$alvo" -type f | while IFS= read -r arquivo; do
+        while IFS= read -r arquivo; do
             __enc_em_dir_ignorado "$arquivo" && continue
             __enc_processar_bom "$arquivo"
-        done
+        done < <(find "$alvo" -type f)
     fi
 
     if [[ $removidos -eq 0 ]]; then
@@ -344,10 +344,10 @@ enc_fixar_crlf() {
     if [[ -f "$alvo" ]]; then
         __enc_processar_crlf "$alvo"
     elif [[ -d "$alvo" ]]; then
-        find "$alvo" -type f | while IFS= read -r arquivo; do
+        while IFS= read -r arquivo; do
             __enc_em_dir_ignorado "$arquivo" && continue
             __enc_processar_crlf "$arquivo"
-        done
+        done < <(find "$alvo" -type f)
     fi
 
     if [[ $convertidos -eq 0 ]]; then
@@ -457,10 +457,10 @@ enc_fixar_python() {
     if [[ -f "$alvo" ]]; then
         __enc_fixar_py_arquivo "$alvo"
     elif [[ -d "$alvo" ]]; then
-        find "$alvo" -name "*.py" -type f | sort | while IFS= read -r arquivo; do
+        while IFS= read -r arquivo; do
             __enc_em_dir_ignorado "$arquivo" && continue
             __enc_fixar_py_arquivo "$arquivo"
-        done
+        done < <(find "$alvo" -name "*.py" -type f | sort)
     fi
 
     echo ""
@@ -512,7 +512,7 @@ enc_lote() {
         echo -e "    ${D_FG}4. Corrigir scripts Python${D_RESET}"
         echo ""
 
-        find "$dir" -type f | sort | while IFS= read -r arquivo; do
+        while IFS= read -r arquivo; do
             __enc_em_dir_ignorado "$arquivo" && continue
             __enc_eh_binario "$arquivo" && continue
 
@@ -561,15 +561,15 @@ enc_lote() {
             fi
 
             ((total++))
-        done
+        done < <(find "$dir" -type f | sort)
 
         if [[ "$dry_run" == false ]]; then
             echo ""
             echo -e "  ${D_PURPLE}${D_BOLD}Corrigindo scripts Python...${D_RESET}"
-            find "$dir" -name "*.py" -type f | while IFS= read -r arquivo; do
+            while IFS= read -r arquivo; do
                 __enc_em_dir_ignorado "$arquivo" && continue
                 enc_fixar_python "$arquivo" --no-backup 2>/dev/null
-            done
+            done < <(find "$dir" -name "*.py" -type f)
         fi
 
     elif [[ "$perfil" == "linux-para-windows" ]]; then
@@ -578,7 +578,7 @@ enc_lote() {
         echo -e "    ${D_FG}2. Adicionar BOM a CSVs (compatibilidade Excel)${D_RESET}"
         echo ""
 
-        find "$dir" -type f | sort | while IFS= read -r arquivo; do
+        while IFS= read -r arquivo; do
             __enc_em_dir_ignorado "$arquivo" && continue
             __enc_eh_binario "$arquivo" && continue
 
@@ -617,7 +617,7 @@ enc_lote() {
             fi
 
             ((total++))
-        done
+        done < <(find "$dir" -type f | sort)
     fi
 
     echo ""

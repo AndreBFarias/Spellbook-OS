@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Proposito: Gerar dossie completo de um projeto (ambiente, git, arvore, conteudo)
-# Uso: diagnostico_projeto <profundidade>
+# Uso: diagnostico_projeto <profundidade> [--max-linhas N]
 diagnostico_projeto() {
     __verificar_dependencias "git" "tree" "fzf" "pv" "jq" || return 1
 
@@ -15,12 +15,31 @@ diagnostico_projeto() {
         if [ $? -ne 0 ]; then return 1; fi
     fi
 
-    if ! [[ "$1" =~ ^[0-9]+$ ]] || [ -z "$1" ]; then
-        echo -e "  ${D_COMMENT}Uso: diagnostico_projeto <profundidade> (0 = infinita)${D_RESET}"
+    local profundidade=""
+    local max_linhas=300
+
+    for arg in "$@"; do
+        case "$arg" in
+            --max-linhas) ;;
+            --max-linhas=*) max_linhas="${arg#*=}" ;;
+            *)
+                if [[ -z "$profundidade" && "$arg" =~ ^[0-9]+$ ]]; then
+                    profundidade="$arg"
+                elif [[ "$prev_arg" == "--max-linhas" && "$arg" =~ ^[0-9]+$ ]]; then
+                    max_linhas="$arg"
+                fi
+                ;;
+        esac
+        local prev_arg="$arg"
+    done
+
+    if [[ -z "$profundidade" ]]; then
+        echo -e "  ${D_COMMENT}Uso: diagnostico_projeto <profundidade> [--max-linhas N]${D_RESET}"
+        echo -e "  ${D_COMMENT}  profundidade: 0 = infinita${D_RESET}"
+        echo -e "  ${D_COMMENT}  --max-linhas: limite por arquivo texto (default: 300)${D_RESET}"
         return 1
     fi
 
-    local profundidade="$1"
     local timestamp=$(date +'%Y-%m-%d_%Hh%M')
     local nome_projeto=$(basename "$(pwd)")
     local output_file="diagnostico_projeto_${nome_projeto}_${timestamp}.md"
@@ -30,12 +49,14 @@ diagnostico_projeto() {
 
     __header "DIAGNOSTICO: $nome_projeto" "$D_PURPLE"
     __item "Profundidade" "$depth_label" "$D_COMMENT" "$D_CYAN"
+    __item "Max linhas" "$max_linhas" "$D_COMMENT" "$D_CYAN"
     __item "Saida" "$output_file" "$D_COMMENT" "$D_GREEN"
     echo ""
 
-    __dossie_arquivos_avancado "$profundidade" "$PYTHON_EXEC" > "$output_file"
+    __dossie_arquivos_avancado "$profundidade" "$PYTHON_EXEC" "$max_linhas" > "$output_file"
 
-    __ok "Dossie concluido: $output_file"
+    local output_size=$(du -h "$output_file" | cut -f1)
+    __ok "Dossie concluido: $output_file ($output_size)"
     echo ""
 }
 
@@ -96,9 +117,40 @@ __dossie_mostrar_progresso() {
         "$etapa" "$percent" "$current" "$total" "${arquivo:0:40}" >&2
 }
 
+# Exibe conteudo de um arquivo texto com limite de linhas
+# .log mostra tail (ultimas linhas mais relevantes), demais mostra head
+__dossie_exibir_texto() {
+    local arquivo="$1"
+    local limite="$2"
+
+    if [ ! -s "$arquivo" ]; then
+        echo "[ARQUIVO VAZIO]"
+        return 0
+    fi
+
+    local total_linhas=$(wc -l < "$arquivo" 2>/dev/null | sed 's/ //g')
+    local tamanho=$(du -h "$arquivo" 2>/dev/null | cut -f1)
+
+    echo "[${total_linhas} linhas | ${tamanho}]"
+    echo ""
+
+    if [ "$total_linhas" -le "$limite" ]; then
+        cat "$arquivo" 2>/dev/null
+    elif [[ "$arquivo" == *.log ]]; then
+        echo "... (mostrando ultimas ${limite} de ${total_linhas} linhas)"
+        echo ""
+        tail -n "$limite" "$arquivo" 2>/dev/null
+    else
+        head -n "$limite" "$arquivo" 2>/dev/null
+        echo ""
+        echo "... (truncado: ${limite}/${total_linhas} linhas)"
+    fi
+}
+
 __dossie_arquivos_avancado() {
     local max_depth="$1"
     local PYTHON_EXEC="$2"
+    local max_linhas="${3:-300}"
     local fast_timeout="15s"
     local intensive_timeout="90s"
     local nome_projeto=$(basename "$(pwd)")
@@ -138,6 +190,7 @@ __dossie_arquivos_avancado() {
 
     echo "--- SUMARIO DO PROJETO: ${nome_projeto} ---"
     echo "Gerado em: $(date)"
+    echo "Arquivos: ${total_files} | Max linhas/arquivo: ${max_linhas}"
 
     # Verificar e limpar emojis no projeto
     local emoji_guardian="${BORDO_DIR:-$HOME/Controle de Bordo}/.sistema/scripts/emoji_guardian.py"
@@ -178,7 +231,11 @@ __dossie_arquivos_avancado() {
     if [ -f "README.md" ]; then
         if [ -s "README.md" ]; then
             echo -e "\n<details><summary><strong>README.MD</strong></summary>\n\n"
-            cat README.md
+            head -n "$max_linhas" README.md
+            local readme_lines=$(wc -l < README.md | sed 's/ //g')
+            if [ "$readme_lines" -gt "$max_linhas" ]; then
+                echo -e "\n... (truncado: ${max_linhas}/${readme_lines} linhas)"
+            fi
             echo -e "\n</details>"
         else
             echo -e "\n<details><summary><strong>README.MD</strong></summary>\n\n[ARQUIVO VAZIO]\n</details>"
@@ -188,10 +245,11 @@ __dossie_arquivos_avancado() {
     echo -e "\n\n--- CONTEUDO DOS ARQUIVOS ---\n"
 
     echo "" >&2
-    echo -e "  \033[38;2;189;147;249mETAPA 1/3:\033[0m Rastreio Rapido ($total_files arquivos)" >&2
+    echo -e "  \033[38;2;189;147;249mETAPA 1/3:\033[0m Rastreio Rapido ($total_files arquivos, max ${max_linhas} linhas/arquivo)" >&2
     local current_file=0
+    local total_linhas_output=0
 
-    echo "$all_files" | while read -r file; do
+    while read -r file; do
         ((current_file++))
         __dossie_mostrar_progresso $current_file $total_files "Rastreio Rapido" "$file"
 
@@ -203,24 +261,27 @@ __dossie_arquivos_avancado() {
                 if [ -f "$analisador" ]; then
                     timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file"
                 else
-                    cat "$file" 2>/dev/null
+                    head -n "$max_linhas" "$file" 2>/dev/null
+                    local data_lines=$(wc -l < "$file" 2>/dev/null | sed 's/ //g')
+                    if [ "$data_lines" -gt "$max_linhas" ]; then
+                        echo -e "\n... (truncado: ${max_linhas}/${data_lines} linhas)"
+                    fi
                 fi
                 exit_code=$?
                 ;;
             *.md|*.txt|*.sh|*.py|*.zsh|*.toml|*.yaml|*.yml|*.ini|*.cfg|*.env|*.sql|*.log|*.gitignore|*.rst|*.conf)
-                if [ -s "$file" ]; then
-                    cat "$file" 2>/dev/null
-                else
-                    echo "[ARQUIVO VAZIO]"
-                fi
+                __dossie_exibir_texto "$file" "$max_linhas"
                 exit_code=$?
                 ;;
             *)
                 if ! [ -s "$file" ]; then
                     echo "[ARQUIVO VAZIO]"
                 elif grep -Iq . "$file"; then
-                    head -n 1000 "$file"
-                    echo -e "\n... (truncado em 1000 linhas)"
+                    head -n "$max_linhas" "$file"
+                    local unk_lines=$(wc -l < "$file" 2>/dev/null | sed 's/ //g')
+                    if [ "$unk_lines" -gt "$max_linhas" ]; then
+                        echo -e "\n... (truncado: ${max_linhas}/${unk_lines} linhas)"
+                    fi
                 else
                     echo "[ARQUIVO BINARIO]"
                 fi
@@ -233,7 +294,7 @@ __dossie_arquivos_avancado() {
             echo "$file" >> "$failed_files_list"
         fi
         echo -e "\n\`\`\`\n</details>"
-    done
+    done <<< "$all_files"
 
     echo "" >&2
     echo -e "  \033[38;2;80;250;123m[OK]\033[0m Etapa 1 concluida." >&2
@@ -265,6 +326,8 @@ __dossie_arquivos_avancado() {
     fi
 
     echo -e "  \033[38;2;98;114;164mETAPA 3/3:\033[0m Finalizando dossie..." >&2
+
+    local output_total_linhas=$(wc -l < /dev/stdin 2>/dev/null || echo "?")
 
     echo ""
     read -k 1 "reply?  Abrir no Antigravity? (s/N) "

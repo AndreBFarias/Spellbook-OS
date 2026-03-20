@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 import json
 import sys
@@ -140,7 +143,7 @@ def main():
         else:
             # Fallback para tentar ler como texto simples se não for reconhecido, mas passado pro script
             print(f"Formato não estruturado padrão. Tentando leitura simples...")
-            with open(file_path, 'r', errors='replace') as f:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                 print(f.read(2000))
 
     except Exception as e:

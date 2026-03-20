@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 import json
 import sys
@@ -164,7 +167,7 @@ def main():
         print(f"**AVISO**: A análise estruturada falhou ({e}). Exibindo conteúdo raw:\n")
         print("```")
         try:
-            with open(file_path, 'r', errors='replace') as f:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                 print(f.read(2000))
         except Exception as e2:
              print(f"Erro fatal até na leitura bruta: {e2}")

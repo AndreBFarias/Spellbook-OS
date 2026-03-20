@@ -76,7 +76,7 @@ repos() {
     printf "  ${D_COMMENT}%-28s %-14s %-18s %s${D_RESET}\n" "PROJETO" "BRANCH" "STATUS" "SYNC"
     echo -e "  ${D_COMMENT}$(printf '%.0s─' {1..70})${D_RESET}"
 
-    echo "$repos" | while read -r repo_path; do
+    while read -r repo_path; do
         local repo_name=$(basename "$repo_path")
         local branch=$(git -C "$repo_path" branch --show-current 2>/dev/null)
         local status=$(git -C "$repo_path" status --porcelain 2>/dev/null)
@@ -103,7 +103,7 @@ repos() {
 
         printf "  ${D_FG}%-28s${D_RESET} ${D_CYAN}%-14s${D_RESET} ${estado_cor}%-18s${D_RESET} ${D_YELLOW}%s${D_RESET}\n" \
             "${repo_name:0:27}" "${branch:0:13}" "$estado_str" "$sync_str"
-    done
+    done <<< "$repos"
 
     echo ""
 }

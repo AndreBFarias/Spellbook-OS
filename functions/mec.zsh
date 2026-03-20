@@ -113,13 +113,13 @@ __mec_exec_dbt() {
     fi
 
     local original_dir="$(pwd)"
-    cd "$__MEC_DBT_DIR" || { __err "Nao foi possivel entrar em: ${__MEC_DBT_DIR}"; return 1; }
+    __cd "$__MEC_DBT_DIR" || return 1
 
     echo -e "  ${D_COMMENT}Rodando: dbt ${subcmd} ${extra_args}${D_RESET}"
     $__MEC_DBT_BIN "$subcmd" --profiles-dir ../dev $extra_args
     local dbt_exit=$?
 
-    cd "$original_dir"
+    __cd "$original_dir" || return $dbt_exit
 
     if [[ "$subcmd" == "run" || "$subcmd" == "build" || "$subcmd" == "test" ]]; then
         if [[ -f "$__MEC_RESULTS_JSON" ]]; then
@@ -204,14 +204,17 @@ __mec_checklist_push() {
     # [3/4] dbt compile
     if [[ -x "$__MEC_DBT_BIN" ]]; then
         local orig="$(pwd)"
-        cd "$__MEC_DBT_DIR" 2>/dev/null || true
-        if $__MEC_DBT_BIN compile --profiles-dir ../dev --quiet >/dev/null 2>&1; then
-            echo -e "  ${D_GREEN}[3/4]${D_RESET} dbt compile: ${D_FG}OK${D_RESET}"
+        if __cd "$__MEC_DBT_DIR"; then
+            if $__MEC_DBT_BIN compile --profiles-dir ../dev --quiet >/dev/null 2>&1; then
+                echo -e "  ${D_GREEN}[3/4]${D_RESET} dbt compile: ${D_FG}OK${D_RESET}"
+            else
+                echo -e "  ${D_RED}[3/4]${D_RESET} dbt compile falhou"
+                passou=false
+            fi
+            __cd "$orig" || true
         else
-            echo -e "  ${D_RED}[3/4]${D_RESET} dbt compile falhou"
-            passou=false
+            echo -e "  ${D_YELLOW}[3/4]${D_RESET} dbt dir nao encontrado — pulando compile"
         fi
-        cd "$orig"
     else
         echo -e "  ${D_YELLOW}[3/4]${D_RESET} dbt nao encontrado — pulando compile"
     fi
@@ -219,14 +222,17 @@ __mec_checklist_push() {
     # [4/4] pre-commit
     if command -v pre-commit &>/dev/null; then
         local orig="$(pwd)"
-        cd "$proj_root" 2>/dev/null || true
-        if pre-commit run --all-files >/dev/null 2>&1; then
-            echo -e "  ${D_GREEN}[4/4]${D_RESET} pre-commit: ${D_FG}OK${D_RESET}"
+        if __cd "$proj_root"; then
+            if pre-commit run --all-files >/dev/null 2>&1; then
+                echo -e "  ${D_GREEN}[4/4]${D_RESET} pre-commit: ${D_FG}OK${D_RESET}"
+            else
+                echo -e "  ${D_RED}[4/4]${D_RESET} pre-commit encontrou problemas"
+                passou=false
+            fi
+            __cd "$orig" || true
         else
-            echo -e "  ${D_RED}[4/4]${D_RESET} pre-commit encontrou problemas"
-            passou=false
+            echo -e "  ${D_YELLOW}[4/4]${D_RESET} proj_root nao encontrado — pulando pre-commit"
         fi
-        cd "$orig"
     else
         echo -e "  ${D_COMMENT}[4/4]${D_RESET} pre-commit nao instalado — pulando"
     fi
@@ -418,8 +424,8 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
         "[AMB]   pre-commit run")
             if command -v pre-commit &>/dev/null; then
                 local orig="$(pwd)"
-                cd "$__MEC_ROOT" && pre-commit run --all-files
-                cd "$orig"
+                __cd "$__MEC_ROOT" && pre-commit run --all-files
+                __cd "$orig" || true
             else
                 __err "pre-commit nao instalado."
             fi
@@ -433,11 +439,11 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
                     echo -e "  ${D_COMMENT}Nenhum arquivo em staging.${D_RESET}"
                 else
                     local orig="$(pwd)"
-                    cd "$__MEC_ROOT"
+                    __cd "$__MEC_ROOT" || break
                     echo "$staged" | xargs python3 "$sanitizer" --check 2>/dev/null \
                         && echo -e "  ${D_GREEN}Nenhum rastro detectado.${D_RESET}" \
                         || __warn "Rastros detectados. Revisar antes de commitar."
-                    cd "$orig"
+                    __cd "$orig" || true
                 fi
             else
                 __err "universal-sanitizer.py nao encontrado."
@@ -445,8 +451,8 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
             ;;
         "[AMB]   ver identidade git")
             local orig="$(pwd)"
-            cd "$__MEC_ROOT" && git_info
-            cd "$orig"
+            __cd "$__MEC_ROOT" && git_info
+            __cd "$orig" || true
             ;;
         "[INFO]  ver run_results")
             if [[ -f "$__MEC_RESULTS_JSON" ]]; then

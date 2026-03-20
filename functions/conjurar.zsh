@@ -48,7 +48,7 @@ conjurar() {
 
     if [[ -z "$args_part" ]]; then
         echo -e "\n  ${D_PURPLE}>>>${D_RESET} ${D_FG}${comando}${D_RESET}\n"
-        eval "$comando"
+        ${(z)comando}
         return
     fi
 
@@ -99,7 +99,7 @@ conjurar() {
         done
 
         echo -e "\n  ${D_PURPLE}>>>${D_RESET} ${D_FG}${full_cmd}${D_RESET}\n"
-        eval "$full_cmd"
+        ${(z)full_cmd}
     else
         echo ""
         echo -e "  ${D_PURPLE}${comando}${D_RESET} ${D_COMMENT}${args_part}${D_RESET}"
@@ -113,6 +113,6 @@ conjurar() {
             return 0
         fi
         echo -e "\n  ${D_PURPLE}>>>${D_RESET} ${D_FG}${comando} ${args_input}${D_RESET}\n"
-        eval "$comando $args_input"
+        eval "${(q)comando} $args_input"
     fi
 }

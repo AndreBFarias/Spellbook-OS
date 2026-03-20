@@ -27,7 +27,7 @@ aplicar_hooks_globais() {
     echo ""
 
     local count=0
-    echo "$repos" | while read -r repo_path; do
+    while read -r repo_path; do
         ((count++))
         local repo_name=$(basename "$repo_path")
 
@@ -41,7 +41,7 @@ aplicar_hooks_globais() {
         chmod +x "$repo_path/.git/hooks/commit-msg" 2>/dev/null
 
         printf "  ${D_GREEN}[%02d/%02d]${D_RESET} %s\n" "$count" "$total" "$repo_name"
-    done
+    done <<< "$repos"
 
     echo ""
     __ok "Hooks aplicados: pre-commit (sanitizer + identidade) + commit-msg (anonimato) + pre-push (contexto + author)"

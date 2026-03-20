@@ -186,11 +186,11 @@ sincronizar_repositorio() {
 
     __header "SINCRONIZACAO" "$D_ORANGE"
 
-    echo "$selecao" | while read -r repo_path; do
-        cd "$repo_path" || continue
+    while read -r repo_path; do
+        __cd "$repo_path" || continue
         __aplicar_contexto_git_automatico > /dev/null 2>&1
         __sinc_preservadora
-    done
+    done <<< "$selecao"
     echo ""
 }
 
@@ -208,11 +208,11 @@ sincronizar_todos_os_repositorios() {
 
     local repos=$(find "$DEV_DIR" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
 
-    echo "$repos" | while read -r repo_path; do
-        cd "$repo_path" || continue
+    while read -r repo_path; do
+        __cd "$repo_path" || continue
         __aplicar_contexto_git_automatico > /dev/null 2>&1
         __sinc_preservadora
-    done
+    done <<< "$repos"
 
     echo ""
     __ok "Todos os repositorios processados."

@@ -2,6 +2,9 @@
 # Variáveis específicas por máquina (gitignored). Gerado pelo install.sh.
 [[ -f "${ZDOTDIR:-$HOME/.config/zsh}/config.local.zsh" ]] && source "${ZDOTDIR:-$HOME/.config/zsh}/config.local.zsh"
 
+# Bridge: config.local.zsh exporta CONTROLE_BORDO_DIR, funcoes usam BORDO_DIR
+export BORDO_DIR="${CONTROLE_BORDO_DIR:-$HOME/Controle de Bordo}"
+
 # --- 1. TEMA E OH MY ZSH ---
 ZSH_THEME="agnoster"
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME/.config/zsh}/.zcompdump"

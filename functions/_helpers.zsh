@@ -48,6 +48,8 @@ __ok()   { echo -e "  ${D_GREEN}[OK]${D_RESET} $1"; }
 __warn() { echo -e "  ${D_YELLOW}[!]${D_RESET} $1"; }
 __err()  { echo -e "  ${D_RED}[ERRO]${D_RESET} $1" >&2; }
 
+__cd() { cd "$1" || { __err "Diretorio nao encontrado: $1"; return 1; } }
+
 # -- Verificacao de dependencias --
 __verificar_dependencias() {
     local ferramentas_faltantes=()

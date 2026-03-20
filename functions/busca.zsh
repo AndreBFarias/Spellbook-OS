@@ -20,13 +20,13 @@ buscar() {
     echo ""
 
     local count=0
-    find "$caminho" -name "$padrao" -print0 | while IFS= read -r -d '' file; do
+    while IFS= read -r -d '' file; do
         ((count++))
         local dir_path=$(realpath "$(dirname "$file")")
         echo -e "  ${D_GREEN}$file${D_RESET}"
         echo -e "  ${D_COMMENT}$dir_path${D_RESET}"
         echo ""
-    done
+    done < <(find "$caminho" -name "$padrao" -print0)
 
     if [ $count -eq 0 ]; then
         echo -e "  ${D_COMMENT}Nenhum resultado.${D_RESET}"

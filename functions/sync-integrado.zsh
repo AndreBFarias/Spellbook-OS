@@ -111,9 +111,16 @@ __process_inbox() {
 
     # Executar processador de inbox
     if [[ -f "$SCRIPTS_DIR/inbox_processor.py" ]]; then
-        python3 "$SCRIPTS_DIR/inbox_processor.py" --auto-merge 2>&1 | while read line; do
+        local inbox_exit=0
+        while IFS= read -r line; do
             echo "  ${D_COMMENT}|${D_RESET} $line"
-        done
+        done < <(python3 "$SCRIPTS_DIR/inbox_processor.py" --auto-merge 2>&1)
+        inbox_exit=$?
+        if (( inbox_exit != 0 )); then
+            __err "Processador de inbox falhou (exit $inbox_exit)"
+            __log "ERROR" "Inbox processor failed with exit $inbox_exit"
+            return 1
+        fi
         __log "INFO" "Inbox processing completed"
     else
         __err "Processador de inbox não encontrado"
@@ -173,7 +180,7 @@ __sync_git() {
 
     __header "SINCRONIZANDO GIT" "$D_CYAN"
 
-    cd "$VAULT_DIR"
+    __cd "$VAULT_DIR" || return 1
 
     # Verificar se ha mudanças
     if [[ -z $(git status --porcelain 2>/dev/null) ]]; then
