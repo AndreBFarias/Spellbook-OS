@@ -66,7 +66,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-TOTAL_STEPS=14
+TOTAL_STEPS=15
 CURRENT_STEP=0
 _EXISTING_CONFIG=false
 
@@ -708,7 +708,29 @@ _step_encoding_tools() {
     _ok "Ferramentas de encoding prontas"
 }
 
-# --- Etapa 10: Validação pós-instalação ---
+# --- Etapa 10: Spicetify (opcional) ---
+_step_spicetify() {
+    _step "Spicetify (customizacao do Spotify)"
+
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "Pular Spicetify (dry-run)"
+        return 0
+    fi
+
+    if ! _yesno "Spicetify" "Instalar/configurar Spicetify para o Spotify?" "defaultno"; then
+        _info "Spicetify pulado"
+        return 0
+    fi
+
+    local setup_script="$ZDOTDIR_TARGET/scripts/spicetify-setup.sh"
+    if [[ -f "$setup_script" ]]; then
+        _run bash "$setup_script"
+    else
+        _warn "Script spicetify-setup.sh nao encontrado em $setup_script"
+    fi
+}
+
+# --- Etapa 11: Validação pós-instalação ---
 _step_validate() {
     _step "Validação pós-instalação"
 
@@ -741,6 +763,18 @@ _step_validate() {
 
     [[ -f "$ZDOTDIR_TARGET/functions.zsh" ]] \
         || { _warn "functions.zsh não encontrado — loader de funções ausente"; ((erros++)); }
+
+    # Spicetify: validar apenas se binario existe
+    if [[ -x "$HOME/.spicetify/spicetify" ]]; then
+        local spice_ext
+        spice_ext=$("$HOME/.spicetify/spicetify" config extensions 2>/dev/null | head -1)
+        if [[ -z "$spice_ext" || "$spice_ext" == "custom_apps" ]]; then
+            _warn "Spicetify: campo extensions corrompido ou vazio"
+            ((erros++))
+        else
+            _ok "Spicetify: extensions configuradas"
+        fi
+    fi
 
     if [[ $erros -eq 0 ]]; then
         _ok "Validação pós-instalação: tudo OK"
@@ -790,6 +824,9 @@ Comandos disponíveis:
   cca                -- claude code (--dangerously-skip-permissions)
   claude-safe        -- claude code com quota guard
   claude-quota       -- verificar quota de uso
+  spicetify_status   -- versao, tema, extensions
+  spicetify_reparar  -- detectar e corrigir config
+  spicetify_instalar -- setup completo do Spicetify
   spellbook_export   -- criptografar credentials no vault
   spellbook_import   -- restaurar credentials do vault
 
@@ -882,6 +919,7 @@ main() {
     _step_secrets_vault
     _step_zshenv
     _step_chsh
+    _step_spicetify
     _step_validate
     _step_manifest
     _step_summary
