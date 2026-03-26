@@ -121,6 +121,8 @@ santuario() {
             else
                 echo -e "  ${D_CYAN}${#req_files[@]} requirements detectado(s)${D_RESET}"
 
+                local -a sufixos_delegados=()
+
                 for req in "${req_files[@]}"; do
                     local req_nome=$(basename "$req")
                     local venv_target=""
@@ -153,7 +155,22 @@ santuario() {
                             echo -e "  ${D_GREEN}[SETUP]${D_RESET} Delegando '$venv_target' para $setup_script..."
                             bash "$setup_script" || { __warn "Falha ao executar '$setup_script'"; continue; }
                         fi
+                        sufixos_delegados+=("$sufixo")
                         continue
+                    fi
+
+                    # Skip sub-requirements de um setup script ja delegado
+                    # Ex: tts_coqui e tts_chatterbox sao consumidos por tts_setup.sh
+                    if [[ -n "$sufixo" && ${#sufixos_delegados[@]} -gt 0 ]]; then
+                        local skip_sub=false
+                        for delegado in "${sufixos_delegados[@]}"; do
+                            if [[ "$sufixo" == "${delegado}_"* ]]; then
+                                echo -e "  ${D_COMMENT}[SKIP]${D_RESET} $req_nome (consumido por ${delegado}_setup.sh)"
+                                skip_sub=true
+                                break
+                            fi
+                        done
+                        if [ "$skip_sub" = true ]; then continue; fi
                     fi
 
                     if [ ! -d "$venv_target" ]; then
