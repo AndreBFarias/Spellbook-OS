@@ -6,6 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ZDOTDIR_TARGET="${HOME}/.config/zsh"
+REPO_URL_SSH="git@github.com-personal:[REDACTED]/Spellbook-OS.git"
+REPO_URL_HTTPS="https://github.com/[REDACTED]/Spellbook-OS.git"
 DRY_RUN=false
 IS_UPDATE=false
 
@@ -806,6 +808,15 @@ _step_validate() {
     [[ -f "$ZDOTDIR_TARGET/functions.zsh" ]] \
         || { _warn "functions.zsh não encontrado — loader de funções ausente"; ((erros++)); }
 
+    [[ -d "$ZDOTDIR_TARGET/.git" ]] \
+        || { _warn "Spellbook-OS não é um repositório git — sync automático indisponível"; ((erros++)); }
+
+    git -C "$ZDOTDIR_TARGET" remote get-url origin &>/dev/null \
+        || { _warn "Remote 'origin' não configurado — push/pull indisponíveis"; ((erros++)); }
+
+    [[ -f "$ZDOTDIR_TARGET/functions/spellbook-sync.zsh" ]] \
+        || { _warn "spellbook-sync.zsh não encontrado — sync bidirecional indisponível"; ((erros++)); }
+
     if [[ $erros -eq 0 ]]; then
         _ok "Validação pós-instalação: tudo OK"
     else
@@ -854,8 +865,14 @@ Comandos disponíveis:
   cca                -- claude code (--dangerously-skip-permissions)
   claude-safe        -- claude code com quota guard
   claude-quota       -- verificar quota de uso
-  spellbook_export   -- criptografar credentials no vault
-  spellbook_import   -- restaurar credentials do vault
+  spellbook_export       -- criptografar credentials no vault
+  spellbook_import       -- restaurar credentials do vault
+  spellbook_sync_status  -- estado do sync bidirecional
+  spellbook_sync_force   -- forcar direcao do sync
+
+Sync automatico:
+  Ao abrir terminal: commit local + pull remoto
+  Ao fechar terminal: commit + push (background)
 
 Para ativar: source ~/.config/zsh/.zshrc
 Ou reinicie o terminal.'
@@ -870,48 +887,116 @@ Ou reinicie o terminal.'
     _msgbox "Instalação Concluída" "$summary_text"
 }
 
-# --- Etapa 0: Deploy — sincroniza repo para ~/.config/zsh/ ---
+# --- Etapa 0: Deploy — git clone do Spellbook-OS para ~/.config/zsh/ ---
 _step_deploy() {
     _step "Sincronizando arquivos"
 
+    # Arquivos locais por maquina (gitignored, preservados entre deploys)
+    local -a LOCAL_FILES=(config.local.zsh .zsh_secrets profiles.yml segape-andre.json meua-ambiente.json novo_login_de_acesso.json .zsh_history .cca_quota .cca_guard_config .claude_quota)
+
+    # Caso 1: ZDOTDIR ja e um clone valido do Spellbook-OS
+    if [[ -d "$ZDOTDIR_TARGET/.git" ]]; then
+        local current_remote
+        current_remote=$(git -C "$ZDOTDIR_TARGET" remote get-url origin 2>/dev/null || echo "")
+        if [[ "$current_remote" == *"Spellbook-OS"* ]]; then
+            _info "Clone existente detectado — atualizando..."
+            _run git -C "$ZDOTDIR_TARGET" pull --ff-only origin main 2>/dev/null || \
+                _warn "Pull falhou — verifique conflitos manualmente"
+            _ok "Spellbook-OS atualizado via git pull"
+            _step_deploy_symlink
+            return 0
+        fi
+    fi
+
+    # Caso 2: Executando direto do ZDOTDIR (usuario ja migrou manualmente)
     if [[ "$SCRIPT_DIR" == "$ZDOTDIR_TARGET" ]]; then
-        _ok "Executando direto de ~/.config/zsh/ — deploy desnecessário"
+        _ok "Executando direto de ~/.config/zsh/"
+        if ! git -C "$ZDOTDIR_TARGET" remote get-url origin &>/dev/null; then
+            _info "Adicionando remote origin..."
+            if ssh -o ConnectTimeout=3 -T git@github.com-personal 2>&1 | grep -q "successfully\|Hi "; then
+                _run git -C "$ZDOTDIR_TARGET" remote add origin "$REPO_URL_SSH"
+            else
+                _run git -C "$ZDOTDIR_TARGET" remote add origin "$REPO_URL_HTTPS"
+                _warn "Usando HTTPS — configure SSH para push automatico"
+            fi
+        fi
+        _step_deploy_symlink
         return 0
     fi
 
-    _info "Sincronizando $SCRIPT_DIR → $ZDOTDIR_TARGET ..."
-    _run mkdir -p "$ZDOTDIR_TARGET"
-
-    # Backup antes de sincronizar (proteção contra rsync --delete)
-    if [[ -d "$ZDOTDIR_TARGET" && "$ZDOTDIR_TARGET" != "$SCRIPT_DIR" ]]; then
+    # Caso 3: Instalacao nova — backup + git clone
+    local tmp_locals=""
+    if [[ -d "$ZDOTDIR_TARGET" ]]; then
         local backup_dir="$HOME/.config/zsh.backup.$(date +%Y%m%d_%H%M%S)"
-        _info "Criando backup em $backup_dir ..."
+        _info "Backup do runtime existente em $backup_dir"
         _run cp -a "$ZDOTDIR_TARGET" "$backup_dir"
         _ok "Backup salvo: $backup_dir"
+
+        # Salvar arquivos locais para restaurar apos clone
+        tmp_locals=$(mktemp -d /tmp/spellbook-locals.XXXXXX)
+        for f in "${LOCAL_FILES[@]}"; do
+            [[ -f "$ZDOTDIR_TARGET/$f" ]] && cp "$ZDOTDIR_TARGET/$f" "$tmp_locals/"
+        done
+
+        # Preservar oh-my-zsh (evitar re-download)
+        if [[ -d "$ZDOTDIR_TARGET/.oh-my-zsh" ]]; then
+            mv "$ZDOTDIR_TARGET/.oh-my-zsh" "$tmp_locals/.oh-my-zsh"
+        fi
+
+        _run rm -rf "$ZDOTDIR_TARGET"
     fi
 
-    _run rsync -a --delete \
-        --exclude='.oh-my-zsh' \
-        --exclude='.zsh_history' \
-        --exclude='.zsh_secrets' \
-        --exclude='config.local.zsh' \
-        --exclude='profiles.yml' \
-        --exclude='segape-andre.json' \
-        --exclude='meua-ambiente.json' \
-        --exclude='novo_login_de_acesso.json' \
-        --exclude='.cca_quota' \
-        --exclude='.cca_guard_config' \
-        --exclude='.claude_quota' \
-        --exclude='*.pre-oh-my-zsh' \
-        --exclude='.zcompdump*' \
-        --exclude='*.zwc' \
-        --exclude='.aider*' \
-        --exclude='__pycache__/' \
-        --exclude='*.py[cod]' \
-        --exclude='.git/' \
-        "$SCRIPT_DIR/" "$ZDOTDIR_TARGET/"
+    _info "Clonando Spellbook-OS..."
+    if ssh -o ConnectTimeout=3 -T git@github.com-personal 2>&1 | grep -q "successfully\|Hi " && \
+       _run git clone "$REPO_URL_SSH" "$ZDOTDIR_TARGET" 2>/dev/null; then
+        _ok "Clone via SSH concluido"
+    elif _run git clone "$REPO_URL_HTTPS" "$ZDOTDIR_TARGET"; then
+        _ok "Clone via HTTPS concluido"
+        _warn "Usando HTTPS — configure SSH para push automatico"
+    else
+        _err "Falha ao clonar Spellbook-OS. Verifique conectividade."
+    fi
 
-    _ok "Arquivos sincronizados para $ZDOTDIR_TARGET"
+    # Restaurar arquivos locais e oh-my-zsh
+    if [[ -n "$tmp_locals" && -d "$tmp_locals" ]]; then
+        for f in "${LOCAL_FILES[@]}"; do
+            [[ -f "$tmp_locals/$f" ]] && cp "$tmp_locals/$f" "$ZDOTDIR_TARGET/"
+        done
+        if [[ -d "$tmp_locals/.oh-my-zsh" ]]; then
+            mv "$tmp_locals/.oh-my-zsh" "$ZDOTDIR_TARGET/.oh-my-zsh"
+            _ok "Oh My Zsh restaurado do backup"
+        fi
+        rm -rf "$tmp_locals"
+        _ok "Arquivos locais restaurados"
+    fi
+
+    _step_deploy_symlink
+    _ok "Deploy concluido via git clone"
+}
+
+# Symlink de conveniencia: ~/Desenvolvimento/Spellbook-OS -> ~/.config/zsh
+_step_deploy_symlink() {
+    local dev_dir="${DEV_DIR:-$HOME/Desenvolvimento}"
+    local link_path="$dev_dir/Spellbook-OS"
+
+    [[ ! -d "$dev_dir" ]] && return 0
+
+    if [[ -L "$link_path" ]]; then
+        local target
+        target=$(readlink -f "$link_path")
+        if [[ "$target" == "$(readlink -f "$ZDOTDIR_TARGET")" ]]; then
+            return 0
+        fi
+        rm -f "$link_path"
+    elif [[ -d "$link_path" ]]; then
+        # Diretorio real ainda existe — nao sobrescrever automaticamente
+        _warn "Spellbook-OS/ em $dev_dir ainda e um diretorio (nao symlink)"
+        _info "Apos verificar, remova-o e crie o symlink: ln -s $ZDOTDIR_TARGET $link_path"
+        return 0
+    fi
+
+    ln -sfn "$ZDOTDIR_TARGET" "$link_path"
+    _ok "Symlink: $link_path -> $ZDOTDIR_TARGET"
 }
 
 # --- Main ---

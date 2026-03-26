@@ -57,3 +57,14 @@ autoload -U bashcompinit && bashcompinit
 export KIMI_YOLO=1
 
 [ -f "$ZDOTDIR/kca/aliases_kca.zsh" ] && source "$ZDOTDIR/kca/aliases_kca.zsh"
+
+# --- 7. SPELLBOOK SYNC (ao abrir terminal) ---
+if [[ -o interactive && -z "${SPELLBOOK_SYNC_DONE:-}" ]]; then
+    export SPELLBOOK_SYNC_DONE=1
+    spellbook_sync_pull
+fi
+
+# --- 99. SPELLBOOK SYNC (ao fechar terminal) ---
+zshexit() {
+    spellbook_sync_push 2>/dev/null
+}
