@@ -17,18 +17,24 @@ else
     CURRENT_NAME=$(git config --get user.name)
     CURRENT_EMAIL=$(git config --get user.email)
 
-    if [[ "$REPO_ROOT" == *"/MEC/"* || "$REPO_ROOT" == *"/MEC" ]]; then
-        EXPECTED_NAME="andrefariasmec"
-        EXPECTED_EMAIL="andrefarias@mec.gov.br"
-        CONTEXT="MEC"
-    elif [[ "$REPO_ROOT" == *"/VitoriaMariaDB/"* || "$REPO_ROOT" == *"/VitoriaMariaDB" ]]; then
-        EXPECTED_NAME="vitoriamariadb"
-        EXPECTED_EMAIL="vitoriamaria.sds@gmail.com"
-        CONTEXT="VitoriaMariaDB"
-    else
-        EXPECTED_NAME="AndreBFarias"
-        EXPECTED_EMAIL="andre.dsbf@gmail.com"
-        CONTEXT="Pessoal"
+    # Fallback: resolver identidade via variaveis de config.local.zsh
+    EXPECTED_NAME=""
+    CONTEXT="Pessoal"
+    for tag in $ZSH_IDENTITY_TAGS; do
+        local path_var="ZSH_IDENTITY_${tag}_PATH"
+        local path_pattern="${!path_var}"
+        if [[ -n "$path_pattern" && ("$REPO_ROOT" == *"/${path_pattern}/"* || "$REPO_ROOT" == *"/${path_pattern}") ]]; then
+            local name_var="ZSH_IDENTITY_${tag}_NAME"
+            local email_var="ZSH_IDENTITY_${tag}_EMAIL"
+            EXPECTED_NAME="${!name_var}"
+            EXPECTED_EMAIL="${!email_var}"
+            CONTEXT="$tag"
+            break
+        fi
+    done
+    if [[ -z "$EXPECTED_NAME" ]]; then
+        EXPECTED_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name)}"
+        EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
     fi
 
     if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" || "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then

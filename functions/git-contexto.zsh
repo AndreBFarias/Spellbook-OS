@@ -1,5 +1,36 @@
 #!/bin/zsh
 
+# --- Resolucao de identidade por path (lê de config.local.zsh) ---
+
+__resolver_identidade() {
+    local repo_path="${1:-$(pwd)}"
+
+    for tag in ${(s: :)ZSH_IDENTITY_TAGS}; do
+        local path_var="ZSH_IDENTITY_${tag}_PATH"
+        local path_pattern="${(P)path_var}"
+
+        if [[ -n "$path_pattern" && ("$repo_path" == *"/${path_pattern}/"* || "$repo_path" == *"/${path_pattern}") ]]; then
+            local name_var="ZSH_IDENTITY_${tag}_NAME"
+            local email_var="ZSH_IDENTITY_${tag}_EMAIL"
+            local ssh_var="ZSH_IDENTITY_${tag}_SSH"
+
+            REPLY_NAME="${(P)name_var}"
+            REPLY_EMAIL="${(P)email_var}"
+            REPLY_SSH="${(P)ssh_var}"
+            REPLY_CONTEXT="$tag"
+            return 0
+        fi
+    done
+
+    REPLY_NAME="${ZSH_GIT_NAME_PESSOAL}"
+    REPLY_EMAIL="${ZSH_GIT_EMAIL_PESSOAL}"
+    REPLY_SSH="${ZSH_SSH_ALIAS_PESSOAL:-github.com-personal}"
+    REPLY_CONTEXT="Pessoal"
+    return 0
+}
+
+# --- Funcoes de contexto git ---
+
 __definir_contexto_git() {
     local user_name="$1"
     local user_email="$2"
@@ -17,14 +48,8 @@ __definir_contexto_git() {
 
 __resolver_alias_ssh() {
     local repo_path="${1:-$(pwd)}"
-
-    if [[ "$repo_path" == *"/MEC/"* || "$repo_path" == *"/MEC" ]]; then
-        echo "github.com-mec"
-    elif [[ "$repo_path" == *"/VitoriaMariaDB/"* || "$repo_path" == *"/VitoriaMariaDB" ]]; then
-        echo "github.com-vit"
-    else
-        echo "github.com-personal"
-    fi
+    __resolver_identidade "$repo_path"
+    echo "$REPLY_SSH"
 }
 
 __fixar_remote_ssh() {
@@ -58,23 +83,8 @@ __fixar_remote_ssh() {
 }
 
 __aplicar_contexto_git_automatico() {
-    local user_pessoal="${ZSH_GIT_NAME_PESSOAL:-AndreBFarias}"
-    local email_pessoal="${ZSH_GIT_EMAIL_PESSOAL:-andre.dsbf@gmail.com}"
-
-    local user_mec="${ZSH_GIT_NAME_MEC:-andrefariasmec}"
-    local email_mec="${ZSH_GIT_EMAIL_MEC:-andrefarias@mec.gov.br}"
-
-    local user_alt="${ZSH_GIT_NAME_ALT:-vitoriamariadb}"
-    local email_alt="${ZSH_GIT_EMAIL_ALT:-vitoriamaria.sds@gmail.com}"
-
-    if [[ "$(pwd)" == *"/MEC/"* || "$(pwd)" == *"/MEC" ]]; then
-        __definir_contexto_git "$user_mec" "$email_mec"
-    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* || "$(pwd)" == *"/VitoriaMariaDB" ]]; then
-        __definir_contexto_git "$user_alt" "$email_alt"
-    else
-        __definir_contexto_git "$user_pessoal" "$email_pessoal"
-    fi
-
+    __resolver_identidade "$(pwd)"
+    __definir_contexto_git "$REPLY_NAME" "$REPLY_EMAIL"
     __fixar_remote_ssh
 }
 
@@ -105,8 +115,6 @@ git_info() {
     echo ""
 }
 
-# Proposito: Alias para git_info (exibir identidade git)
-# Uso: git_status
 alias git_status='git_info'
 
 __aplicar_contexto_gh_automatico() {
@@ -114,14 +122,8 @@ __aplicar_contexto_gh_automatico() {
         return 0
     fi
 
-    local conta_alvo=""
-    if [[ "$(pwd)" == *"/MEC/"* || "$(pwd)" == *"/MEC" ]]; then
-        conta_alvo="${ZSH_GIT_NAME_MEC:-andrefariasmec}"
-    elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* || "$(pwd)" == *"/VitoriaMariaDB" ]]; then
-        conta_alvo="${ZSH_GIT_NAME_ALT:-vitoriamariadb}"
-    else
-        conta_alvo="${ZSH_GIT_NAME_PESSOAL:-AndreBFarias}"
-    fi
+    __resolver_identidade "$(pwd)"
+    local conta_alvo="$REPLY_NAME"
 
     local conta_ativa
     conta_ativa=$(gh api user --jq '.login' 2>/dev/null)
@@ -218,3 +220,5 @@ sincronizar_todos_os_repositorios() {
     __ok "Todos os repositorios processados."
     echo ""
 }
+
+# "Nao e a consciencia que determina a vida, mas a vida que determina a consciencia." -- Karl Marx

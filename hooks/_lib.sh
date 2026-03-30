@@ -1,6 +1,7 @@
 #!/bin/bash
 # _lib.sh — Biblioteca compartilhada para hooks git
 # Regexes centralizados + funcoes de logging
+# Identidades lidas de config.local.zsh (variaveis ZSH_IDENTITY_*)
 # Fonte: source "$HOME/.config/git/hooks/_lib.sh" 2>/dev/null || true
 
 # --- Diretorio de logs ---
@@ -48,22 +49,29 @@ _hook_repo_name() {
 _hook_detect_context() {
     local repo_path="$1"
 
-    if [[ "$repo_path" == *"/MEC/"* || "$repo_path" == *"/MEC" ]]; then
-        EXPECTED_NAME="andrefariasmec"
-        EXPECTED_EMAIL="andrefarias@mec.gov.br"
-        EXPECTED_SSH_ALIAS="github.com-mec"
-        CONTEXT="MEC"
-    elif [[ "$repo_path" == *"/VitoriaMariaDB/"* || "$repo_path" == *"/VitoriaMariaDB" ]]; then
-        EXPECTED_NAME="vitoriamariadb"
-        EXPECTED_EMAIL="vitoriamaria.sds@gmail.com"
-        EXPECTED_SSH_ALIAS="github.com-vit"
-        CONTEXT="VitoriaMariaDB"
-    else
-        EXPECTED_NAME="AndreBFarias"
-        EXPECTED_EMAIL="andre.dsbf@gmail.com"
-        EXPECTED_SSH_ALIAS="github.com-personal"
-        CONTEXT="Pessoal"
-    fi
+    # Iterar sobre identidades configuradas em config.local.zsh
+    for tag in $ZSH_IDENTITY_TAGS; do
+        local path_var="ZSH_IDENTITY_${tag}_PATH"
+        local name_var="ZSH_IDENTITY_${tag}_NAME"
+        local email_var="ZSH_IDENTITY_${tag}_EMAIL"
+        local ssh_var="ZSH_IDENTITY_${tag}_SSH"
+
+        local path_pattern="${!path_var}"
+
+        if [[ -n "$path_pattern" && ("$repo_path" == *"/${path_pattern}/"* || "$repo_path" == *"/${path_pattern}") ]]; then
+            EXPECTED_NAME="${!name_var}"
+            EXPECTED_EMAIL="${!email_var}"
+            EXPECTED_SSH_ALIAS="${!ssh_var}"
+            CONTEXT="$tag"
+            return
+        fi
+    done
+
+    # Fallback: identidade padrao
+    EXPECTED_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name)}"
+    EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
+    EXPECTED_SSH_ALIAS="${ZSH_SSH_ALIAS_PESSOAL:-github.com}"
+    CONTEXT="Pessoal"
 }
 
 _hook_validate_identity() {

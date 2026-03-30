@@ -11,21 +11,27 @@ REPO_PATH="$(git rev-parse --show-toplevel)"
 if type _hook_detect_context &>/dev/null; then
     _hook_detect_context "$REPO_PATH"
 else
-    if [[ "$REPO_PATH" == *"/MEC/"* || "$REPO_PATH" == *"/MEC" ]]; then
-        EXPECTED_NAME="andrefariasmec"
-        EXPECTED_EMAIL="andrefarias@mec.gov.br"
-        EXPECTED_SSH_ALIAS="github.com-mec"
-        CONTEXT="MEC"
-    elif [[ "$REPO_PATH" == *"/VitoriaMariaDB/"* || "$REPO_PATH" == *"/VitoriaMariaDB" ]]; then
-        EXPECTED_NAME="vitoriamariadb"
-        EXPECTED_EMAIL="vitoriamaria.sds@gmail.com"
-        EXPECTED_SSH_ALIAS="github.com-vit"
-        CONTEXT="VitoriaMariaDB"
-    else
-        EXPECTED_NAME="AndreBFarias"
-        EXPECTED_EMAIL="andre.dsbf@gmail.com"
-        EXPECTED_SSH_ALIAS="github.com-personal"
-        CONTEXT="Pessoal"
+    # Fallback: resolver identidade via variaveis de config.local.zsh
+    EXPECTED_NAME=""
+    CONTEXT="Pessoal"
+    for tag in $ZSH_IDENTITY_TAGS; do
+        local path_var="ZSH_IDENTITY_${tag}_PATH"
+        local path_pattern="${!path_var}"
+        if [[ -n "$path_pattern" && ("$REPO_PATH" == *"/${path_pattern}/"* || "$REPO_PATH" == *"/${path_pattern}") ]]; then
+            local name_var="ZSH_IDENTITY_${tag}_NAME"
+            local email_var="ZSH_IDENTITY_${tag}_EMAIL"
+            local ssh_var="ZSH_IDENTITY_${tag}_SSH"
+            EXPECTED_NAME="${!name_var}"
+            EXPECTED_EMAIL="${!email_var}"
+            EXPECTED_SSH_ALIAS="${!ssh_var}"
+            CONTEXT="$tag"
+            break
+        fi
+    done
+    if [[ -z "$EXPECTED_NAME" ]]; then
+        EXPECTED_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name)}"
+        EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
+        EXPECTED_SSH_ALIAS="${ZSH_SSH_ALIAS_PESSOAL:-github.com}"
     fi
 fi
 

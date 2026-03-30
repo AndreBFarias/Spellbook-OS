@@ -1,0 +1,11 @@
+[Unit]
+Description=Ritual da Aurora - GPU Performance e servicos essenciais
+After=graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "system76-power profile performance; systemctl enable --now earlyoom"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

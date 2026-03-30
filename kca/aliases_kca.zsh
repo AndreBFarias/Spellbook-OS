@@ -252,17 +252,11 @@ kimi-check-anon() {
 }
 
 # ============================================================================
-# ALIASES LEGACY (compatibilidade com Claude)
+# ALIASES KIMI (sem sobreposicao com CCA/Claude)
 # ============================================================================
 
-# NOTA: cca é do Claude - nao sobrescrever
-# O Claude é carregado antes em .zshrc: source "$ZDOTDIR/claude/aliases_claude.zsh"
-# alias cca='kca'  # REMOVIDO - cca deve executar o Claude, nao o Kimi
-
-alias claude-safe='kca'
-alias claude-quota='kimi-quota'
-alias claude-login='kimi-login'
-alias cq='kimi-quota'
+# CCA mantém: claude-safe, cq, ce, cr, cca
+# KCA mantém: kca, kq, kimi-*
 
 # ============================================================================
 # FUNÇÕES DE ATALHO RÁPIDO

@@ -68,7 +68,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-TOTAL_STEPS=15
+TOTAL_STEPS=16
 CURRENT_STEP=0
 _EXISTING_CONFIG=false
 
@@ -261,7 +261,7 @@ _tui_sim_nao() {
 _step_deps() {
     _step "Verificando dependências"
 
-    local pkgs=(zsh fzf git python3-pip rsync tree jq pv)
+    local pkgs=(zsh fzf git python3-pip rsync tree jq pv dunst)
 
     local mgr
     mgr=$(_detect_pkg_manager)
@@ -518,17 +518,32 @@ _step_gen_config() {
     _dev_dir="${_dev_dir//\$\{HOME\}/$HOME}"
     _mec_root="${_mec_root//\$\{HOME\}/$HOME}"
 
+    # Montar lista de identity tags
+    local _identity_tags=""
+    local _identity_block=""
+
+    if [[ -n "$_name_mec" && -n "$_email_mec" ]]; then
+        _identity_tags="MEC"
+        _identity_block="
+# Identidade MEC: repos em */MEC/* usam esta identidade
+export ZSH_IDENTITY_MEC_PATH=\"MEC\"
+export ZSH_IDENTITY_MEC_NAME=\"${_name_mec}\"
+export ZSH_IDENTITY_MEC_EMAIL=\"${_email_mec}\"
+export ZSH_IDENTITY_MEC_SSH=\"github.com-mec\""
+    fi
+
     cat > "$config_file" << EOF
 # config.local.zsh — Variáveis desta máquina
 # Gerado pelo install.sh. Editável manualmente. Gitignored.
 
-# --- Git: identidade pessoal ---
+# --- Identidade padrão (fallback para repos sem override) ---
 export ZSH_GIT_NAME_PESSOAL="${_name}"
 export ZSH_GIT_EMAIL_PESSOAL="${_email}"
+export ZSH_SSH_ALIAS_PESSOAL="github.com-personal"
 
-# --- Git: identidade MEC (opcional) ---
-export ZSH_GIT_NAME_MEC="${_name_mec}"
-export ZSH_GIT_EMAIL_MEC="${_email_mec}"
+# --- Identidades por path (tags separadas por espaco) ---
+export ZSH_IDENTITY_TAGS="${_identity_tags}"
+${_identity_block}
 
 # --- Caminhos dos projetos ---
 export DEV_DIR="${_dev_dir}"
@@ -772,6 +787,55 @@ _step_hooks() {
     fi
 
     _ok "Hooks git e commit template prontos"
+}
+
+# --- Etapa: Ritual da Aurora (autostart + systemd) ---
+_step_ritual() {
+    _step "Ritual da Aurora (GPU + servicos essenciais)"
+
+    local scripts_dir="$ZDOTDIR_TARGET/scripts"
+    local autostart_dir="$HOME/.config/autostart"
+    local service_source="$scripts_dir/ritual-aurora-root.service"
+    local service_dest="/etc/systemd/system/ritual-aurora-root.service"
+    local user_script="$scripts_dir/ritual-da-aurora-user.sh"
+
+    # Autostart do usuario (nvidia-settings)
+    if [[ -f "$user_script" ]]; then
+        _run mkdir -p "$autostart_dir"
+        cat > "$autostart_dir/ritual_aurora.desktop" << DESK
+[Desktop Entry]
+Type=Application
+Exec=$user_script
+Name=Ritual da Aurora
+Comment=Configura GPU Nvidia no modo performance ao iniciar.
+Terminal=false
+X-GNOME-Autostart-enabled=true
+DESK
+        _run chmod +x "$user_script"
+        _ok "Autostart configurado (nvidia-settings)"
+    else
+        _warn "Script $user_script nao encontrado"
+    fi
+
+    # Systemd service (root) — pede sudo apenas se necessario
+    if [[ -f "$service_source" ]]; then
+        if [[ ! -f "$service_dest" ]] || ! diff -q "$service_source" "$service_dest" &>/dev/null; then
+            _info "Instalando systemd service (requer sudo)..."
+            if _run sudo cp "$service_source" "$service_dest"; then
+                _run sudo systemctl daemon-reload
+                _run sudo systemctl enable ritual-aurora-root
+                _ok "Systemd service instalado e habilitado"
+            else
+                _warn "Falha ao instalar service (sudo negado?). Instale manualmente:"
+                _info "  sudo cp $service_source $service_dest"
+                _info "  sudo systemctl daemon-reload && sudo systemctl enable ritual-aurora-root"
+            fi
+        else
+            _ok "Systemd service ja instalado e atualizado"
+        fi
+    else
+        _warn "Service file nao encontrado: $service_source"
+    fi
 }
 
 # --- Etapa 11: Validação pós-instalação ---
@@ -1030,6 +1094,7 @@ main() {
     _step_templates
     _step_secrets_vault
     _step_hooks
+    _step_ritual
     _step_zshenv
     _step_chsh
     _step_validate

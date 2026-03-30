@@ -1,31 +1,49 @@
 # config.local.zsh — Variáveis por máquina
 # Copiar para config.local.zsh e preencher. Este arquivo é gitignored.
 
-# --- Git: identidade pessoal ---
+# === IDENTIDADE GIT ===
+
+# --- Identidade padrão (fallback para repos sem override) ---
 export ZSH_GIT_NAME_PESSOAL="SeuNome"
 export ZSH_GIT_EMAIL_PESSOAL="voce@email.com"
+export ZSH_SSH_ALIAS_PESSOAL="github.com-personal"
 
-# --- Git: identidade MEC (opcional) ---
-export ZSH_GIT_NAME_MEC=""
-export ZSH_GIT_EMAIL_MEC=""
+# --- Identidades por path (tags separadas por espaco) ---
+# Cada tag precisa de 4 variaveis: _PATH, _NAME, _EMAIL, _SSH
+# Exemplo Nitro-5: ZSH_IDENTITY_TAGS="MEC VIT"
+# Exemplo PC Vitoria: ZSH_IDENTITY_TAGS="MEC AND"
+export ZSH_IDENTITY_TAGS=""
 
-# --- Git: identidade alternativa (opcional) ---
-export ZSH_GIT_NAME_ALT=""
-export ZSH_GIT_EMAIL_ALT=""
+# Exemplo: identidade MEC (repos em */MEC/*)
+# export ZSH_IDENTITY_MEC_PATH="MEC"
+# export ZSH_IDENTITY_MEC_NAME="seunome-mec"
+# export ZSH_IDENTITY_MEC_EMAIL="seunome@mec.gov.br"
+# export ZSH_IDENTITY_MEC_SSH="github.com-mec"
 
-# --- Caminhos dos projetos ---
+# Exemplo: identidade alternativa (repos em */OutraPessoa/*)
+# export ZSH_IDENTITY_ALT_PATH="OutraPessoa"
+# export ZSH_IDENTITY_ALT_NAME="outrapessoa"
+# export ZSH_IDENTITY_ALT_EMAIL="outra@email.com"
+# export ZSH_IDENTITY_ALT_SSH="github.com-alt"
+
+# === CAMINHOS ===
+
 export DEV_DIR="${HOME}/Desenvolvimento"
 export MEC_ROOT="${DEV_DIR}/MEC/pipelines-main"
 export CONTROLE_BORDO_DIR="${HOME}/Controle de Bordo"
 export BEHOLDER_DIR="${HOME}/Beholder"
 
-# --- SSH key alternativa (opcional, carregada pelo env.zsh) ---
+# === SSH ===
+
+# SSH key alternativa (opcional, carregada pelo env.zsh)
 export ZSH_SSH_KEY_ALT=""
 
-# --- Sincronização remota (remoto.zsh) ---
+# === SYNC REMOTO ===
+
 export ZSH_REMOTE_HOST=""
 export ZSH_REMOTE_USER=""
 export ZSH_REMOTE_PASTA_LOCAL="${BEHOLDER_DIR}"
 
-# --- BigQuery keyfile (dbt) ---
+# === DBT / BIGQUERY ===
+
 export BQ_KEYFILE_PATH=""

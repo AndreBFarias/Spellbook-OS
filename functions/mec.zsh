@@ -184,7 +184,8 @@ __mec_checklist_push() {
     # [1/4] Identidade
     local email_local
     email_local=$(git -C "$proj_root" config --local user.email 2>/dev/null)
-    if [[ "$email_local" == "andrefarias@mec.gov.br" ]]; then
+    local email_esperado="${ZSH_IDENTITY_MEC_EMAIL:-andrefarias@mec.gov.br}"
+    if [[ "$email_local" == "$email_esperado" ]]; then
         echo -e "  ${D_GREEN}[1/4]${D_RESET} Identidade: ${D_FG}${email_local}${D_RESET}"
     else
         echo -e "  ${D_RED}[1/4]${D_RESET} Identidade incorreta: ${D_FG}${email_local:-"(nao configurada)"}${D_RESET}"

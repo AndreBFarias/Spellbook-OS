@@ -75,8 +75,9 @@ fi
 # --- 6. SSH AGENT AUTO-START ---
 if [ -z "$SSH_AUTH_SOCK" ]; then
     eval "$(ssh-agent -s)" > /dev/null 2>&1
-    ssh-add ~/.ssh/id_ed25519 2>/dev/null
-    [[ -n "$ZSH_SSH_KEY_ALT" && -f "$ZSH_SSH_KEY_ALT" ]] && ssh-add "$ZSH_SSH_KEY_ALT" 2>/dev/null
+    ssh-add ~/.ssh/id_ed25519_personal 2>/dev/null
+    ssh-add ~/.ssh/id_ed25519_mec 2>/dev/null
+    ssh-add ~/.ssh/id_ed25519_vit 2>/dev/null
 fi
 
 # --- 7. GITHUB CLI ---
@@ -99,7 +100,5 @@ if command -v gh &>/dev/null; then
     # Completions
     eval "$(gh completion -s zsh)"
 fi
-
-
 
 

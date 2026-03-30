@@ -8,24 +8,31 @@ VERBOSE=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
 [[ "${1:-}" == "--verbose" || "${2:-}" == "--verbose" ]] && VERBOSE=true
 
-CONTAS_GERENCIADAS=(
-    "AndreBFarias"
-    "andrebfarias"
-    "vitoriamariadb"
-    "SEGAPE"
-    "andrefariasmec"
-)
+# Construir lista de contas gerenciadas a partir de config.local.zsh
+CONTAS_GERENCIADAS=()
+[[ -n "${ZSH_GIT_NAME_PESSOAL:-}" ]] && CONTAS_GERENCIADAS+=("$ZSH_GIT_NAME_PESSOAL")
+for tag in $ZSH_IDENTITY_TAGS; do
+    local_name_var="ZSH_IDENTITY_${tag}_NAME"
+    [[ -n "${!local_name_var:-}" ]] && CONTAS_GERENCIADAS+=("${!local_name_var}")
+done
+# Adicionar variantes comuns (lowercase, orgs conhecidas)
+CONTAS_GERENCIADAS+=("SEGAPE")
 
 resolver_alias_ssh() {
     local repo_path="$1"
 
-    if [[ "$repo_path" == *"/MEC/"* || "$repo_path" == *"/MEC" ]]; then
-        echo "github.com-mec"
-    elif [[ "$repo_path" == *"/VitoriaMariaDB/"* || "$repo_path" == *"/VitoriaMariaDB" ]]; then
-        echo "github.com-vit"
-    else
-        echo "github.com-personal"
-    fi
+    for tag in $ZSH_IDENTITY_TAGS; do
+        local path_var="ZSH_IDENTITY_${tag}_PATH"
+        local ssh_var="ZSH_IDENTITY_${tag}_SSH"
+        local path_pattern="${!path_var:-}"
+
+        if [[ -n "$path_pattern" && ("$repo_path" == *"/${path_pattern}/"* || "$repo_path" == *"/${path_pattern}") ]]; then
+            echo "${!ssh_var}"
+            return
+        fi
+    done
+
+    echo "${ZSH_SSH_ALIAS_PESSOAL:-github.com-personal}"
 }
 
 eh_conta_gerenciada() {
@@ -71,6 +78,7 @@ echo "========================================"
 echo ""
 $DRY_RUN && echo "[DRY-RUN] Nenhuma alteracao sera feita."
 echo "Diretorio: $DEV_DIR"
+echo "Contas gerenciadas: ${CONTAS_GERENCIADAS[*]}"
 echo ""
 
 while IFS= read -r repo_path; do
@@ -138,3 +146,5 @@ echo "  Ignorados:    $ignorados (third-party/URL invalida)"
 echo "  Sem remote:   $sem_remote"
 echo "========================================"
 $DRY_RUN && echo "[DRY-RUN] Rode sem --dry-run para aplicar."
+
+# "Conhece-te a ti mesmo." -- Socrates
