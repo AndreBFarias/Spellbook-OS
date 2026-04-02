@@ -76,7 +76,16 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
     [[ -z "$LOCAL_SHA" || "$LOCAL_SHA" == "0000000000000000000000000000000000000000" ]] && continue
 
     if [[ "$REMOTE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-        RANGE="$LOCAL_SHA"
+        # Branch nova: verificar apenas commits desde o merge-base com develop/main
+        # Sem isso, git log percorre toda a historia do repositorio e bloqueia
+        # por encontrar commits de outros autores que ja estao no remoto
+        MERGE_BASE=$(git merge-base origin/develop "$LOCAL_SHA" 2>/dev/null \
+            || git merge-base origin/main "$LOCAL_SHA" 2>/dev/null || echo "")
+        if [[ -n "$MERGE_BASE" ]]; then
+            RANGE="$MERGE_BASE..$LOCAL_SHA"
+        else
+            RANGE="$LOCAL_SHA"
+        fi
     else
         RANGE="$REMOTE_SHA..$LOCAL_SHA"
     fi
