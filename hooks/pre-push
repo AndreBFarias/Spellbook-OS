@@ -91,7 +91,7 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
     fi
 
     # [3/4] Validacao de author email (existente)
-    BAD_COMMITS=$(git log --format="%H %ae" "$RANGE" 2>/dev/null | grep -v "$EXPECTED_EMAIL" || true)
+    BAD_COMMITS=$(git log --first-parent --format="%H %ae" "$RANGE" 2>/dev/null | grep -v "$EXPECTED_EMAIL" || true)
     if [[ -n "$BAD_COMMITS" ]]; then
         echo "[pre-push] BLOQUEADO: Commits com author email incorreto para contexto $CONTEXT"
         echo "  Esperado: $EXPECTED_EMAIL"
@@ -134,7 +134,7 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
             VIOLATION_COUNT=$((VIOLATION_COUNT + 1))
         fi
 
-    done < <(git log --format="%H" "$RANGE" 2>/dev/null)
+    done < <(git log --first-parent --format="%H" "$RANGE" 2>/dev/null)
 
 done
 
