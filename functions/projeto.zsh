@@ -183,8 +183,13 @@ santuario() {
                     fi
 
                     if [ ! -d "$venv_target" ]; then
-                        echo -e "  ${D_GREEN}[NOVO]${D_RESET} Criando '$venv_target' ($req_nome)..."
-                        python3 -m venv "$venv_target" || { __warn "Falha ao criar venv '$venv_target'"; continue; }
+                        local py_cmd=$(__resolver_python_projeto)
+                        local venv_flags=""
+                        if [ -f "install.sh" ] && grep -q "system-site-packages" install.sh 2>/dev/null; then
+                            venv_flags="--system-site-packages"
+                        fi
+                        echo -e "  ${D_GREEN}[NOVO]${D_RESET} Criando '$venv_target' ($req_nome) [${py_cmd}]..."
+                        "$py_cmd" -m venv $venv_flags "$venv_target" || { __warn "Falha ao criar venv '$venv_target'"; continue; }
                         [[ -f "$venv_target/bin/activate" ]] || { __warn "activate nao encontrado em '$venv_target'"; continue; }
                         source "$venv_target/bin/activate"
                         pip install -r "$req_nome"
