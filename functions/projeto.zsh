@@ -114,6 +114,15 @@ santuario() {
             echo -e "  ${D_COMMENT}Projeto Rust detectado. Compilando...${D_RESET}"
             cargo build
         else
+            # Delegacao para install.sh do projeto (respeita configuracao de venv do projeto)
+            if [ -f "install.sh" ]; then
+                local venv_base="venv"
+                if [ ! -d "$venv_base" ] || [ "$sync_dependencias" = true ]; then
+                    echo -e "  ${D_GREEN}[SETUP]${D_RESET} Delegando para install.sh do projeto..."
+                    bash install.sh || __warn "Falha ao executar install.sh"
+                fi
+            fi
+
             local req_files=($(find . -maxdepth 1 -name "requirements*.txt"))
 
             if [ ${#req_files[@]} -eq 0 ]; then

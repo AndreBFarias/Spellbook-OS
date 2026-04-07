@@ -100,6 +100,26 @@ __verificar_dependencias_python() {
     return 0
 }
 
+__resolver_python_projeto() {
+    # 1. .python-version (convencao pyenv/asdf)
+    if [ -f ".python-version" ]; then
+        local ver=$(head -1 .python-version | tr -d '[:space:]')
+        for candidato in "python${ver}" "/usr/bin/python${ver}"; do
+            if command -v "$candidato" &> /dev/null; then
+                echo "$candidato"
+                return 0
+            fi
+        done
+    fi
+    # 2. Fallback: python do sistema (evita version managers)
+    if [ -x "/usr/bin/python3" ]; then
+        echo "/usr/bin/python3"
+        return 0
+    fi
+    # 3. Ultimo recurso: PATH
+    echo "python3"
+}
+
 __preparar_ambiente_python() {
     local VENV_PATH="$1"
     if [ ! -d "$VENV_PATH" ]; then
