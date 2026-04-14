@@ -92,12 +92,24 @@ check_context_size() {
     return 0
 }
 
+warm_sudo() {
+    # Autentica sudo para que o Claude Code possa rodar scripts que precisam
+    # de permissões elevadas (install.sh, apt, etc.) sem travar no prompt.
+    # A senha fica no cache do sudo (~15 min por padrão).
+    if ! sudo -n true 2>/dev/null; then
+        echo "[GUARD] Autenticando sudo para a sessão..."
+        sudo -v 2>/dev/null || echo "[GUARD] AVISO: sudo não autenticado — scripts com apt podem travar"
+    fi
+}
+
 before_claude_request() {
     load_config
 
     if [ -z "$CLAUDE_FORCE" ]; then
         bash "$QUOTA_MANAGER" pre-check || return 1
     fi
+
+    warm_sudo
 
     return 0
 }
