@@ -4,7 +4,7 @@
 [![Licença](https://img.shields.io/badge/licença-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Zsh](https://img.shields.io/badge/shell-zsh-green.svg)](https://www.zsh.org/)
 [![Oh My Zsh](https://img.shields.io/badge/Oh%20My%20Zsh-compatible-blue.svg)](https://ohmyz.sh/)
-[![Estrelas](https://img.shields.io/github/stars/AndreBFarias/spellbook-OS.svg?style=social)](https://github.com/AndreBFarias/spellbook-OS/stargazers)
+[![Estrelas](https://img.shields.io/github/stars/[REDACTED]/spellbook-OS.svg?style=social)](https://github.com/[REDACTED]/spellbook-OS/stargazers)
 
 <img src="assets/spellbook_os.png" width="120" alt="Spellbook OS">
 
@@ -25,7 +25,7 @@ Configuração zsh modular e portável. 23 módulos de funções, 9 scripts Pyth
 | `functions/mec.zsh` | Menu FZF completo para projetos dbt/BigQuery (29 operações) |
 | `functions/git-contexto.zsh` | Identidade git automática por diretório |
 | `functions/conjurar.zsh` | Menu FZF global de ferramentas |
-| `functions/diagnostico.zsh` | Diagnóstico de ambiente e dependências |
+| `functions/diagnostico.zsh` | Dossiê completo de projeto — git, árvore, conteúdo, imagens, PDFs, planilhas com senha |
 | `functions/sync.zsh` | Sincronização de repositórios com backup |
 | `functions/controle-de-bordo.zsh` | Gestão de projetos e tarefas |
 | `functions/projeto.zsh` | Criação e gestão de projetos |
@@ -46,7 +46,7 @@ Configuração zsh modular e portável. 23 módulos de funções, 9 scripts Pyth
 #### Bootstrap completo (nova máquina)
 
 ```bash
-git clone https://github.com/AndreBFarias/spellbook-OS ~/Desenvolvimento/spellbook-OS
+git clone https://github.com/[REDACTED]/spellbook-OS ~/Desenvolvimento/spellbook-OS
 bash ~/Desenvolvimento/spellbook-OS/install.sh
 ```
 
@@ -73,9 +73,12 @@ zsh  git  fzf  jq  pv  rsync  tree  python3  pip3  whiptail
 **Python (via requirements.txt):**
 
 ```
-pandas >= 2.0
+pandas >= 3.0
 openpyxl >= 3.1
 tabulate >= 0.9
+pyarrow >= 14.0
+pymupdf >= 1.23
+msoffcrypto-tool >= 5.0
 ```
 
 ---
@@ -87,7 +90,7 @@ tabulate >= 0.9
 | `mec-dbt-results.py` | Parser de `run_results.json` do dbt — exibe resultado colorido no terminal |
 | `mec-migrar-censo.py` | Migração semi-automatizada de tabelas INEP no BigQuery (scan + apply) |
 | `universal-sanitizer.py` | Detecta rastros de IA em arquivos staged antes do commit |
-| `analisador-dados.py` | Analisa CSV/Excel e gera relatório de qualidade de dados |
+| `analisador-dados.py` | Analisa CSV, Excel, JSON, Parquet, PDF e imagens — gera markdown compatível com GitHub e Obsidian |
 
 Uso: `python3 ~/.config/zsh/scripts/<script>.py --help`
 
