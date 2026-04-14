@@ -163,7 +163,8 @@ __dossie_arquivos_avancado() {
     local nome_projeto=$(basename "$(pwd)")
     local analisador="${ZDOTDIR:-$HOME/.config/zsh}/scripts/analisador-dados.py"
     local failed_files_list=$(mktemp)
-    trap 'rm -f "$failed_files_list"' EXIT
+    local passwords_file=$(mktemp)
+    trap 'rm -f "$failed_files_list" "$passwords_file"' EXIT
 
     local find_cmd=(find .)
 
@@ -179,9 +180,7 @@ __dossie_arquivos_avancado() {
         -o -name "target" -o -name "build" -o -name "dist"
     \) -prune
     -o -type f -not \(
-        -name "*.png" -o -name "*.jpg" -o -name "*.jpeg"
-        -o -name "*.gif" -o -name "*.svg"
-        -o -name "*.mp3" -o -name "*.mp4" -o -name "*.avi" -o -name "*.mov"
+        -name "*.mp3" -o -name "*.mp4" -o -name "*.avi" -o -name "*.mov"
         -o -name "*.zip" -o -name "*.tar" -o -name "*.gz" -o -name "*.rar"
         -o -name "*.o" -o -name "*.so" -o -name "*.a"
         -o -name "*.exe" -o -name "*.dll"
@@ -263,10 +262,25 @@ __dossie_arquivos_avancado() {
         local exit_code=0
 
         case "$file" in
-            *.csv|*.xlsx|*.xls|*.parquet|*.json)
+            *.pdf|*.csv|*.xlsx|*.xls|*.parquet|*.json)
                 echo -e "\n<details><summary><code>$file</code></summary>\n"
                 if [ -f "$analisador" ]; then
-                    timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file"
+                    timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
+                    exit_code=$?
+                    if [ $exit_code -eq 125 ]; then
+                        echo "" >&2
+                        local new_senha
+                        print -n "  Senha para '${file:t}': " >&2
+                        read -rs new_senha < /dev/tty
+                        echo "" >&2
+                        echo "$new_senha" >> "$passwords_file"
+                        timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
+                        exit_code=$?
+                        if [ $exit_code -eq 125 ]; then
+                            echo -e "\n[SENHA INCORRETA] Nenhuma senha do pool abriu este arquivo."
+                            exit_code=0
+                        fi
+                    fi
                 else
                     echo "\`\`\`"
                     head -n "$max_linhas" "$file" 2>/dev/null
@@ -275,6 +289,13 @@ __dossie_arquivos_avancado() {
                         echo -e "\n... (truncado: ${max_linhas}/${data_lines} linhas)"
                     fi
                     echo "\`\`\`"
+                    exit_code=$?
+                fi
+                ;;
+            *.jpg|*.jpeg|*.png|*.gif|*.svg|*.webp|*.bmp|*.tiff|*.tif|*.heic|*.avif)
+                echo -e "\n<details><summary><code>$file</code> (IMAGEM)</summary>\n"
+                if [ -f "$analisador" ]; then
+                    timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
                 fi
                 exit_code=$?
                 ;;
@@ -323,11 +344,25 @@ __dossie_arquivos_avancado() {
             echo -e "\n<details open><summary><code>$file</code> (REPROCESSAMENTO)</summary>\n"
 
             if [ -f "$analisador" ]; then
-                timeout "$intensive_timeout" "$PYTHON_EXEC" "$analisador" "$file"
-            fi
-
-            if [ $? -eq 124 ]; then
-                echo -e "\n[IRRECUPERAVEL] Excedeu ${intensive_timeout}."
+                timeout "$intensive_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
+                local reprocess_code=$?
+                if [ $reprocess_code -eq 125 ]; then
+                    echo "" >&2
+                    local new_senha
+                    print -n "  Senha para '${file:t}': " >&2
+                    read -rs new_senha < /dev/tty
+                    echo "" >&2
+                    echo "$new_senha" >> "$passwords_file"
+                    timeout "$intensive_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
+                    reprocess_code=$?
+                    if [ $reprocess_code -eq 125 ]; then
+                        echo -e "\n[SENHA INCORRETA] Nenhuma senha do pool abriu este arquivo."
+                    elif [ $reprocess_code -eq 124 ]; then
+                        echo -e "\n[IRRECUPERAVEL] Excedeu ${intensive_timeout}."
+                    fi
+                elif [ $reprocess_code -eq 124 ]; then
+                    echo -e "\n[IRRECUPERAVEL] Excedeu ${intensive_timeout}."
+                fi
             fi
             echo -e "\n</details>"
         done < "$failed_files_list"

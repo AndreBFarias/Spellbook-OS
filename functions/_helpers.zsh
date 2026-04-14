@@ -134,6 +134,6 @@ __preparar_ambiente_python() {
         fi
     fi
     local PYTHON_EXEC="$VENV_PATH/bin/python"
-    __verificar_dependencias_python "$PYTHON_EXEC" "pandas" "openpyxl" "tabulate" "pyarrow" >&2 || return 1
+    __verificar_dependencias_python "$PYTHON_EXEC" "pandas" "openpyxl" "tabulate" "pyarrow" "pymupdf" "msoffcrypto-tool" >&2 || return 1
     echo "$PYTHON_EXEC"
 }
