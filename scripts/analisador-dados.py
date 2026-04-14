@@ -75,7 +75,7 @@ def summarize_pdf(file_path, passwords=None, max_lines=300):
         import fitz
     except ImportError:
         return (f"### PDF: `{file_path}`\n\n"
-                "[PyMuPDF nao instalado — instale com: pip install pymupdf]")
+                "[PyMuPDF não instalado — instale com: pip install pymupdf]")
 
     try:
         doc = fitz.open(file_path)
@@ -95,10 +95,10 @@ def summarize_pdf(file_path, passwords=None, max_lines=300):
     output = [f"### PDF: `{file_path}`\n"]
     meta = doc.metadata
     if meta.get('title'):
-        output.append(f"- **Titulo**: {meta['title']}")
+        output.append(f"- **Título**: {meta['title']}")
     if meta.get('author'):
         output.append(f"- **Autor**: {meta['author']}")
-    output.append(f"- **Paginas**: {doc.page_count}\n")
+    output.append(f"- **Páginas**: {doc.page_count}\n")
 
     lines_remaining = max_lines
     has_text = False
@@ -111,7 +111,7 @@ def summarize_pdf(file_path, passwords=None, max_lines=300):
         if not text:
             continue
         has_text = True
-        output.append(f"#### Pagina {i + 1}\n\n```")
+        output.append(f"#### Página {i + 1}\n\n```")
         page_lines = text.splitlines()
         if len(page_lines) > lines_remaining:
             output.append('\n'.join(page_lines[:lines_remaining]))
@@ -127,16 +127,6 @@ def summarize_pdf(file_path, passwords=None, max_lines=300):
 
     doc.close()
     return "\n".join(output)
-
-
-def is_xlsx_encrypted(file_path):
-    try:
-        import msoffcrypto
-        with open(file_path, 'rb') as f:
-            office_file = msoffcrypto.OfficeFile(f)
-            return office_file.is_encrypted()
-    except Exception:
-        return False
 
 
 def open_protected_xlsx(file_path, passwords):
@@ -160,17 +150,24 @@ def open_protected_xlsx(file_path, passwords):
 
 
 def summarize_xlsx(file_path, passwords=None):
-    file_obj = file_path
-
-    if is_xlsx_encrypted(file_path):
-        buf = open_protected_xlsx(file_path, passwords)
-        if buf is None:
-            sys.exit(125)
-        file_obj = buf
-
+    # Tentativa direta (sem senha)
+    xls = None
     try:
-        xls = pd.ExcelFile(file_obj)
+        xls = pd.ExcelFile(file_path)
     except Exception:
+        pass
+
+    # Se falhou, tentar descriptografar com cada senha do pool
+    if xls is None and passwords:
+        buf = open_protected_xlsx(file_path, passwords)
+        if buf is not None:
+            try:
+                xls = pd.ExcelFile(buf)
+            except Exception:
+                xls = None
+
+    # Sem sucesso: arquivo precisa de senha não disponível no pool
+    if xls is None:
         sys.exit(125)
 
     output = []
@@ -187,7 +184,7 @@ def summarize_xlsx(file_path, passwords=None):
 
 def summarize_json(file_path):
     output = []
-    output.append(f"### Analise JSON: `{file_path}`\n")
+    output.append(f"### Análise JSON: `{file_path}`\n")
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -210,7 +207,7 @@ def summarize_json(file_path):
             output.append(json.dumps(sample_dict, indent=2, ensure_ascii=False))
             output.append("\n```")
         else:
-            output.append("#### Conteudo\n")
+            output.append("#### Conteúdo\n")
             output.append(str(data))
 
     except Exception as e:
@@ -224,9 +221,9 @@ def summarize_dataframe(df, file_path, delimiter=None, sheet_name=None):
     file_type = "CSV/TXT" if file_path.lower().endswith(('.csv', '.txt')) else "Excel"
 
     if sheet_name:
-        output.append(f"### Analise: `{file_path}` | Aba: `{sheet_name}`\n")
+        output.append(f"### Análise: `{file_path}` | Aba: `{sheet_name}`\n")
     else:
-        output.append(f"### Analise de Dados: `{file_path}`\n")
+        output.append(f"### Análise de Dados: `{file_path}`\n")
 
     output.append(f"- **Tipo**: {file_type}")
     if delimiter:
@@ -236,7 +233,7 @@ def summarize_dataframe(df, file_path, delimiter=None, sheet_name=None):
     try:
         output.append(df.head(5).to_markdown(index=False))
     except ImportError:
-        output.append("AVISO: Biblioteca 'tabulate' nao encontrada. Exibindo em formato simples.\n")
+        output.append("AVISO: Biblioteca 'tabulate' não encontrada. Exibindo em formato simples.\n")
         output.append(df.head(5).to_string())
     output.append("\n")
 
@@ -306,7 +303,7 @@ def main():
     except SystemExit:
         raise
     except Exception as e:
-        print(f"### Analise de Dados: `{file_path}`\n")
+        print(f"### Análise de Dados: `{file_path}`\n")
         print(f"**STATUS**: FALHA NA LEITURA ESTRUTURADA\n")
         print("```")
         print(f"Erro: {e}")

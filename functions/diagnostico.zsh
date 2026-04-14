@@ -50,13 +50,13 @@ diagnostico_projeto() {
     __header "DIAGNOSTICO: $nome_projeto" "$D_PURPLE"
     __item "Profundidade" "$depth_label" "$D_COMMENT" "$D_CYAN"
     __item "Max linhas" "$max_linhas" "$D_COMMENT" "$D_CYAN"
-    __item "Saida" "$output_file" "$D_COMMENT" "$D_GREEN"
+    __item "Saída" "$output_file" "$D_COMMENT" "$D_GREEN"
     echo ""
 
     __dossie_arquivos_avancado "$profundidade" "$PYTHON_EXEC" "$max_linhas" > "$output_file"
 
     local output_size=$(du -h "$output_file" | cut -f1)
-    __ok "Dossie concluido: $output_file ($output_size)"
+    __ok "Dossiê concluído: $output_file ($output_size)"
     echo ""
 
     local reply
@@ -69,39 +69,39 @@ diagnostico_projeto() {
 
 __dossie_capturar_ambiente() {
     local PYTHON_EXEC="$1"
-    echo "Versao do Python:"
+    echo "Versão do Python:"
     if command -v "$PYTHON_EXEC" &>/dev/null; then
         "$PYTHON_EXEC" --version
         echo "  Caminho: $(which "$PYTHON_EXEC")"
     else
-        echo "  Nao encontrado."
+        echo "  Não encontrado."
     fi
 
-    echo "\nVersao do PIP:"
+    echo "\nVersão do PIP:"
     if command -v "$PYTHON_EXEC" &>/dev/null; then
         "$PYTHON_EXEC" -m pip --version
     else
-        echo "  Nao encontrado."
+        echo "  Não encontrado."
     fi
 
     echo "\nBibliotecas Instaladas (pip list):"
     if command -v "$PYTHON_EXEC" &>/dev/null; then
         "$PYTHON_EXEC" -m pip list
     else
-        echo "  Nao foi possivel listar."
+        echo "  Não foi possível listar."
     fi
 }
 
 __git_diagnostico() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        echo "Nao e um repositorio Git."
+        echo "Não é um repositório Git."
         return 1
     fi
     echo "Remotos:"
     git remote -v
     echo "\nBranch Atual:"
     git branch --show-current
-    echo "\nUltimos 5 Commits:"
+    echo "\nÚltimos 5 Commits:"
     git log --oneline --graph --decorate -n 5
     echo "\nStatus:"
     git status -s
@@ -124,8 +124,8 @@ __dossie_mostrar_progresso() {
         "$etapa" "$percent" "$current" "$total" "${arquivo:0:40}" >&2
 }
 
-# Exibe conteudo de um arquivo texto com limite de linhas
-# .log mostra tail (ultimas linhas mais relevantes), demais mostra head
+# Exibe conteúdo de um arquivo texto com limite de linhas
+# .log mostra tail (últimas linhas mais relevantes), demais mostra head
 __dossie_exibir_texto() {
     local arquivo="$1"
     local limite="$2"
@@ -144,7 +144,7 @@ __dossie_exibir_texto() {
     if [ "$total_linhas" -le "$limite" ]; then
         cat "$arquivo" 2>/dev/null
     elif [[ "$arquivo" == *.log ]]; then
-        echo "... (mostrando ultimas ${limite} de ${total_linhas} linhas)"
+        echo "... (mostrando últimas ${limite} de ${total_linhas} linhas)"
         echo ""
         tail -n "$limite" "$arquivo" 2>/dev/null
     else
@@ -194,14 +194,22 @@ __dossie_arquivos_avancado() {
         return 0
     fi
 
-    echo "--- SUMARIO DO PROJETO: ${nome_projeto} ---"
-    echo "Gerado em: $(date)"
-    echo "Arquivos: ${total_files} | Max linhas/arquivo: ${max_linhas}"
+    echo "# Diagnóstico — ${nome_projeto}"
+    echo ""
+    echo "**Gerado em:** $(date) · **Arquivos:** ${total_files} · **Max linhas/arquivo:** ${max_linhas}"
+    echo ""
+    echo "---"
 
     # Verificar e limpar emojis no projeto
     local emoji_guardian="${BORDO_DIR:-$HOME/Controle de Bordo}/.sistema/scripts/emoji_guardian.py"
     if [[ -f "$emoji_guardian" ]]; then
-        echo -e "\n<details><summary><strong>VERIFICACAO DE EMOJIS</strong></summary>\n\n\`\`\`"
+        echo ""
+        echo "## Verificação de Emojis"
+        echo ""
+        echo "<details>"
+        echo "<summary>Resultado da verificação automática</summary>"
+        echo ""
+        echo '```'
         local emoji_output=$(python3 "$emoji_guardian" check . 2>&1)
         local emoji_count
         emoji_count=$(echo "$emoji_output" | grep -c "ARQUIVO") || emoji_count=0
@@ -213,57 +221,118 @@ __dossie_arquivos_avancado() {
         else
             echo "[OK] Nenhum emoji encontrado"
         fi
-        echo -e "\n\`\`\`\n</details>"
+        echo '```'
+        echo ""
+        echo "</details>"
+        echo ""
+        echo "---"
     fi
 
-    echo -e "\n<details><summary><strong>AMBIENTE</strong></summary>\n\n\`\`\`"
+    echo ""
+    echo "## Ambiente Python"
+    echo ""
+    echo "<details>"
+    echo "<summary>Dependências e versões</summary>"
+    echo ""
+    echo '```'
     __dossie_capturar_ambiente "$PYTHON_EXEC"
-    echo -e "\n\`\`\`\n</details>"
+    echo '```'
+    echo ""
+    echo "</details>"
+    echo ""
+    echo "---"
 
-    echo -e "\n<details><summary><strong>DIAGNOSTICO GIT</strong></summary>\n\n\`\`\`"
+    echo ""
+    echo "## Git"
+    echo ""
+    echo "<details>"
+    echo "<summary>Status do repositório</summary>"
+    echo ""
+    echo '```'
     __git_diagnostico
-    echo -e "\n\`\`\`\n</details>"
+    echo '```'
+    echo ""
+    echo "</details>"
+    echo ""
+    echo "---"
 
     local ignore_pattern=".git|venv|.venv|__pycache__|node_modules|*site-packages*|.cache|target|build|dist"
-    local depth_label="ILIMITADA"
+    local depth_label="ilimitada"
     [ "$max_depth" -ne 0 ] && depth_label="$max_depth"
 
-    echo -e "\n<details><summary><strong>ESTRUTURA (PROF. ${depth_label})</strong></summary>\n\n\`\`\`"
+    echo ""
+    echo "## Estrutura (profundidade: ${depth_label})"
+    echo ""
+    echo '```'
     local tree_cmd=(command tree -I "$ignore_pattern")
     [ "$max_depth" -ne 0 ] && tree_cmd+=(-L "$max_depth")
     "${tree_cmd[@]}"
-    echo -e "\n\`\`\`\n</details>"
+    echo '```'
+    echo ""
+    echo "---"
 
     if [ -f "README.md" ]; then
+        echo ""
+        echo "## README"
+        echo ""
         if [ -s "README.md" ]; then
-            echo -e "\n<details><summary><strong>README.MD</strong></summary>\n\n"
             head -n "$max_linhas" README.md
             local readme_lines=$(wc -l < README.md | sed 's/ //g')
             if [ "$readme_lines" -gt "$max_linhas" ]; then
-                echo -e "\n... (truncado: ${max_linhas}/${readme_lines} linhas)"
+                echo ""
+                echo "... (truncado: ${max_linhas}/${readme_lines} linhas)"
             fi
-            echo -e "\n</details>"
         else
-            echo -e "\n<details><summary><strong>README.MD</strong></summary>\n\n[ARQUIVO VAZIO]\n</details>"
+            echo "*Arquivo vazio.*"
         fi
+        echo ""
+        echo "---"
     fi
 
-    echo -e "\n\n--- CONTEUDO DOS ARQUIVOS ---\n"
+    echo ""
+    echo "## Conteúdo dos Arquivos"
+    echo ""
+    echo "> ${total_files} arquivos mapeados"
+    echo ""
 
     echo "" >&2
-    echo -e "  \033[38;2;189;147;249mETAPA 1/3:\033[0m Rastreio Rapido ($total_files arquivos, max ${max_linhas} linhas/arquivo)" >&2
+    echo -e "  \033[38;2;189;147;249mETAPA 1/3:\033[0m Rastreio Rápido ($total_files arquivos, max ${max_linhas} linhas/arquivo)" >&2
     local current_file=0
-    local total_linhas_output=0
 
     while read -r file; do
         ((current_file++))
-        __dossie_mostrar_progresso $current_file $total_files "Rastreio Rapido" "$file"
+        __dossie_mostrar_progresso $current_file $total_files "Rastreio Rápido" "$file"
 
         local exit_code=0
+        local tipo
+
+        case "$file" in
+            *.pdf)   tipo="PDF"    ;;
+            *.csv)   tipo="CSV"    ;;
+            *.xlsx)  tipo="Excel"  ;;
+            *.xls)   tipo="Excel"  ;;
+            *.parquet) tipo="Parquet" ;;
+            *.json)  tipo="JSON"   ;;
+            *.jpg|*.jpeg|*.png|*.gif|*.svg|*.webp|*.bmp|*.tiff|*.tif|*.heic|*.avif)
+                     tipo="Imagem" ;;
+            *.md)    tipo="Markdown" ;;
+            *.py)    tipo="Python" ;;
+            *.sh|*.zsh) tipo="Script" ;;
+            *.sql)   tipo="SQL"    ;;
+            *.yaml|*.yml) tipo="YAML" ;;
+            *.toml)  tipo="TOML"   ;;
+            *.txt)   tipo="Texto"  ;;
+            *.log)   tipo="Log"    ;;
+            *.env)   tipo="Env"    ;;
+            *)       tipo="Arquivo" ;;
+        esac
 
         case "$file" in
             *.pdf|*.csv|*.xlsx|*.xls|*.parquet|*.json)
-                echo -e "\n<details><summary><code>$file</code></summary>\n"
+                echo ""
+                echo "<details>"
+                echo "<summary><b>[${tipo}]</b> <code>${file}</code></summary>"
+                echo ""
                 if [ -f "$analisador" ]; then
                     timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
                     exit_code=$?
@@ -277,61 +346,77 @@ __dossie_arquivos_avancado() {
                         timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
                         exit_code=$?
                         if [ $exit_code -eq 125 ]; then
-                            echo -e "\n[SENHA INCORRETA] Nenhuma senha do pool abriu este arquivo."
+                            echo ""
+                            echo "[SENHA INCORRETA] Nenhuma senha do pool abriu este arquivo."
                             exit_code=0
                         fi
                     fi
                 else
-                    echo "\`\`\`"
+                    echo '```'
                     head -n "$max_linhas" "$file" 2>/dev/null
                     local data_lines=$(wc -l < "$file" 2>/dev/null | sed 's/ //g')
                     if [ "$data_lines" -gt "$max_linhas" ]; then
-                        echo -e "\n... (truncado: ${max_linhas}/${data_lines} linhas)"
+                        echo ""
+                        echo "... (truncado: ${max_linhas}/${data_lines} linhas)"
                     fi
-                    echo "\`\`\`"
+                    echo '```'
                     exit_code=$?
                 fi
                 ;;
             *.jpg|*.jpeg|*.png|*.gif|*.svg|*.webp|*.bmp|*.tiff|*.tif|*.heic|*.avif)
-                echo -e "\n<details><summary><code>$file</code> (IMAGEM)</summary>\n"
+                echo ""
+                echo "<details>"
+                echo "<summary><b>[${tipo}]</b> <code>${file}</code></summary>"
+                echo ""
                 if [ -f "$analisador" ]; then
                     timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
                 fi
                 exit_code=$?
                 ;;
             *.md|*.txt|*.sh|*.py|*.zsh|*.toml|*.yaml|*.yml|*.ini|*.cfg|*.env|*.sql|*.log|*.gitignore|*.rst|*.conf)
-                echo -e "\n<details><summary><code>$file</code></summary>\n\n\`\`\`"
+                echo ""
+                echo "<details>"
+                echo "<summary><b>[${tipo}]</b> <code>${file}</code></summary>"
+                echo ""
+                echo '```'
                 __dossie_exibir_texto "$file" "$max_linhas"
                 exit_code=$?
-                echo -e "\n\`\`\`"
+                echo '```'
                 ;;
             *)
-                echo -e "\n<details><summary><code>$file</code></summary>\n\n\`\`\`"
+                echo ""
+                echo "<details>"
+                echo "<summary><b>[${tipo}]</b> <code>${file}</code></summary>"
+                echo ""
+                echo '```'
                 if ! [ -s "$file" ]; then
                     echo "[ARQUIVO VAZIO]"
                 elif grep -Iq . "$file"; then
                     head -n "$max_linhas" "$file"
                     local unk_lines=$(wc -l < "$file" 2>/dev/null | sed 's/ //g')
                     if [ "$unk_lines" -gt "$max_linhas" ]; then
-                        echo -e "\n... (truncado: ${max_linhas}/${unk_lines} linhas)"
+                        echo ""
+                        echo "... (truncado: ${max_linhas}/${unk_lines} linhas)"
                     fi
                 else
-                    echo "[ARQUIVO BINARIO]"
+                    echo "[ARQUIVO BINÁRIO]"
                 fi
                 exit_code=$?
-                echo -e "\n\`\`\`"
+                echo '```'
                 ;;
         esac
 
         if [ $exit_code -eq 124 ]; then
-            echo -e "\n[TIMEOUT] Analise rapida excedeu ${fast_timeout}."
+            echo ""
+            echo "[TIMEOUT] Análise rápida excedeu ${fast_timeout}."
             echo "$file" >> "$failed_files_list"
         fi
-        echo -e "\n</details>"
+        echo ""
+        echo "</details>"
     done <<< "$all_files"
 
     echo "" >&2
-    echo -e "  \033[38;2;80;250;123m[OK]\033[0m Etapa 1 concluida." >&2
+    echo -e "  \033[38;2;80;250;123m[OK]\033[0m Etapa 1 concluída." >&2
 
     if [ -s "$failed_files_list" ]; then
         local failed_count=$(wc -l < "$failed_files_list" | sed 's/ //g')
@@ -341,7 +426,11 @@ __dossie_arquivos_avancado() {
         while read -r file; do
             ((current_file++))
             __dossie_mostrar_progresso $current_file $failed_count "Reprocessamento" "$file"
-            echo -e "\n<details open><summary><code>$file</code> (REPROCESSAMENTO)</summary>\n"
+
+            echo ""
+            echo "<details open>"
+            echo "<summary><b>[Reprocessamento]</b> <code>${file}</code></summary>"
+            echo ""
 
             if [ -f "$analisador" ]; then
                 timeout "$intensive_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
@@ -356,24 +445,28 @@ __dossie_arquivos_avancado() {
                     timeout "$intensive_timeout" "$PYTHON_EXEC" "$analisador" "$file" --passwords-file "$passwords_file"
                     reprocess_code=$?
                     if [ $reprocess_code -eq 125 ]; then
-                        echo -e "\n[SENHA INCORRETA] Nenhuma senha do pool abriu este arquivo."
+                        echo ""
+                        echo "[SENHA INCORRETA] Nenhuma senha do pool abriu este arquivo."
                     elif [ $reprocess_code -eq 124 ]; then
-                        echo -e "\n[IRRECUPERAVEL] Excedeu ${intensive_timeout}."
+                        echo ""
+                        echo "[IRRECUPERÁVEL] Excedeu ${intensive_timeout}."
                     fi
                 elif [ $reprocess_code -eq 124 ]; then
-                    echo -e "\n[IRRECUPERAVEL] Excedeu ${intensive_timeout}."
+                    echo ""
+                    echo "[IRRECUPERÁVEL] Excedeu ${intensive_timeout}."
                 fi
             fi
-            echo -e "\n</details>"
+            echo ""
+            echo "</details>"
         done < "$failed_files_list"
 
         echo "" >&2
-        echo -e "  \033[38;2;80;250;123m[OK]\033[0m Etapa 2 concluida." >&2
+        echo -e "  \033[38;2;80;250;123m[OK]\033[0m Etapa 2 concluída." >&2
     else
-        echo -e "  \033[38;2;98;114;164mETAPA 2/3:\033[0m Nenhum reprocessamento necessario." >&2
+        echo -e "  \033[38;2;98;114;164mETAPA 2/3:\033[0m Nenhum reprocessamento necessário." >&2
     fi
 
-    echo -e "  \033[38;2;98;114;164mETAPA 3/3:\033[0m Finalizando dossie..." >&2
+    echo -e "  \033[38;2;98;114;164mETAPA 3/3:\033[0m Finalizando dossiê..." >&2
 }
 
 # Proposito: Reconstruir arquivos a partir de um diagnostico .md
@@ -387,7 +480,7 @@ reconstruir_diagnostico() {
     fi
 
     if [ ! -f "$arquivo_entrada" ]; then
-        __err "'$arquivo_entrada' nao existe."
+        __err "'$arquivo_entrada' não existe."
         return 1
     fi
 
@@ -402,18 +495,18 @@ reconstruir_diagnostico() {
     echo ""
 
     if [ -d "$dir_destino" ]; then
-        __warn "Pasta ja existe. Arquivos podem ser sobrescritos."
+        __warn "Pasta já existe. Arquivos podem ser sobrescritos."
     else
         mkdir -p "$dir_destino"
     fi
 
     if [ ! -f "$script_helper" ]; then
-        __err "Script auxiliar nao encontrado: $script_helper"
+        __err "Script auxiliar não encontrado: $script_helper"
         return 1
     fi
 
     python3 "$script_helper" "$arquivo_entrada" "$dir_destino"
 
-    __ok "Reconstrucao concluida."
+    __ok "Reconstrução concluída."
     echo ""
 }
