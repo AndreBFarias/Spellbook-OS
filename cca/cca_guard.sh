@@ -93,12 +93,10 @@ check_context_size() {
 }
 
 warm_sudo() {
-    # Autentica sudo para que o Claude Code possa rodar scripts que precisam
-    # de permissões elevadas (install.sh, apt, etc.) sem travar no prompt.
-    # A senha fica no cache do sudo (~15 min por padrão).
+    # Verifica se sudo está disponível sem senha.
+    # Configurado via /etc/sudoers.d/andrefarias (NOPASSWD).
     if ! sudo -n true 2>/dev/null; then
-        echo "[GUARD] Autenticando sudo para a sessão..."
-        sudo -v 2>/dev/null || echo "[GUARD] AVISO: sudo não autenticado — scripts com apt podem travar"
+        echo "[GUARD] AVISO: sudo não disponível — scripts com apt podem travar"
     fi
 }
 
