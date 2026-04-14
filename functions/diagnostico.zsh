@@ -58,6 +58,13 @@ diagnostico_projeto() {
     local output_size=$(du -h "$output_file" | cut -f1)
     __ok "Dossie concluido: $output_file ($output_size)"
     echo ""
+
+    local reply
+    read -k 1 "reply?  Abrir no Antigravity? (s/N) "
+    echo ""
+    if [[ "$reply" == "s" || "$reply" == "S" ]]; then
+        levitar .
+    fi
 }
 
 __dossie_capturar_ambiente() {
@@ -253,27 +260,32 @@ __dossie_arquivos_avancado() {
         ((current_file++))
         __dossie_mostrar_progresso $current_file $total_files "Rastreio Rapido" "$file"
 
-        echo -e "\n<details><summary><code>$file</code></summary>\n\n\`\`\`"
         local exit_code=0
 
         case "$file" in
             *.csv|*.xlsx|*.xls|*.parquet|*.json)
+                echo -e "\n<details><summary><code>$file</code></summary>\n"
                 if [ -f "$analisador" ]; then
                     timeout "$fast_timeout" "$PYTHON_EXEC" "$analisador" "$file"
                 else
+                    echo "\`\`\`"
                     head -n "$max_linhas" "$file" 2>/dev/null
                     local data_lines=$(wc -l < "$file" 2>/dev/null | sed 's/ //g')
                     if [ "$data_lines" -gt "$max_linhas" ]; then
                         echo -e "\n... (truncado: ${max_linhas}/${data_lines} linhas)"
                     fi
+                    echo "\`\`\`"
                 fi
                 exit_code=$?
                 ;;
             *.md|*.txt|*.sh|*.py|*.zsh|*.toml|*.yaml|*.yml|*.ini|*.cfg|*.env|*.sql|*.log|*.gitignore|*.rst|*.conf)
+                echo -e "\n<details><summary><code>$file</code></summary>\n\n\`\`\`"
                 __dossie_exibir_texto "$file" "$max_linhas"
                 exit_code=$?
+                echo -e "\n\`\`\`"
                 ;;
             *)
+                echo -e "\n<details><summary><code>$file</code></summary>\n\n\`\`\`"
                 if ! [ -s "$file" ]; then
                     echo "[ARQUIVO VAZIO]"
                 elif grep -Iq . "$file"; then
@@ -286,6 +298,7 @@ __dossie_arquivos_avancado() {
                     echo "[ARQUIVO BINARIO]"
                 fi
                 exit_code=$?
+                echo -e "\n\`\`\`"
                 ;;
         esac
 
@@ -293,7 +306,7 @@ __dossie_arquivos_avancado() {
             echo -e "\n[TIMEOUT] Analise rapida excedeu ${fast_timeout}."
             echo "$file" >> "$failed_files_list"
         fi
-        echo -e "\n\`\`\`\n</details>"
+        echo -e "\n</details>"
     done <<< "$all_files"
 
     echo "" >&2
@@ -307,7 +320,7 @@ __dossie_arquivos_avancado() {
         while read -r file; do
             ((current_file++))
             __dossie_mostrar_progresso $current_file $failed_count "Reprocessamento" "$file"
-            echo -e "\n<details open><summary><code>$file</code> (REPROCESSAMENTO)</summary>\n\n\`\`\`"
+            echo -e "\n<details open><summary><code>$file</code> (REPROCESSAMENTO)</summary>\n"
 
             if [ -f "$analisador" ]; then
                 timeout "$intensive_timeout" "$PYTHON_EXEC" "$analisador" "$file"
@@ -316,7 +329,7 @@ __dossie_arquivos_avancado() {
             if [ $? -eq 124 ]; then
                 echo -e "\n[IRRECUPERAVEL] Excedeu ${intensive_timeout}."
             fi
-            echo -e "\n\`\`\`\n</details>"
+            echo -e "\n</details>"
         done < "$failed_files_list"
 
         echo "" >&2
@@ -326,15 +339,6 @@ __dossie_arquivos_avancado() {
     fi
 
     echo -e "  \033[38;2;98;114;164mETAPA 3/3:\033[0m Finalizando dossie..." >&2
-
-    local output_total_linhas=$(wc -l < /dev/stdin 2>/dev/null || echo "?")
-
-    echo ""
-    read -k 1 "reply?  Abrir no Antigravity? (s/N) "
-    echo ""
-    if [[ "$reply" == "s" || "$reply" == "S" ]]; then
-        levitar .
-    fi
 }
 
 # Proposito: Reconstruir arquivos a partir de um diagnostico .md

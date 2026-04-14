@@ -17,7 +17,7 @@ def detect_delimiter(file_path):
     except Exception:
         for sep in [',', ';', '\t', '|']:
             try:
-                pd.read_csv(file_path, sep=sep, nrows=2, encoding='utf-8', errors='ignore')
+                pd.read_csv(file_path, sep=sep, nrows=2, encoding='utf-8', on_bad_lines='skip', encoding_errors='ignore')
                 return sep
             except Exception:
                 continue
@@ -121,7 +121,7 @@ def main():
 
         if file_path.lower().endswith(('.csv', '.txt')):
             delimiter = detect_delimiter(file_path)
-            df = pd.read_csv(file_path, sep=delimiter, nrows=1000, engine='python', encoding='utf-8', errors='ignore')
+            df = pd.read_csv(file_path, sep=delimiter, nrows=1000, encoding='utf-8', on_bad_lines='skip', encoding_errors='ignore')
             print(summarize_dataframe(df, file_path, delimiter))
 
 #2
