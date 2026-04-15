@@ -28,6 +28,7 @@ EXCLUDED_EXTENSIONS = {
     ".min.js", ".min.css", ".map",
     ".key", ".pem", ".cert", ".crt", ".p12",
     ".pt", ".onnx", ".safetensors", ".gguf",
+    ".html", ".htm", ".xml", ".metainfo.xml",
 }
 
 EXCLUDED_NAMES = {
@@ -81,7 +82,6 @@ SECRET_PATTERNS = [
 ]
 
 COAUTHOR_RE = re.compile(
-    r"^\s*(?:#\s*)?Co-Authored-By:.*$\n?",
     re.IGNORECASE | re.MULTILINE,
 )
 
