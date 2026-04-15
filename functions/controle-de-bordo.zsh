@@ -483,7 +483,7 @@ vsync_projetos() {
         echo -e "  ${D_CYAN}[SYNC]${D_RESET} $projeto_dir -> Projetos/$nome_vault"
         mkdir -p "$destino"
 
-        rsync -av --delete \
+        rsync -av --delete --delete-excluded \
             --exclude='.git/' \
             --exclude='node_modules/' \
             --exclude='__pycache__/' \
