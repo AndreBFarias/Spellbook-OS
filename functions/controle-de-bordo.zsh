@@ -489,6 +489,9 @@ vsync_projetos() {
             --exclude='__pycache__/' \
             --exclude='.venv/' \
             --exclude='venv/' \
+            --exclude='venv_*/' \
+            --exclude='.dev_venv/' \
+            --exclude='*_venv/' \
             --exclude='data/' \
             --exclude='.env' \
             --exclude='*.pyc' \
@@ -499,6 +502,8 @@ vsync_projetos() {
             --exclude='.pytest_cache/' \
             --exclude='.obsidian/' \
             --exclude='.mypy_cache/' \
+            --exclude='target/' \
+            --exclude='site-packages/' \
             --include='*/' \
             --include='*.md' \
             --include='*.yaml' \
