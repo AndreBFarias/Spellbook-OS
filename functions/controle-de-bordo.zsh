@@ -54,6 +54,7 @@ __cdb_get_autor() {
 # ============================================
 
 __cdb_mes_nome() {
+    setopt LOCAL_OPTIONS NO_KSH_ARRAYS
     local mes_num="$1"
     local meses=(
         "Janeiro" "Fevereiro" "Março" "Abril"
@@ -404,7 +405,23 @@ vinbox() {
         fi
     done
 
+    local count=${#arquivos[@]}
     echo ""
+    echo -e "  ${D_COMMENT}$count arquivo(s) no Inbox${D_RESET}"
+    if [[ -f "$SCRIPTS_DIR/inbox_processor.py" ]]; then
+        echo ""
+        echo -e "  ${D_CYAN}[p]${D_RESET} Processar com Inbox Inteligente"
+        echo -e "  ${D_CYAN}[d]${D_RESET} Dry-run (apenas sugestões)"
+        echo -e "  ${D_CYAN}[q]${D_RESET} Sair"
+        echo ""
+        read -k1 "resposta?  Opção: "
+        echo ""
+        case "$resposta" in
+            p) python3 "$SCRIPTS_DIR/inbox_processor.py" ;;
+            d) python3 "$SCRIPTS_DIR/inbox_processor.py" --dry-run ;;
+            *) return 0 ;;
+        esac
+    fi
 }
 
 # ============================================
@@ -466,14 +483,14 @@ vault_buscar() {
     echo ""
     echo -e "${D_PURPLE}Em títulos:${D_RESET}"
     local encontrou_titulo=0
-    find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/Arquivo/*" 2>/dev/null | while read f; do
+    while read f; do
         local nome=$(basename "$f" .md)
         if echo "$nome" | grep -qi "$query"; then
             echo -e "  ${D_COMMENT}|${D_RESET} ${D_FG}${nome}${D_RESET}"
             echo -e "  ${D_COMMENT}|  -> ${f}${D_RESET}"
             encontrou_titulo=1
         fi
-    done
+    done < <(find "$VAULT_DIR" -name "*.md" -not -path "*/\.*" -not -path "*/Arquivo/*" 2>/dev/null)
 
     echo ""
     echo -e "${D_PURPLE}Em conteúdo:${D_RESET}"
