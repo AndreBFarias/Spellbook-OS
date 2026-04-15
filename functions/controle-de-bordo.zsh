@@ -445,6 +445,80 @@ vmobile() {
 }
 
 # ============================================
+# SYNC DE DOCUMENTAÇÃO DOS PROJETOS
+# ============================================
+
+vsync_projetos() {
+    local DEV_DIR="$HOME/Desenvolvimento"
+    local PROJETOS_DIR="$VAULT_DIR/Projetos"
+    local LOG_FILE="$LOGS_DIR/sync_projetos_$(date +%Y%m%d).log"
+
+    local -A PROJETOS=(
+        ["protocolo-ouroboros"]="Protocolo Ouroboros"
+        ["Controle_de_Bordo_OS"]="Controle de Bordo OS"
+        ["Luna"]="Luna"
+        ["Spellbook-OS"]="Spellbook OS"
+        ["Detector-de-Doppelganger"]="Detector de Doppelganger"
+        ["Neurosonancy"]="Neurosonancy"
+        ["FogStripper-Removedor-Background"]="FogStripper"
+    )
+
+    __cdb_header "SYNC DOCUMENTAÇÃO DOS PROJETOS" "$D_CYAN"
+    echo -e "  ${D_COMMENT}Origem:${D_RESET} $DEV_DIR"
+    echo -e "  ${D_COMMENT}Destino:${D_RESET} $PROJETOS_DIR"
+    echo ""
+
+    local synced=0 skipped=0
+
+    for projeto_dir nome_vault in ${(kv)PROJETOS}; do
+        local origem="$DEV_DIR/$projeto_dir"
+        local destino="$PROJETOS_DIR/$nome_vault"
+
+        if [[ ! -d "$origem" ]]; then
+            echo -e "  ${D_YELLOW}[SKIP]${D_RESET} $projeto_dir não encontrado"
+            ((skipped++))
+            continue
+        fi
+
+        echo -e "  ${D_CYAN}[SYNC]${D_RESET} $projeto_dir -> Projetos/$nome_vault"
+        mkdir -p "$destino"
+
+        rsync -av --delete \
+            --exclude='.git/' \
+            --exclude='node_modules/' \
+            --exclude='__pycache__/' \
+            --exclude='.venv/' \
+            --exclude='venv/' \
+            --exclude='data/' \
+            --exclude='.env' \
+            --exclude='*.pyc' \
+            --exclude='*.egg-info/' \
+            --exclude='dist/' \
+            --exclude='build/' \
+            --exclude='.ruff_cache/' \
+            --exclude='.pytest_cache/' \
+            --exclude='.obsidian/' \
+            --exclude='.mypy_cache/' \
+            --include='*/' \
+            --include='*.md' \
+            --include='*.yaml' \
+            --include='*.yml' \
+            --include='*.toml' \
+            --exclude='*' \
+            "$origem/" "$destino/" >> "$LOG_FILE" 2>&1
+
+        ((synced++))
+    done
+
+    echo ""
+    echo -e "  ${D_GREEN}Sincronizados: $synced${D_RESET} | ${D_YELLOW}Ignorados: $skipped${D_RESET}"
+    echo -e "  ${D_COMMENT}Log: $LOG_FILE${D_RESET}"
+    __cdb_log "INFO" "vsync_projetos: $synced synced, $skipped skipped"
+}
+
+alias vsyncproj='vsync_projetos'
+
+# ============================================
 # LIMPEZA E TAMANHO
 # ============================================
 
@@ -743,4 +817,3 @@ vcheck_file() {
         return 1
     fi
 }
-
