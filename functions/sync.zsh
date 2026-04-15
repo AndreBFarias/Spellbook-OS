@@ -22,7 +22,7 @@ sincronizar_controle_de_bordo() {
     __verificar_dependencias "rsync" || return 1
 
     local base_dir="${DEV_DIR:-$HOME/Desenvolvimento}"
-    local bordo_dir="${BORDO_DIR:-$HOME/Controle de Bordo}"
+    local bordo_dir="${CONTROLE_BORDO_DIR:-$HOME/Controle de Bordo}"
 
     if [[ ! -d "$base_dir" ]]; then
         __err "Diretório de desenvolvimento não encontrado: $base_dir"
@@ -39,14 +39,13 @@ sincronizar_controle_de_bordo() {
     # Repos para ignorar
     local -a REPO_SKIP=(Spellbook-OS)
 
-    # Variáveis de tamanho (inicializadas antes do bloco condicional)
-    local vault_size=0 vault_size_mb=0 limit_mb=1024 warning_threshold=800
+    # Variáveis de tamanho (calculadas sempre para exibição correta)
+    local limit_mb=1024 warning_threshold=800
+    local vault_size=$(du -sb "$bordo_dir" 2>/dev/null | cut -f1)
+    local vault_size_mb=$((vault_size / 1024 / 1024))
 
-    # Verificar tamanho atual do vault
+    # Verificar limites de tamanho
     if (( check_size )) || (( ! dry_run )); then
-        vault_size=$(du -sb "$bordo_dir" 2>/dev/null | cut -f1)
-        vault_size_mb=$((vault_size / 1024 / 1024))
-
         if (( vault_size_mb > limit_mb )); then
             __err "Vault excede 1GB ($vault_size_mb MB). Limpe antes de sincronizar."
             echo "  Dica: Limpe a pasta Arquivo/ ou remova arquivos desnecessários."
@@ -71,7 +70,8 @@ sincronizar_controle_de_bordo() {
         echo "  ${D_GREEN}Caches Python removidos${D_RESET}"
 
         # Limpar arquivos vazios no Diário
-        find "$bordo_dir/Diario/2026" -type f -size 0 -delete 2>/dev/null
+        local ano_atual=$(date +%Y)
+        find "$bordo_dir/Diario/$ano_atual" -type f -size 0 -delete 2>/dev/null
         echo "  ${D_GREEN}Arquivos vazios removidos${D_RESET}"
 
         # Limpar backups antigos
