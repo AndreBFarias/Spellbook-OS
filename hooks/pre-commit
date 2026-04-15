@@ -181,7 +181,7 @@ fi
 WARNINGS=0
 
 # [7] Acentuacao PT-BR em .md e .py (AVISO - inspirado ADR-17 Luna)
-ACCENT_PATTERNS='[^a-zA-Z](funcao|validacao|descricao|comunicacao|configuracao|informacao|aplicacao|execucao|operacao|conexao|excecao|solucao|interacao|producao|instalacao|documentacao|integracao|autenticacao|atualizacao|migracao|padronizacao)[^a-zA-Z]'
+ACCENT_PATTERNS='(^|[^a-zA-Zà-ú])(funcao|validacao|descricao|comunicacao|configuracao|informacao|aplicacao|execucao|operacao|conexao|excecao|solucao|interacao|producao|instalacao|documentacao|integracao|autenticacao|atualizacao|migracao|padronizacao)($|[^a-zA-Zà-ú])'
 ACCENT_COUNT=0
 for file in $FILES; do
     case "$file" in
@@ -205,7 +205,7 @@ HARDCODED_COUNT=0
 for file in $FILES; do
     case "$file" in
         *.py|*.sh|*.bash|*.zsh|*.js|*.ts)
-            if [ -f "$file" ] && grep -qE '(/home/[a-z]+/|/Users/[a-z]+/)' "$file" 2>/dev/null; then
+            if [ -f "$file" ] && grep -qE '(/home/[a-zA-Z0-9_-]+/|/Users/[a-zA-Z0-9_-]+/)' "$file" 2>/dev/null; then
                 HARDCODED_COUNT=$((HARDCODED_COUNT + 1))
                 if [ $HARDCODED_COUNT -le 3 ]; then
                     echo "  [aviso] Path absoluto hardcoded: $file"
