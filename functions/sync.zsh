@@ -1,18 +1,23 @@
 #!/bin/zsh
 
 sincronizar_controle_de_bordo() {
-    local auto=0 dry_run=0 show_stats=0 docs_only=0 cleanup=0 check_size=0
+    local auto=0 dry_run=0 show_stats=0 cleanup=0 check_size=0
     for arg in "$@"; do
         case "$arg" in
             --auto) auto=1 ;;
             --dry-run) dry_run=1 ;;
             --stats) show_stats=1 ;;
-            --docs-only) docs_only=1 ;;
             --cleanup) cleanup=1 ;;
             --check-size) check_size=1 ;;
             *) __err "Flag desconhecida: $arg"; return 1 ;;
         esac
     done
+
+    # Modo dry-run ativo por padrão quando chamado sem flags de execução
+    if (( ! auto )) && (( ! dry_run )); then
+        dry_run=1
+        echo -e "  ${D_YELLOW}Modo dry-run ativo por padrão. Use --auto para executar.${D_RESET}"
+    fi
 
     __verificar_dependencias "rsync" || return 1
 
@@ -24,26 +29,17 @@ sincronizar_controle_de_bordo() {
         return 1
     fi
 
-    # Mapeamento repo -> destino no vault
+    # Mapeamento repo -> destino no vault (apenas documentação)
     typeset -A REPO_MAP=(
-        [Luna]="Projetos/Luna/codigo"
-        [FogStripper-Removedor-Background]="Projetos/FogStripper/codigo"
-        [Gaslighting-Is-All-You-Need]="Projetos/Gaslighting/codigo"
-        [QR-Code-Void-Generator]="Projetos/QR_Code/codigo"
-        [stilingue-energisa-etl]="Trabalho/Energisa/codigo/stilingue-energisa-etl"
-        [stilingue-social-listening-etl]="Trabalho/Energisa/codigo/stilingue-social-listening-etl"
-        [dbt-date-harvester]="Trabalho/MEC/codigo/dbt-date-harvester"
-    )
-
-    # Repos com tratamento especial (formato: subdir:origem:destino)
-    typeset -A REPO_SPECIAL=(
-        [MEC]="subdir:pipelines-main:Trabalho/MEC/pipelines-main"
+        [Luna]="Projetos/Luna"
+        [Financas]="Pessoal/Casal/Financeiro/Código"
+        [Controle_de_Bordo_OS]="Projetos/Controle de Bordo OS"
     )
 
     # Repos para ignorar
     local -a REPO_SKIP=(Spellbook-OS)
 
-    # Variaveis de tamanho (inicializadas antes do bloco condicional)
+    # Variáveis de tamanho (inicializadas antes do bloco condicional)
     local vault_size=0 vault_size_mb=0 limit_mb=1024 warning_threshold=800
 
     # Verificar tamanho atual do vault
@@ -53,7 +49,7 @@ sincronizar_controle_de_bordo() {
 
         if (( vault_size_mb > limit_mb )); then
             __err "Vault excede 1GB ($vault_size_mb MB). Limpe antes de sincronizar."
-            echo "  Dica: Use --docs-only ou limpe a pasta Arquivo/"
+            echo "  Dica: Limpe a pasta Arquivo/ ou remova arquivos desnecessários."
             return 1
         elif (( vault_size_mb > warning_threshold )); then
             __warn "Vault próximo do limite: $vault_size_mb MB / $limit_mb MB"
@@ -111,17 +107,6 @@ sincronizar_controle_de_bordo() {
     done
     rsync_filters+=(--exclude='*.egg-info/')
 
-    # Se --docs-only, excluir código fonte
-    if (( docs_only )); then
-        rsync_filters+=(--exclude='src/')
-        rsync_filters+=(--exclude='lib/')
-        rsync_filters+=(--exclude='bin/')
-        rsync_filters+=(--exclude='obj/')
-        rsync_filters+=(--exclude='*.py' --exclude='*.js' --exclude='*.ts')
-        rsync_filters+=(--exclude='*.rs' --exclude='*.go' --exclude='*.java')
-        rsync_filters+=(--exclude='*.c' --exclude='*.cpp' --exclude='*.h')
-    fi
-
     # Exclusões de arquivos sensíveis
     rsync_filters+=(
         --exclude='.env'
@@ -143,19 +128,11 @@ sincronizar_controle_de_bordo() {
 
     rsync_filters+=(--include='*/')
 
-    # Extensoes permitidas
+    # Extensões permitidas (apenas documentação)
     local -a include_exts=(
         md txt rst
-        py sh zsh bash
-        js ts jsx tsx
-        json yaml yml toml
+        yaml yml toml
         ini cfg conf
-        sql r R
-        rs go java
-        html css scss
-        xml csv
-        tf hcl
-        ipynb
     )
     for ext in "${include_exts[@]}"; do
         rsync_filters+=(--include="*.$ext")
@@ -165,17 +142,11 @@ sincronizar_controle_de_bordo() {
     rsync_filters+=(
         --include='Dockerfile'
         --include='Makefile'
-        --include='Cargo.toml'
-        --include='Cargo.lock'
-        --include='package.json'
-        --include='package-lock.json'
         --include='requirements*.txt'
-        --include='setup.py'
         --include='pyproject.toml'
         --include='LICENSE'
         --include='CHANGELOG*'
         --include='README*'
-        --include='CLAUDE*'
         --include='ROADMAP*'
         --include='CONTRIBUTING*'
         --include='SECURITY*'
@@ -188,14 +159,11 @@ sincronizar_controle_de_bordo() {
 
     __header "SINCRONIZAR CONTROLE DE BORDO" "$D_CYAN"
 
-    # Mostrar info do vault
+    # Mostrar informações do vault
     local current_size=$(du -sh "$bordo_dir" 2>/dev/null | cut -f1)
     echo -e "  ${D_COMMENT}Vault atual: ${D_FG}$current_size${D_RESET}"
     echo -e "  ${D_COMMENT}Origem:  ${D_FG}$base_dir${D_RESET}"
-
-    if (( docs_only )); then
-        echo -e "  ${D_YELLOW}Modo: Apenas documentação (sem código)${D_RESET}"
-    fi
+    echo -e "  ${D_YELLOW}Modo: Apenas documentação${D_RESET}"
     echo ""
     echo -e "  ${D_COMMENT}Rastreando...${D_RESET}"
 
@@ -204,7 +172,7 @@ sincronizar_controle_de_bordo() {
         local repo_name="$1"
         local repo_path="$base_dir/$repo_name"
 
-        # Ignorar se nao e diretorio
+        # Ignorar se não é diretório
         [[ ! -d "$repo_path" ]] && return 1
 
         # Ignorar repos em REPO_SKIP
@@ -214,22 +182,7 @@ sincronizar_controle_de_bordo() {
 
         local src dest
 
-        if [[ -n "${REPO_SPECIAL[$repo_name]}" ]]; then
-            local spec="${REPO_SPECIAL[$repo_name]}"
-            local type="${spec%%:*}"
-            local rest="${spec#*:}"
-
-            if [[ "$type" == "subdir" ]]; then
-                local subdir="${rest%%:*}"
-                local target="${rest#*:}"
-                src="$repo_path/$subdir"
-                dest="$bordo_dir/$target"
-
-                [[ ! -d "$src" ]] && return 1
-            else
-                return 1
-            fi
-        elif [[ -n "${REPO_MAP[$repo_name]}" ]]; then
+        if [[ -n "${REPO_MAP[$repo_name]}" ]]; then
             src="$repo_path"
             dest="$bordo_dir/${REPO_MAP[$repo_name]}"
         else
@@ -259,12 +212,10 @@ sincronizar_controle_de_bordo() {
 
     # Dry-run agregado: coletar preview de todos os repos
     local all_file_list=""
-    local -a sync_destinations=()
 
     for pair in "${sync_pairs[@]}"; do
         local src="${pair%%|*}"
         local dest="${pair#*|}"
-        sync_destinations+=("$dest")
 
         local repo_preview
         repo_preview=$(rsync "${rsync_base[@]}" --dry-run --out-format=$'%l\t%n' \
@@ -274,7 +225,7 @@ sincronizar_controle_de_bordo() {
         repo_files=$(echo "$repo_preview" | grep -P '^\d+\t' | grep -v '/$')
 
         if [[ -n "$repo_files" ]]; then
-            # Prefixar com nome legivel do destino relativo ao vault
+            # Prefixar com nome legível do destino relativo ao vault
             local rel_dest="${dest#$bordo_dir/}"
             while IFS=$'\t' read -r fsize fname; do
                 all_file_list+="${fsize}\t${rel_dest}/${fname}\n"
@@ -310,14 +261,13 @@ sincronizar_controle_de_bordo() {
         return 0
     fi
 
-    # Verificar se sincronizacao excederia o limite
+    # Verificar se sincronização excederia o limite
     local projected_size=$((vault_size + total_bytes))
     local projected_mb=$((projected_size / 1024 / 1024))
 
     if (( projected_mb > limit_mb )); then
         __err "Sincronização excederia 1GB (projeção: $projected_mb MB)"
         echo "  Arquivos pendentes: $file_count ($size_human)"
-        echo "  Dica: Use --docs-only para sincronizar apenas documentação"
         return 1
     fi
 
@@ -418,35 +368,8 @@ sincronizar_controle_de_bordo() {
     local final_size=$(du -sh "$bordo_dir" 2>/dev/null | cut -f1)
     echo -e "  ${D_COMMENT}Vault: $current_size -> $final_size${D_RESET}"
     echo ""
-
-    # Verificar e limpar emojis nos arquivos sincronizados
-    local emoji_guardian="$bordo_dir/.sistema/scripts/emoji_guardian.py"
-    if [[ -f "$emoji_guardian" ]]; then
-        echo -e "  ${D_COMMENT}Verificando emojis nos arquivos sincronizados...${D_RESET}"
-
-        local emoji_total=0
-        for dest in "${sync_destinations[@]}"; do
-            [[ ! -d "$dest" ]] && continue
-            local emoji_check
-            emoji_check=$(python3 "$emoji_guardian" check "$dest" 2>&1)
-            local count
-            count=$(echo "$emoji_check" | grep -c "ARQUIVO") || count=0
-            (( emoji_total += count ))
-
-            if [[ "$count" -gt 0 ]]; then
-                python3 "$emoji_guardian" clean "$dest" --apply > /dev/null 2>&1
-            fi
-        done
-
-        if [[ "$emoji_total" -gt 0 ]]; then
-            echo -e "  ${D_YELLOW}$emoji_total arquivo(s) com emojis limpo(s)${D_RESET}"
-        else
-            echo -e "  ${D_GREEN}Nenhum emoji encontrado${D_RESET}"
-        fi
-        echo ""
-    fi
 }
 
-# Alias para limpeza rapida
-alias limpar_vault='sincronizar_controle_de_bordo --cleanup --check-size'
-alias sync_docs='sincronizar_controle_de_bordo --docs-only --auto'
+alias sync_docs='sincronizar_controle_de_bordo --auto'
+
+# "A simplicidade e a sofisticacao suprema." -- Leonardo da Vinci
