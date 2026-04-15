@@ -57,8 +57,8 @@ fi
 echo "$MSG" > "$MSG_FILE"
 
 # Warning de formato (nao bloqueia)
-if ! echo "$SUBJECT" | grep -qE '^(feat|fix|refactor|docs|test|perf|chore):' 2>/dev/null; then
-    echo "  [aviso] Formato recomendado: tipo: descricao (feat, fix, refactor, docs, test, perf, chore)"
+if ! echo "$SUBJECT" | grep -qE '^(feat|fix|refactor|docs|test|perf|chore|style|ci|build|release|micro):' 2>/dev/null; then
+    echo "  [aviso] Formato recomendado: tipo: descricao (feat, fix, refactor, docs, test, perf, chore, style, ci, build, release)"
 fi
 
 # Relatorio

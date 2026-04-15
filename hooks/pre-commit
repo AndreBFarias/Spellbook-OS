@@ -176,6 +176,82 @@ if [[ "$HAS_FRAMEWORK" == false ]]; then
 
 fi
 
+# === VERIFICACOES UNIVERSAIS (avisos, rodam SEMPRE, mesmo com framework) ===
+
+WARNINGS=0
+
+# [7] Acentuacao PT-BR em .md e .py (AVISO - inspirado ADR-17 Luna)
+ACCENT_PATTERNS='[^a-zA-Z](funcao|validacao|descricao|comunicacao|configuracao|informacao|aplicacao|execucao|operacao|conexao|excecao|solucao|interacao|producao|instalacao|documentacao|integracao|autenticacao|atualizacao|migracao|padronizacao)[^a-zA-Z]'
+ACCENT_COUNT=0
+for file in $FILES; do
+    case "$file" in
+        *.md|*.py|*.txt|*.rst)
+            if [ -f "$file" ] && grep -qiE "$ACCENT_PATTERNS" "$file" 2>/dev/null; then
+                ACCENT_COUNT=$((ACCENT_COUNT + 1))
+                if [ $ACCENT_COUNT -le 3 ]; then
+                    echo "  [aviso] Possivel falta de acentuacao: $file"
+                fi
+            fi
+            ;;
+    esac
+done
+if [ $ACCENT_COUNT -gt 3 ]; then
+    echo "  [aviso] ... e mais $((ACCENT_COUNT - 3)) arquivo(s) com possivel falta de acentuacao"
+fi
+[ $ACCENT_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + ACCENT_COUNT))
+
+# [8] Hardcoded paths absolutos (AVISO)
+HARDCODED_COUNT=0
+for file in $FILES; do
+    case "$file" in
+        *.py|*.sh|*.bash|*.zsh|*.js|*.ts)
+            if [ -f "$file" ] && grep -qE '(/home/[a-z]+/|/Users/[a-z]+/)' "$file" 2>/dev/null; then
+                HARDCODED_COUNT=$((HARDCODED_COUNT + 1))
+                if [ $HARDCODED_COUNT -le 3 ]; then
+                    echo "  [aviso] Path absoluto hardcoded: $file"
+                fi
+            fi
+            ;;
+    esac
+done
+[ $HARDCODED_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + HARDCODED_COUNT))
+
+# [9] Debug statements: print() / console.log() (AVISO)
+DEBUG_COUNT=0
+for file in $FILES; do
+    case "$file" in
+        *.py)
+            if [ -f "$file" ] && grep -qE '^\s*print\(' "$file" 2>/dev/null; then
+                DEBUG_COUNT=$((DEBUG_COUNT + 1))
+                if [ $DEBUG_COUNT -le 3 ]; then
+                    echo "  [aviso] print() detectado: $file (usar logging)"
+                fi
+            fi
+            ;;
+        *.js|*.ts|*.jsx|*.tsx)
+            if [ -f "$file" ] && grep -qE '^\s*console\.(log|debug|info|warn)\(' "$file" 2>/dev/null; then
+                DEBUG_COUNT=$((DEBUG_COUNT + 1))
+                if [ $DEBUG_COUNT -le 3 ]; then
+                    echo "  [aviso] console.log detectado: $file"
+                fi
+            fi
+            ;;
+    esac
+done
+[ $DEBUG_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + DEBUG_COUNT))
+
+# [10] Arquivo grande >5MB staged (AVISO)
+for file in $STAGED; do
+    if [ -f "$file" ]; then
+        SIZE=$(stat --format="%s" "$file" 2>/dev/null || stat -f "%z" "$file" 2>/dev/null)
+        if [ -n "$SIZE" ] && [ "$SIZE" -gt 5242880 ] 2>/dev/null; then
+            SIZE_MB=$((SIZE / 1048576))
+            echo "  [aviso] Arquivo grande (${SIZE_MB}MB): $file"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    fi
+done
+
 # Chamar universal-sanitizer.py como camada adicional (se Python disponivel)
 if command -v python3 &>/dev/null; then
     SANITIZER="$HOME/.config/zsh/scripts/universal-sanitizer.py"
