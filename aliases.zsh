@@ -80,18 +80,29 @@ alias remover="sudo apt remove"
 # Proposito: Remover pacote e configs
 # Uso: expurgar <pacote>
 alias expurgar='sudo apt purge'
-# Proposito: Limpar cache de pacotes do apt
+# Proposito: Limpar cache de pacotes do apt e reconstruir caches de icones
 # Uso: limpar_cache
-alias limpar_cache='sudo apt clean'
+limpar_cache() {
+    sudo apt clean
+    echo "Cache APT limpo. Reconstruindo caches de icones..."
+    _reconstruir_caches_icones
+}
 # Proposito: Corrigir dependencias quebradas
 # Uso: corrigir_deps
 alias corrigir_deps='sudo apt -f install'
 # Proposito: Reconfigurar pacotes com falha
 # Uso: reparar_pacotes
 alias reparar_pacotes='sudo dpkg --configure -a'
-# Proposito: Atualizar tudo (apt + flatpak + limpeza)
+# Proposito: Atualizar tudo (apt + flatpak + limpeza + caches de icones)
 # Uso: atualizar_tudo
-alias atualizar_tudo='sudo apt update && sudo apt full-upgrade -y && flatpak update -y && sudo apt autoremove -y && sudo apt clean'
+atualizar_tudo() {
+    sudo apt update && sudo apt full-upgrade -y
+    flatpak update -y
+    flatpak repair --user 2>/dev/null
+    sudo apt autoremove -y && sudo apt clean
+    echo "Reconstruindo caches de icones..."
+    _reconstruir_caches_icones
+}
 # Proposito: Atualizar apenas flatpaks
 # Uso: flatpak_atualizar
 alias flatpak_atualizar='flatpak update -y'
