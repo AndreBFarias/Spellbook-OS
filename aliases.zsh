@@ -112,9 +112,9 @@ alias instalados_recente="grep ' install ' /var/log/apt/history.log | tail -n 20
 # Proposito: Top 20 maiores pacotes instalados
 # Uso: maiores_pacotes
 alias maiores_pacotes="dpkg-query -Wf '\${Installed-Size}\t\${Package}\n' | sort -rn | head -n 20"
-# Proposito: Atualizar cache de icones do desktop
+# Proposito: Reconstruir caches de icones e desktop database
 # Uso: atualizar_icones
-alias atualizar_icones='sudo update-desktop-database'
+alias atualizar_icones='_reconstruir_caches_icones'
 
 # -- Rede / Processos ---------------------------------------------------------
 
