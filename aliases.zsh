@@ -80,11 +80,13 @@ alias remover="sudo apt remove"
 # Proposito: Remover pacote e configs
 # Uso: expurgar <pacote>
 alias expurgar='sudo apt purge'
-# Proposito: Limpar cache de pacotes do apt e reconstruir caches de icones
+# Proposito: Atualizar sistema completo, limpar cache e reconstruir icones
 # Uso: limpar_cache
 limpar_cache() {
-    sudo apt clean
-    echo "Cache APT limpo. Reconstruindo caches de icones..."
+    sudo apt update && sudo apt full-upgrade -y
+    flatpak update -y
+    flatpak repair --user 2>/dev/null
+    sudo apt autoremove -y && sudo apt clean
     _reconstruir_caches_icones
 }
 # Proposito: Corrigir dependencias quebradas
