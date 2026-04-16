@@ -1,5 +1,43 @@
 #!/bin/zsh
 
+# Proposito: Reconstruir caches de icones de todos os temas e desktop database
+# Uso: _reconstruir_caches_icones (chamado por atualizar_tudo, limpar_cache, atualizar_icones)
+_reconstruir_caches_icones() {
+    __header "CACHES DE ICONES" "$D_CYAN"
+
+    sudo update-desktop-database 2>/dev/null
+    __ok "Desktop database atualizado"
+
+    local falhas=0
+    for tema_dir in /usr/share/icons/*/; do
+        [ -f "${tema_dir}index.theme" ] || continue
+        local tema=$(basename "$tema_dir")
+        if sudo gtk-update-icon-cache -f -q "$tema_dir" 2>/dev/null; then
+            echo -e "  ${D_GREEN}[OK]${D_RESET} $tema"
+        else
+            echo -e "  ${D_YELLOW}[!]${D_RESET}  $tema (cache invalido, pode haver arquivos corrompidos)"
+            ((falhas++))
+        fi
+    done
+
+    if [ -d "$HOME/.local/share/flatpak/exports/share/icons/hicolor" ]; then
+        if gtk-update-icon-cache -f -q "$HOME/.local/share/flatpak/exports/share/icons/hicolor/" 2>/dev/null; then
+            __ok "Flatpak (user)"
+        else
+            __warn "Flatpak (user) - falha no cache"
+            ((falhas++))
+        fi
+    fi
+
+    echo ""
+    if [ $falhas -eq 0 ]; then
+        __ok "Todos os caches reconstruidos"
+    else
+        __warn "$falhas tema(s) com problemas (verifique arquivos com nomes invalidos)"
+    fi
+    echo ""
+}
+
 # Proposito: Exibir contexto de usuario no prompt (SSH e usuarios nao-padrao)
 # Uso: prompt_context
 prompt_context() {
