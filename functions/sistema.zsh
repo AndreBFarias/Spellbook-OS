@@ -1,11 +1,12 @@
 #!/bin/zsh
 
-# Proposito: Reconstruir caches de icones de todos os temas e desktop database
+# Propósito: Reconstruir caches de ícones de todos os temas e desktop database
 # Uso: _reconstruir_caches_icones (chamado por atualizar_tudo, limpar_cache, atualizar_icones)
 _reconstruir_caches_icones() {
     __header "CACHES DE ICONES" "$D_CYAN"
 
     sudo update-desktop-database 2>/dev/null
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
     __ok "Desktop database atualizado"
 
     local falhas=0
@@ -29,11 +30,58 @@ _reconstruir_caches_icones() {
         fi
     fi
 
+    if [ -d /var/lib/flatpak/exports/share/icons/hicolor ]; then
+        if sudo gtk-update-icon-cache -f -q /var/lib/flatpak/exports/share/icons/hicolor/ 2>/dev/null; then
+            __ok "Flatpak (system)"
+        else
+            __warn "Flatpak (system) - falha no cache"
+            ((falhas++))
+        fi
+    fi
+
     echo ""
     if [ $falhas -eq 0 ]; then
         __ok "Todos os caches reconstruidos"
     else
         __warn "$falhas tema(s) com problemas (verifique arquivos com nomes invalidos)"
+    fi
+    echo ""
+}
+
+# Propósito: Reaplicar Icon= corretos em .desktop de Flatpaks com path absoluto quebrado
+# Uso: _fix_flatpak_icons (chamado após flatpak update/repair em limpar_cache e atualizar_tudo)
+# Contexto: alguns .desktop de Flatpaks vêm com Icon= apontando para ~/.icons/Dracula-Icones/
+#           scalable/ que nao existe. Esta funcao sobrescreve para nomes canonicos.
+_fix_flatpak_icons() {
+    local exports_dir="$HOME/.local/share/flatpak/exports/share/applications"
+    [ -d "$exports_dir" ] || return 0
+
+    __header "ICONES FLATPAK (.desktop)" "$D_CYAN"
+
+    local -A mapeamento=(
+        "com.visualstudio.code.desktop"                              "vscode"
+        "com.visualstudio.code-url-handler.desktop"                  "vscode"
+        "io.github.electronstudio.WeylusCommunityEdition.desktop"    "weylus"
+        "org.gnome.gitlab.somas.Apostrophe.desktop"                  "org.gnome.gitlab.somas.Apostrophe"
+    )
+
+    local ajustados=0
+    for arquivo in ${(k)mapeamento}; do
+        local caminho="$exports_dir/$arquivo"
+        [ -f "$caminho" ] || continue
+        local icon_novo="${mapeamento[$arquivo]}"
+        if grep -q "^Icon=${icon_novo}$" "$caminho"; then
+            continue
+        fi
+        sed -i -E "s|^Icon=.*|Icon=${icon_novo}|" "$caminho"
+        echo -e "  ${D_GREEN}[OK]${D_RESET} $arquivo -> Icon=$icon_novo"
+        ((ajustados++))
+    done
+
+    if [ $ajustados -eq 0 ]; then
+        __ok "Nenhum ajuste necessario"
+    else
+        __ok "$ajustados .desktop corrigido(s)"
     fi
     echo ""
 }

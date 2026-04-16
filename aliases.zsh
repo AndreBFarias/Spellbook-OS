@@ -87,6 +87,7 @@ limpar_cache() {
     flatpak update -y
     flatpak repair --user 2>/dev/null
     sudo apt autoremove -y && sudo apt clean
+    _fix_flatpak_icons
     _reconstruir_caches_icones
 }
 # Proposito: Corrigir dependencias quebradas
@@ -104,6 +105,7 @@ atualizar_tudo() {
     flatpak update -y
     flatpak repair --user 2>/dev/null
     sudo apt autoremove -y && sudo apt autoclean
+    _fix_flatpak_icons
     _reconstruir_caches_icones
 }
 # Proposito: Atualizar apenas flatpaks
