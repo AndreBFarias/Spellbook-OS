@@ -95,14 +95,15 @@ alias corrigir_deps='sudo apt -f install'
 # Proposito: Reconfigurar pacotes com falha
 # Uso: reparar_pacotes
 alias reparar_pacotes='sudo dpkg --configure -a'
-# Proposito: Atualizar tudo (apt + flatpak + limpeza + caches de icones)
+# Proposito: Atualizar tudo (apt + topgrade + flatpak + limpeza + caches de icones)
 # Uso: atualizar_tudo
 atualizar_tudo() {
-    sudo apt update && sudo apt full-upgrade -y
+    sudo dpkg --configure -a
+    sudo apt update && sudo apt upgrade -y && sudo apt full-upgrade -y
+    topgrade -y
     flatpak update -y
     flatpak repair --user 2>/dev/null
-    sudo apt autoremove -y && sudo apt clean
-    echo "Reconstruindo caches de icones..."
+    sudo apt autoremove -y && sudo apt autoclean
     _reconstruir_caches_icones
 }
 # Proposito: Atualizar apenas flatpaks
