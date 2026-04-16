@@ -119,6 +119,8 @@ reparo_pop() {
     echo -e "  ${D_COMMENT}Reconfigurando pacotes...${D_RESET}";   sudo dpkg --configure -a
     echo -e "  ${D_COMMENT}Limpando orfaos...${D_RESET}";          sudo apt autoremove --purge -y; sudo apt clean
     echo -e "  ${D_COMMENT}Atualizando sistema...${D_RESET}";      sudo apt update; sudo apt full-upgrade -y
+    echo -e "  ${D_COMMENT}Reparando Flatpak...${D_RESET}";        flatpak repair --user 2>/dev/null; sudo flatpak repair 2>/dev/null
+    echo -e "  ${D_COMMENT}Reconstruindo icones...${D_RESET}";     _reconstruir_caches_icones
 
     exec >&2
 
