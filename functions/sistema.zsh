@@ -21,6 +21,18 @@ _reconstruir_caches_icones() {
         fi
     done
 
+    # Temas instalados em nivel user (~/.local/share/icons)
+    for tema_dir in "$HOME/.local/share/icons/"*/; do
+        [ -f "${tema_dir}index.theme" ] || continue
+        local tema=$(basename "$tema_dir")
+        if gtk-update-icon-cache -f -q "$tema_dir" 2>/dev/null; then
+            echo -e "  ${D_GREEN}[OK]${D_RESET} $tema (user)"
+        else
+            echo -e "  ${D_YELLOW}[!]${D_RESET}  $tema (user, cache invalido)"
+            ((falhas++))
+        fi
+    done
+
     if [ -d "$HOME/.local/share/flatpak/exports/share/icons/hicolor" ]; then
         if gtk-update-icon-cache -f -q "$HOME/.local/share/flatpak/exports/share/icons/hicolor/" 2>/dev/null; then
             __ok "Flatpak (user)"
@@ -83,6 +95,46 @@ _fix_flatpak_icons() {
     else
         __ok "$ajustados .desktop corrigido(s)"
     fi
+    echo ""
+}
+
+# Proposito: Reconstruir Dracula_OS-Theme do zero (build + install --user)
+# Uso: rebuild_dracula_theme [--activate]
+rebuild_dracula_theme() {
+    local repo="$HOME/Desenvolvimento/Dracula_OS-Theme"
+    if [ ! -d "$repo" ]; then
+        echo -e "  ${D_YELLOW}[!]${D_RESET} Repo nao encontrado em $repo"
+        return 1
+    fi
+
+    __header "DRACULA_OS-THEME REBUILD" "$D_PURPLE"
+
+    (
+        cd "$repo" || return 1
+
+        # Garantir que upstreams estao presentes (.gitignore esconde do repo)
+        if [ ! -d "src/icons/upstream/dracula-icons-main" ]; then
+            echo -e "  ${D_COMMENT}Baixando upstreams ausentes...${D_RESET}"
+            ./scripts/baixar_upstreams.sh || return 1
+        fi
+
+        echo -e "  ${D_COMMENT}Regenerando mapping.json...${D_RESET}"
+        python3 scripts/extrair_mapeamento.py >/dev/null || return 1
+
+        echo -e "  ${D_COMMENT}Rodando build.sh...${D_RESET}"
+        ./build.sh > /tmp/dracula-build.log 2>&1 || {
+            echo -e "  ${D_RED}[X]${D_RESET} build.sh falhou (veja /tmp/dracula-build.log)"
+            return 1
+        }
+
+        echo -e "  ${D_COMMENT}Instalando em ~/.local/share/...${D_RESET}"
+        ./install.sh --user "$@" > /tmp/dracula-install.log 2>&1 || {
+            echo -e "  ${D_RED}[X]${D_RESET} install.sh falhou (veja /tmp/dracula-install.log)"
+            return 1
+        }
+    ) || return 1
+
+    __ok "Dracula_OS-Theme reconstruido e instalado"
     echo ""
 }
 
