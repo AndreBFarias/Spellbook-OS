@@ -101,6 +101,10 @@ __enc_remover_bom() {
 # Funções públicas
 # ---------------------------------------------------------------------------
 
+# Propósito: Detectar encoding, BOM e line ending de arquivo/diretório
+# Uso: enc_detectar <alvo>
+# Completa:
+#   <alvo>=_files
 enc_detectar() {
     local alvo="$1"
 
@@ -189,6 +193,13 @@ enc_detectar() {
     unfunction __enc_analisar_arquivo 2>/dev/null
 }
 
+# Propósito: Converter encoding de arquivo (auto-detecta origem se omitida)
+# Uso: enc_converter <arquivo> [destino] [origem] [--no-backup]
+# Flags: --no-backup=Não cria cópia .bak antes de converter
+# Completa:
+#   <arquivo>=_files
+#   [destino]=__enc_encodings
+#   [origem]=__enc_encodings
 enc_converter() {
     local arquivo="$1"
     local destino="${2:-utf-8}"
@@ -239,6 +250,11 @@ enc_converter() {
     fi
 }
 
+# Propósito: Remover BOM de arquivos UTF-8
+# Uso: enc_fixar_bom <alvo> [--no-backup]
+# Flags: --no-backup=Não cria .bak antes de remover BOM
+# Completa:
+#   <alvo>=_files
 enc_fixar_bom() {
     local alvo="$1"
     local no_backup=false
@@ -289,6 +305,12 @@ enc_fixar_bom() {
     unfunction __enc_processar_bom 2>/dev/null
 }
 
+# Propósito: Converter line endings (CRLF<->LF)
+# Uso: enc_fixar_crlf <alvo> [--para-windows] [--no-backup]
+# Flags: --para-windows=Converte LF->CRLF (padrão é CRLF->LF)
+#        --no-backup=Não cria .bak antes de converter
+# Completa:
+#   <alvo>=_files
 enc_fixar_crlf() {
     local alvo="$1"
     local para_windows=false
@@ -360,6 +382,11 @@ enc_fixar_crlf() {
     unfunction __enc_processar_crlf 2>/dev/null
 }
 
+# Propósito: Normalizar scripts Python (shebang, coding, BOM, CRLF, chmod)
+# Uso: enc_fixar_python <alvo> [--no-backup]
+# Flags: --no-backup=Não cria .bak antes de editar
+# Completa:
+#   <alvo>=_files
 enc_fixar_python() {
     local alvo="$1"
     local no_backup=false
