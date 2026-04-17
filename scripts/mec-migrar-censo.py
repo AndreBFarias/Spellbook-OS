@@ -159,7 +159,7 @@ def get_bq_client(project: str):
         from google.cloud import bigquery
         return bigquery.Client(project=project)
     except ImportError as exc:
-        print(f"  {RED}google-cloud-bigquery nao encontrado: {exc}{RESET}", file=sys.stderr)
+        print(f"  {RED}google-cloud-bigquery não encontrado: {exc}{RESET}", file=sys.stderr)
         sys.exit(EXIT_ERROR)
 
 

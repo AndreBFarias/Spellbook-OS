@@ -124,7 +124,7 @@ def main() -> int:
     results_path = Path(sys.argv[1])
     if not results_path.exists():
         print(
-            f"[ERRO] Arquivo nao encontrado: {results_path}",
+            f"[ERRO] Arquivo não encontrado: {results_path}",
             file=sys.stderr,
         )
         return 2

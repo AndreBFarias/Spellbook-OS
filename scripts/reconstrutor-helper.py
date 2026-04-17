@@ -10,7 +10,7 @@ def sanitize_filename(name):
 
 def main(input_file, output_dir):
     if not os.path.exists(input_file):
-        print(f"Erro Critico: O arquivo '{input_file}' nao existe.")
+        print(f"Erro Crítico: O arquivo '{input_file}' não existe.")
         sys.exit(1)
 
     print(f"Lendo pergaminho: '{os.path.basename(input_file)}'...")
