@@ -645,7 +645,7 @@ def cmd_scan(args) -> int:
 
     if not models_dir.exists():
         print(
-            f"  {RED}Diretorio de modelos nao encontrado: {models_dir}{RESET}",
+            f"  {RED}Diretório de modelos não encontrado: {models_dir}{RESET}",
             file=sys.stderr,
         )
         return EXIT_ERROR
