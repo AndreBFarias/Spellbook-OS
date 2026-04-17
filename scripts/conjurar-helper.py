@@ -104,7 +104,7 @@ def format_preview(full_line):
             print(f"\n{D_YELLOW}Proposito:{D_RESET}")
             print(f"{D_FG}{purpose}{D_RESET}")
         else:
-            print(f"\n{D_COMMENT}(sem descricao){D_RESET}")
+            print(f"\n{D_COMMENT}(sem descrição){D_RESET}")
 
         if usage:
             print(f"\n{D_GREEN}Uso:{D_RESET}")
