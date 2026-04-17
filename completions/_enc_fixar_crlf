@@ -1,0 +1,13 @@
+#compdef enc_fixar_crlf
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: encoding.zsh
+# Propósito: Converter line endings (CRLF<->LF)
+# Uso: enc_fixar_crlf <alvo> [--para-windows] [--no-backup]
+
+_enc_fixar_crlf() {
+    _arguments \
+        '--para-windows[Converte LF->CRLF (padrão é CRLF->LF)]' \
+        '--no-backup[Não cria .bak antes de converter]' \
+        '1:alvo:__files'
+}
+_enc_fixar_crlf "$@"

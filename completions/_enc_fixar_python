@@ -1,0 +1,12 @@
+#compdef enc_fixar_python
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: encoding.zsh
+# Propósito: Normalizar scripts Python (shebang, coding, BOM, CRLF, chmod)
+# Uso: enc_fixar_python <alvo> [--no-backup]
+
+_enc_fixar_python() {
+    _arguments \
+        '--no-backup[Não cria .bak antes de editar]' \
+        '1:alvo:__files'
+}
+_enc_fixar_python "$@"

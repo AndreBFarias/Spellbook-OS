@@ -1,0 +1,11 @@
+#compdef enc_detectar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: encoding.zsh
+# Propósito: Detectar encoding, BOM e line ending de arquivo/diretório
+# Uso: enc_detectar <alvo>
+
+_enc_detectar() {
+    _arguments \
+        '1:alvo:__files'
+}
+_enc_detectar "$@"

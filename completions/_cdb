@@ -1,0 +1,10 @@
+#compdef cdb
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Navegar para o diretório raiz do vault Obsidian
+# Uso: cdb
+
+_cdb() {
+    _message 'sem argumentos definidos'
+}
+_cdb "$@"

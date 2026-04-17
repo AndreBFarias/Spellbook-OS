@@ -1,0 +1,14 @@
+#compdef enc_converter
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: encoding.zsh
+# Propósito: Converter encoding de arquivo (auto-detecta origem se omitida)
+# Uso: enc_converter <arquivo> [destino] [origem] [--no-backup]
+
+_enc_converter() {
+    _arguments \
+        '--no-backup[Não cria cópia .bak antes de converter]' \
+        '1:arquivo:__files' \
+        '::destino:__enc_encodings' \
+        '::origem:__enc_encodings'
+}
+_enc_converter "$@"

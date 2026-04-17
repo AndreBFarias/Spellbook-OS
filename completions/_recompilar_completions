@@ -1,0 +1,12 @@
+#compdef recompilar_completions
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: completions.zsh
+# Propósito: Regera arquivos _<funcao> em completions/ a partir dos metadados
+# Uso: recompilar_completions [--verbose] [--func NOME]
+
+_recompilar_completions() {
+    _arguments \
+        '--verbose[Mostra progresso detalhado]' \
+        '--func[Regera apenas uma função específica]'
+}
+_recompilar_completions "$@"

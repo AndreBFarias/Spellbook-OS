@@ -1,0 +1,12 @@
+#compdef vnova
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Criar nova nota no vault a partir de template por tipo
+# Uso: vnova <tipo> [nome]
+
+_vnova() {
+    _arguments \
+        '1:tipo:__vnova_tipos' \
+        '::nome:_default'
+}
+_vnova "$@"

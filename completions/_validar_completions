@@ -1,0 +1,10 @@
+#compdef validar_completions
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: completions.zsh
+# Propósito: Lista funções sem metadados de completion (# Propósito + # Uso)
+# Uso: validar_completions
+
+_validar_completions() {
+    _message 'sem argumentos definidos'
+}
+_validar_completions "$@"

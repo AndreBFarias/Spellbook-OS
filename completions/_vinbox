@@ -1,0 +1,10 @@
+#compdef vinbox
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Listar e processar arquivos do Inbox do vault
+# Uso: vinbox
+
+_vinbox() {
+    _message 'sem argumentos definidos'
+}
+_vinbox "$@"

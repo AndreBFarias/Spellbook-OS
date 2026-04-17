@@ -1,0 +1,10 @@
+#compdef spellbook_sync_push
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spellbook-sync.zsh
+# Propósito: Push em background do Spellbook-OS (auto-commit local + push não-bloqueante)
+# Uso: spellbook_sync_push
+
+_spellbook_sync_push() {
+    _message 'sem argumentos definidos'
+}
+_spellbook_sync_push "$@"

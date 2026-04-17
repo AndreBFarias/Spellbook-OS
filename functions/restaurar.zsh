@@ -197,6 +197,9 @@ __restaurar_capturar_dconf() {
 # Funções públicas
 # ---------------------------------------------------------------------------
 
+# Propósito: Capturar manifesto completo do sistema (APT, Flatpak, SSH, VSCode, git, temas)
+# Uso: sistema_capturar [--saida <arquivo>]
+# Flags: --saida=Caminho do manifesto de saída (default: $HOME/.sistema/manifestos/AAAA-MM-DD.json)
 sistema_capturar() {
     local saida=""
 
@@ -420,6 +423,11 @@ sistema_capturar() {
     echo ""
 }
 
+# Propósito: Restaurar sistema a partir de manifesto salvo por sistema_capturar
+# Uso: sistema_restaurar <manifesto.json> [categorias] [--dry-run]
+# Flags: --dry-run=Não altera nada, apenas lista o que seria feito
+# Completa:
+#   <manifesto.json>=_files -g "*.json"
 sistema_restaurar() {
     local manifesto="$1"
     local dry_run=false
@@ -638,6 +646,10 @@ sistema_restaurar() {
     unfunction __restaurar_categoria_ativa 2>/dev/null
 }
 
+# Propósito: Comparar manifesto salvo com estado atual do sistema
+# Uso: sistema_diff [manifesto.json]
+# Completa:
+#   [manifesto.json]=_files -g "*.json"
 sistema_diff() {
     local manifesto="$1"
 
@@ -711,6 +723,9 @@ sistema_diff() {
     echo ""
 }
 
+# Propósito: Gerenciar manifestos salvos (exibir ou listar)
+# Uso: sistema_manifesto [--listar]
+# Flags: --listar=Lista todos os manifestos ao invés do último
 sistema_manifesto() {
     local listar=false
 

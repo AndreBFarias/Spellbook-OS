@@ -1,0 +1,10 @@
+#compdef spicetify_instalar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spicetify.zsh
+# Propósito: Instalar Spicetify via script de setup
+# Uso: spicetify_instalar
+
+_spicetify_instalar() {
+    _message 'sem argumentos definidos'
+}
+_spicetify_instalar "$@"

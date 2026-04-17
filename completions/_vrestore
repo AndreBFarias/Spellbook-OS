@@ -1,0 +1,11 @@
+#compdef vrestore
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Restaurar arquivo do vault a partir de backup
+# Uso: vrestore <caminho>
+
+_vrestore() {
+    _arguments \
+        '1:caminho:_default'
+}
+_vrestore "$@"

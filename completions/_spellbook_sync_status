@@ -1,0 +1,10 @@
+#compdef spellbook_sync_status
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spellbook-sync.zsh
+# Propósito: Exibir status do sync do Spellbook-OS (branch, ahead/behind, pendentes)
+# Uso: spellbook_sync_status
+
+_spellbook_sync_status() {
+    _message 'sem argumentos definidos'
+}
+_spellbook_sync_status "$@"

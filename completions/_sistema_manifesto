@@ -1,0 +1,11 @@
+#compdef sistema_manifesto
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: restaurar.zsh
+# Propósito: Gerenciar manifestos salvos (exibir ou listar)
+# Uso: sistema_manifesto [--listar]
+
+_sistema_manifesto() {
+    _arguments \
+        '--listar[Lista todos os manifestos ao invés do último]'
+}
+_sistema_manifesto "$@"

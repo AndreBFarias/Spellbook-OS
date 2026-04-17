@@ -1,0 +1,10 @@
+#compdef vsize
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Exibir tamanho do vault por pasta
+# Uso: vsize
+
+_vsize() {
+    _message 'sem argumentos definidos'
+}
+_vsize "$@"

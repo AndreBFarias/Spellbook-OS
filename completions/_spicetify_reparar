@@ -1,0 +1,10 @@
+#compdef spicetify_reparar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spicetify.zsh
+# Propósito: Reparar Spicetify (re-aplicar tema, extensions, custom apps, sidebar)
+# Uso: spicetify_reparar
+
+_spicetify_reparar() {
+    _message 'sem argumentos definidos'
+}
+_spicetify_reparar "$@"

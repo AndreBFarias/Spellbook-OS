@@ -1,0 +1,13 @@
+#compdef sistema_restaurar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: restaurar.zsh
+# Propósito: Restaurar sistema a partir de manifesto salvo por sistema_capturar
+# Uso: sistema_restaurar <manifesto.json> [categorias] [--dry-run]
+
+_sistema_restaurar() {
+    _arguments \
+        '--dry-run[Não altera nada, apenas lista o que seria feito]' \
+        '1:manifesto.json:__files -g "*.json"' \
+        '::categorias:_default'
+}
+_sistema_restaurar "$@"

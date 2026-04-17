@@ -1,0 +1,10 @@
+#compdef vopen
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Abrir o vault Obsidian pelo URI
+# Uso: vopen
+
+_vopen() {
+    _message 'sem argumentos definidos'
+}
+_vopen "$@"

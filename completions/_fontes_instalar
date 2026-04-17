@@ -1,0 +1,10 @@
+#compdef fontes_instalar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: fontes.zsh
+# Propósito: Instalar fontes de compatibilidade Win/Mac (MS Core, Liberation, Noto, Inter)
+# Uso: fontes_instalar
+
+_fontes_instalar() {
+    _message 'sem argumentos definidos'
+}
+_fontes_instalar "$@"

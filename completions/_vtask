@@ -1,0 +1,12 @@
+#compdef vtask
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Criar/editar nota quinzenal de tarefas para um cliente
+# Uso: vtask <cliente> [quinzena]
+
+_vtask() {
+    _arguments \
+        '1:cliente:__vtask_clientes' \
+        '::quinzena:_default'
+}
+_vtask "$@"

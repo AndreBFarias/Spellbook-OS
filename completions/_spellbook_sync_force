@@ -1,0 +1,13 @@
+#compdef spellbook_sync_force
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spellbook-sync.zsh
+# Propósito: Forçar sync do Spellbook-OS sobrescrevendo local ou remoto
+# Uso: spellbook_sync_force [--local|--remote]
+
+_spellbook_sync_force() {
+    _arguments \
+        '--local[Push força (sobrescreve remoto com local)]' \
+        '--remote[Pull força (sobrescreve local com remoto)]' \
+        '--local|--remote[--local|--remote]'
+}
+_spellbook_sync_force "$@"

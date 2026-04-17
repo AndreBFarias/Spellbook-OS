@@ -1,0 +1,10 @@
+#compdef fontes_verificar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: fontes.zsh
+# Propósito: Verificar cobertura de fontes instaladas e fallback
+# Uso: fontes_verificar
+
+_fontes_verificar() {
+    _message 'sem argumentos definidos'
+}
+_fontes_verificar "$@"

@@ -1,0 +1,10 @@
+#compdef fontes_mapa
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: fontes.zsh
+# Propósito: Exibir mapeamento Win/Mac -> substituto Linux -> fallback
+# Uso: fontes_mapa
+
+_fontes_mapa() {
+    _message 'sem argumentos definidos'
+}
+_fontes_mapa "$@"

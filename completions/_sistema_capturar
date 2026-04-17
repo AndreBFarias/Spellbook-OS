@@ -1,0 +1,11 @@
+#compdef sistema_capturar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: restaurar.zsh
+# Propósito: Capturar manifesto completo do sistema (APT, Flatpak, SSH, VSCode, git, temas)
+# Uso: sistema_capturar [--saida <arquivo>]
+
+_sistema_capturar() {
+    _arguments \
+        '--saida[Caminho do manifesto de saída (default\: $HOME/.sistema/manifestos/AAAA-MM-DD.json)]'
+}
+_sistema_capturar "$@"

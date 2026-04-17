@@ -1,0 +1,11 @@
+#compdef vbackups
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Listar backups disponíveis do vault
+# Uso: vbackups [filtro]
+
+_vbackups() {
+    _arguments \
+        '::filtro:_default'
+}
+_vbackups "$@"

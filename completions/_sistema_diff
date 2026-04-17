@@ -1,0 +1,11 @@
+#compdef sistema_diff
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: restaurar.zsh
+# Propósito: Comparar manifesto salvo com estado atual do sistema
+# Uso: sistema_diff [manifesto.json]
+
+_sistema_diff() {
+    _arguments \
+        '::manifesto.json:__files -g "*.json"'
+}
+_sistema_diff "$@"

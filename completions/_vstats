@@ -1,0 +1,10 @@
+#compdef vstats
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Estatísticas do vault (notas, tamanho, hubs, responsáveis)
+# Uso: vstats
+
+_vstats() {
+    _message 'sem argumentos definidos'
+}
+_vstats "$@"

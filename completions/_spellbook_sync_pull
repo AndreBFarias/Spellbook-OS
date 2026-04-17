@@ -1,0 +1,10 @@
+#compdef spellbook_sync_pull
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spellbook-sync.zsh
+# Propósito: Pull sincronizado do Spellbook-OS (commit local + fetch + merge com tratamento de conflito)
+# Uso: spellbook_sync_pull
+
+_spellbook_sync_pull() {
+    _message 'sem argumentos definidos'
+}
+_spellbook_sync_pull "$@"

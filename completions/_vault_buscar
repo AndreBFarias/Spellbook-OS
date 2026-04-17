@@ -1,0 +1,11 @@
+#compdef vault_buscar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Buscar notas no vault por título e conteúdo
+# Uso: vault_buscar <termo>
+
+_vault_buscar() {
+    _arguments \
+        '1:termo:_default'
+}
+_vault_buscar "$@"

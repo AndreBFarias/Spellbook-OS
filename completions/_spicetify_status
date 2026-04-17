@@ -1,0 +1,10 @@
+#compdef spicetify_status
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: spicetify.zsh
+# Propósito: Exibir status do Spicetify (tema, esquema, extensions, custom apps)
+# Uso: spicetify_status
+
+_spicetify_status() {
+    _message 'sem argumentos definidos'
+}
+_spicetify_status "$@"

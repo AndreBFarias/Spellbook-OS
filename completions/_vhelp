@@ -1,0 +1,10 @@
+#compdef vhelp
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: controle-de-bordo.zsh
+# Propósito: Exibir ajuda do Controle de Bordo (comandos e aliases)
+# Uso: vhelp
+
+_vhelp() {
+    _message 'sem argumentos definidos'
+}
+_vhelp "$@"
