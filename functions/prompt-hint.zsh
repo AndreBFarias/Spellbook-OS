@@ -12,32 +12,22 @@ __prompt_hint_cache_build() {
     local func_dir="${ZDOTDIR:-$HOME/.config/zsh}/functions"
     [[ -d "$func_dir" ]] || return 0
 
-    local arquivo current_uso name
+    local arquivo current_uso name linha
     for arquivo in "$func_dir"/*.zsh "$func_dir"/../aliases.zsh "$func_dir"/../cca/aliases_cca.zsh; do
         [[ -f "$arquivo" ]] || continue
         current_uso=""
         while IFS= read -r linha; do
-            case "$linha" in
-                (\#\ Uso:*|\#\ USO:*)
-                    current_uso="${linha#\# [Uu]so:}"
-                    current_uso="${current_uso# }"
-                    ;;
-                ([a-zA-Z_][a-zA-Z0-9_]*\(\)*)
-                    name="${linha%%(*}"
-                    name="${name## }"
-                    if [[ -n "$current_uso" && -n "$name" ]]; then
-                        __PROMPT_HINT_MAP[$name]="$current_uso"
-                    fi
-                    current_uso=""
-                    ;;
-                (alias\ *)
-                    # alias nome='cmd' — sem uso, pula
-                    current_uso=""
-                    ;;
-                ('')
-                    current_uso=""
-                    ;;
-            esac
+            if [[ "$linha" =~ '^[[:space:]]*#[[:space:]]*[Uu]so:[[:space:]]*(.*)$' ]]; then
+                current_uso="${match[1]}"
+            elif [[ "$linha" =~ '^([a-zA-Z_][a-zA-Z0-9_]*)\(\)' ]]; then
+                name="${match[1]}"
+                if [[ -n "$current_uso" && -n "$name" ]]; then
+                    __PROMPT_HINT_MAP[$name]="$current_uso"
+                fi
+                current_uso=""
+            elif [[ -z "${linha// }" ]]; then
+                current_uso=""
+            fi
         done < "$arquivo"
     done
 }
