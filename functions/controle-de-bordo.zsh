@@ -75,6 +75,8 @@ cdb() {
     __ok "Diretório: $VAULT_DIR"
 }
 
+# Propósito: Abrir o vault Obsidian pelo URI
+# Uso: vopen
 vopen() {
     local uri="obsidian://open?vault=Controle%20de%20Bordo"
 
@@ -99,6 +101,10 @@ vopen() {
 # CRIAÇÃO DE NOTAS -- vtask
 # ============================================
 
+# Propósito: Criar/editar nota quinzenal de tarefas para um cliente
+# Uso: vtask <cliente> [quinzena]
+# Completa:
+#   <cliente>=__vtask_clientes
 vtask() {
     local cliente="$1"
     local quinzena="$2"
@@ -228,6 +234,10 @@ vtask() {
 # CRIAÇÃO DE NOTAS -- vnova
 # ============================================
 
+# Propósito: Criar nova nota no vault a partir de template por tipo
+# Uso: vnova <tipo> [nome]
+# Completa:
+#   <tipo>=__vnova_tipos
 vnova() {
     local tipo="$1"
     local nome="$2"
@@ -360,6 +370,8 @@ vnova() {
 # INBOX
 # ============================================
 
+# Propósito: Listar e processar arquivos do Inbox do vault
+# Uso: vinbox
 vinbox() {
     local inbox_dir="$VAULT_DIR/Inbox"
 
@@ -430,6 +442,8 @@ vinbox() {
 # ESTATÍSTICAS
 # ============================================
 
+# Propósito: Estatísticas do vault (notas, tamanho, hubs, responsáveis)
+# Uso: vstats
 vstats() {
     __cdb_header "ESTATÍSTICAS DO VAULT" "$D_CYAN"
 
@@ -476,6 +490,8 @@ vstats() {
 # BUSCA
 # ============================================
 
+# Propósito: Buscar notas no vault por título e conteúdo
+# Uso: vault_buscar <termo>
 vault_buscar() {
     local query="$1"
     [[ -z "$query" ]] && { __err "Uso: vault_buscar <termo>"; return 1; }
@@ -506,6 +522,8 @@ vault_buscar() {
 # TAMANHO
 # ============================================
 
+# Propósito: Exibir tamanho do vault por pasta
+# Uso: vsize
 vsize() {
     __cdb_header "TAMANHO POR PASTA" "$D_CYAN"
     echo ""
@@ -528,6 +546,8 @@ vsize() {
 # BACKUP E RECUPERAÇÃO
 # ============================================
 
+# Propósito: Restaurar arquivo do vault a partir de backup
+# Uso: vrestore <caminho>
 vrestore() {
     if [[ ! -f "$SCRIPTS_DIR/vault_backup.py" ]]; then
         __err "Script de backup não encontrado"
