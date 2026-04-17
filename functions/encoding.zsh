@@ -502,6 +502,13 @@ enc_fixar_python() {
     unfunction __enc_fixar_py_arquivo 2>/dev/null
 }
 
+# Propósito: Conversão em lote (encoding + BOM + CRLF + scripts Python)
+# Uso: enc_lote <diretorio> [--perfil windows-para-linux|linux-para-windows] [--dry-run] [--no-backup]
+# Flags: --perfil=Perfil de conversão (default: windows-para-linux)
+#        --dry-run=Apenas lista, não altera nada
+#        --no-backup=Não cria .bak antes de converter
+# Completa:
+#   <diretorio>=_path_files -/
 enc_lote() {
     local dir="$1"
     local perfil="windows-para-linux"

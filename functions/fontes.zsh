@@ -260,6 +260,8 @@ FONTCONFIG_EOF
 # Funções públicas
 # ---------------------------------------------------------------------------
 
+# Propósito: Instalar fontes de compatibilidade Win/Mac (MS Core, Liberation, Noto, Inter)
+# Uso: fontes_instalar
 fontes_instalar() {
     __verificar_dependencias "fc-cache" "wget" || return 1
 
@@ -312,6 +314,10 @@ fontes_instalar() {
     echo ""
 }
 
+# Propósito: Copiar fontes proprietárias da partição Windows para ~/.local/share/fonts
+# Uso: fontes_importar_windows [raiz_windows]
+# Completa:
+#   [raiz_windows]=_path_files -/
 fontes_importar_windows() {
     local raiz_windows="$1"
     local win_fonts
@@ -358,6 +364,8 @@ fontes_importar_windows() {
     echo ""
 }
 
+# Propósito: Verificar cobertura de fontes instaladas e fallback
+# Uso: fontes_verificar
 fontes_verificar() {
     __header "VERIFICAÇÃO DE FONTES" "$D_CYAN"
 
@@ -455,6 +463,8 @@ fontes_verificar() {
     unfunction __fontes_verificar_arquivo 2>/dev/null
 }
 
+# Propósito: Exibir mapeamento Win/Mac -> substituto Linux -> fallback
+# Uso: fontes_mapa
 fontes_mapa() {
     __header "MAPEAMENTO DE FONTES" "$D_CYAN"
     echo -e "  ${D_COMMENT}Windows/macOS -> Substituto Linux -> Fallback${D_RESET}"
@@ -490,6 +500,8 @@ fontes_mapa() {
     echo ""
 }
 
+# Propósito: Listar todas as famílias de fontes instaladas no sistema
+# Uso: fontes_listar
 fontes_listar() {
     __header "FONTES INSTALADAS" "$D_CYAN"
 
