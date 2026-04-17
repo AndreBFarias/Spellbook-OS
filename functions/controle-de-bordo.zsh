@@ -574,6 +574,8 @@ vbackups() {
 # HELP
 # ============================================
 
+# Propósito: Exibir ajuda do Controle de Bordo (comandos e aliases)
+# Uso: vhelp
 vhelp() {
     __cdb_header "CONTROLE DE BORDO -- AJUDA" "$D_CYAN"
     echo ""
