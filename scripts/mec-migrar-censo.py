@@ -719,7 +719,7 @@ def cmd_scan(args) -> int:
 def cmd_analyze(args, client) -> int:
     sql_path = Path(args.sql_file).expanduser()
     if not sql_path.exists():
-        print(f"  {RED}Arquivo nao encontrado: {sql_path}{RESET}", file=sys.stderr)
+        print(f"  {RED}Arquivo não encontrado: {sql_path}{RESET}", file=sys.stderr)
         return EXIT_ERROR
 
     sql = sql_path.read_text(encoding="utf-8")
