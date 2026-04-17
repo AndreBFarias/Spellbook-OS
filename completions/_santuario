@@ -1,0 +1,14 @@
+#compdef santuario
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: projeto.zsh
+# Propósito: Setup completo de projeto (cd, branch, venv, deps, git context)
+# Uso: santuario <Projeto> [Branch] [--sync] [--vit]
+
+_santuario() {
+    _arguments \
+        '--sync[Sincroniza dependências via pip install -r]' \
+        '--vit[Usa subdiretório VitoriaMariaDB/]' \
+        '1:Projeto:__santuario_pastas_dev' \
+        '::Branch:__santuario_branches_git'
+}
+_santuario "$@"
