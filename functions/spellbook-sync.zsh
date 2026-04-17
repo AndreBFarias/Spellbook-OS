@@ -157,6 +157,8 @@ spellbook_sync_push() {
     git -C "$dir" push origin main --quiet 2>/dev/null &
 }
 
+# Propósito: Exibir status do sync do Spellbook-OS (branch, ahead/behind, pendentes)
+# Uso: spellbook_sync_status
 spellbook_sync_status() {
     __spellbook_is_git_repo || {
         __err "ZDOTDIR nao e um repositorio git com remote configurado"
