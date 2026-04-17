@@ -556,6 +556,8 @@ vrestore() {
     python3 "$SCRIPTS_DIR/vault_backup.py" --restore "$@"
 }
 
+# Propósito: Listar backups disponíveis do vault
+# Uso: vbackups [filtro]
 vbackups() {
     if [[ ! -f "$SCRIPTS_DIR/vault_backup.py" ]]; then
         __err "Script de backup não encontrado"
