@@ -68,6 +68,8 @@ __cdb_mes_nome() {
 # NAVEGAÇÃO
 # ============================================
 
+# Propósito: Navegar para o diretório raiz do vault Obsidian
+# Uso: cdb
 cdb() {
     cd "$VAULT_DIR" || { __err "Diretório não encontrado: $VAULT_DIR"; return 1; }
     __ok "Diretório: $VAULT_DIR"
