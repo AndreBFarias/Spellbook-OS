@@ -12,10 +12,30 @@ export PATH="$HOME/.spicetify:$HOME/.cargo/bin:$HOME/.local/bin:/snap/bin:$PATH"
 
 export ZSH="${ZDOTDIR:-$HOME/.config/zsh}/.oh-my-zsh"
 
-plugins=(git zsh-autosuggestions zsh-history-substring-search fzf zsh-syntax-highlighting)
+# Completions customizadas (geradas por scripts/gerar-completions.py + manuais)
+# Deve vir antes do source do OMZ (que dispara compinit via plugins)
+fpath=("${ZDOTDIR:-$HOME/.config/zsh}/completions" $fpath)
+
+# fzf-tab deve ser carregado depois do fzf e antes de autosuggestions/syntax-highlighting
+plugins=(git fzf fzf-tab zsh-autosuggestions zsh-history-substring-search zsh-syntax-highlighting)
 
 if [ -f "$ZSH/oh-my-zsh.sh" ]; then
   source "$ZSH/oh-my-zsh.sh"
+fi
+
+# Completers dinâmicos referenciados em `# Completa:` nos metadados das funções
+[[ -f "${ZDOTDIR:-$HOME/.config/zsh}/completions/completers.zsh" ]] && \
+    source "${ZDOTDIR:-$HOME/.config/zsh}/completions/completers.zsh"
+
+# fzf-tab: tema Dracula, preview à direita, descrições na mesma linha
+if (( $+functions[_fzf_tab_complete] )); then
+    zstyle ':fzf-tab:*' fzf-flags \
+        --color=bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4 \
+        --height=60% --layout=reverse --border
+    zstyle ':fzf-tab:*' show-group full
+    zstyle ':fzf-tab:*' single-group color header
+    zstyle ':fzf-tab:complete:*:*' fzf-preview 'echo $desc 2>/dev/null'
+    zstyle ':completion:*:descriptions' format '[%d]'
 fi
 
 # --- 2. HISTORICO DE COMANDOS ---
