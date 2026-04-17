@@ -3,6 +3,11 @@ import sys
 import re
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _logging import setup_logger
+
+_log = setup_logger("conjurar-helper", stderr=False)
+
 DELIMITER = "\t"
 
 D_CYAN = "\033[38;2;139;233;253m"
@@ -115,6 +120,7 @@ def format_preview(full_line):
             print(f"{D_FG}{code}{D_RESET}")
 
     except Exception as e:
+        _log.error("Erro no preview: %s", e)
         print(f"{D_YELLOW}Erro no preview: {e}{D_RESET}", file=sys.stderr)
 
 
@@ -129,5 +135,6 @@ if __name__ == "__main__":
         for item in sorted(parsed):
             print(item)
     else:
-        print("Uso: _conjurar_helper.py <arquivo_ou_diretorio> [...]", file=sys.stderr)
+        _log.error("Uso: conjurar-helper.py <arquivo_ou_diretório> [...]")
+        print("Uso: conjurar-helper.py <arquivo_ou_diretório> [...]", file=sys.stderr)
         sys.exit(1)

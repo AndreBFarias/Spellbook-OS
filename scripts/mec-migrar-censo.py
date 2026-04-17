@@ -3,14 +3,16 @@
 import argparse
 import difflib
 import json
-import logging
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _logging import setup_logger
+
+_log = setup_logger("mec-migrar-censo", stderr=False)
 
 # -- Exit codes --
 EXIT_OK              = 0
@@ -52,9 +54,11 @@ def _init_colors(enabled: bool) -> None:
 
 
 def _p(*args, **kwargs) -> None:
-    """Print que respeita _JSON_MODE: em modo json, redireciona para stderr."""
+    """Print que respeita _JSON_MODE: em modo json, redireciona para stderr. Também loga."""
     if _JSON_MODE and "file" not in kwargs:
         kwargs["file"] = sys.stderr
+    msg = " ".join(str(a) for a in args)
+    _log.info("%s", msg)
     print(*args, **kwargs)
 
 

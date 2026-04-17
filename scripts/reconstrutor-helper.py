@@ -3,6 +3,12 @@
 import sys
 import os
 import re
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _logging import setup_logger
+
+_log = setup_logger("reconstrutor", stderr=True)
 
 def sanitize_filename(name):
     # Substitui caracteres proibidos em sistemas de arquivos
