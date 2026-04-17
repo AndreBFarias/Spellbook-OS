@@ -1,12 +1,12 @@
 #!/bin/zsh
 
-# Proposito: Arvore de diretorios com filtros e exportacao para arquivo
-# Uso: tree <profundidade> [diretorio]
+# Proposito: Arvore de diretórios com filtros e exportacao para arquivo
+# Uso: tree <profundidade> [diretório]
 tree() {
     __verificar_dependencias "tree" || return 1
 
     if ! [[ "$1" =~ ^[0-9]+$ ]] || [ -z "$1" ]; then
-        echo -e "  ${D_COMMENT}Uso: tree <profundidade> [diretorio] (0 = infinito)${D_RESET}"
+        echo -e "  ${D_COMMENT}Uso: tree <profundidade> [diretório] (0 = infinito)${D_RESET}"
         return 1
     fi
 

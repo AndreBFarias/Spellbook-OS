@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Propósito: Regera arquivos _<funcao> em completions/ a partir dos metadados
+# Propósito: Regera arquivos _<função> em completions/ a partir dos metadados
 # Uso: recompilar_completions [--verbose] [--func NOME]
 # Flags: --verbose=Mostra progresso detalhado
 #        --func=Regera apenas uma função específica

@@ -94,7 +94,7 @@ def format_preview(full_line):
 
         name, kind, code, purpose, usage = parts[0], parts[1], parts[2], parts[3], parts[4]
 
-        type_label = "ALIAS" if kind == "alias" else "FUNCAO"
+        type_label = "ALIAS" if kind == "alias" else "Função"
         type_color = D_ORANGE if kind == "alias" else D_PURPLE
 
         print(f"{D_CYAN}{name}{D_RESET}  {type_color}{type_label}{D_RESET}")

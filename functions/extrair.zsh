@@ -9,7 +9,7 @@ extrair() {
     fi
 
     if [ ! -f "$1" ]; then
-        __err "'$1' nao e um arquivo valido."
+        __err "'$1' não e um arquivo valido."
         return 1
     fi
 
@@ -33,7 +33,7 @@ extrair() {
         *.zst)        unzstd "$1"      ;;
         *.tar.zst)    tar --zstd -xvf "$1" ;;
         *)
-            __err "Formato nao suportado: $nome"
+            __err "Formato não suportado: $nome"
             echo -e "  ${D_COMMENT}Formatos: tar.gz, tar.bz2, tar.xz, tar.zst, zip, rar, 7z, gz, bz2, xz, zst${D_RESET}"
             return 1
             ;;

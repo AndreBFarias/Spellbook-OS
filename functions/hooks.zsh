@@ -9,7 +9,7 @@ aplicar_hooks_globais() {
     local hooks_source="$HOME/.config/git/hooks"
 
     if [ ! -d "$hooks_source" ]; then
-        __err "Diretorio de hooks nao encontrado em $hooks_source"
+        __err "Diretório de hooks não encontrado em $hooks_source"
         return 1
     fi
 
@@ -41,7 +41,7 @@ aplicar_hooks_globais() {
         cp "$hooks_source/pre-push" "$repo_path/.git/hooks/pre-push" 2>/dev/null
         cp "$hooks_source/commit-msg" "$repo_path/.git/hooks/commit-msg" 2>/dev/null
 
-        # Garantir permissoes de execucao
+        # Garantir permissoes de execução
         chmod +x "$repo_path/.git/hooks/_lib.sh" 2>/dev/null
         chmod +x "$repo_path/.git/hooks/pre-commit" 2>/dev/null
         chmod +x "$repo_path/.git/hooks/pre-push" 2>/dev/null

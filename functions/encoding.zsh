@@ -328,10 +328,10 @@ enc_fixar_crlf() {
         return 1
     fi
 
-    local direcao="CRLF -> LF"
-    [[ "$para_windows" == true ]] && direcao="LF -> CRLF"
+    local direção="CRLF -> LF"
+    [[ "$para_windows" == true ]] && direção="LF -> CRLF"
 
-    __header "CONVERTER LINE ENDINGS ($direcao)" "$D_ORANGE"
+    __header "CONVERTER LINE ENDINGS ($direção)" "$D_ORANGE"
 
     local convertidos=0
 
@@ -503,12 +503,12 @@ enc_fixar_python() {
 }
 
 # Propósito: Conversão em lote (encoding + BOM + CRLF + scripts Python)
-# Uso: enc_lote <diretorio> [--perfil windows-para-linux|linux-para-windows] [--dry-run] [--no-backup]
+# Uso: enc_lote <diretório> [--perfil windows-para-linux|linux-para-windows] [--dry-run] [--no-backup]
 # Flags: --perfil=Perfil de conversão (default: windows-para-linux)
 #        --dry-run=Apenas lista, não altera nada
 #        --no-backup=Não cria .bak antes de converter
 # Completa:
-#   <diretorio>=_path_files -/
+#   <diretório>=_path_files -/
 enc_lote() {
     local dir="$1"
     local perfil="windows-para-linux"

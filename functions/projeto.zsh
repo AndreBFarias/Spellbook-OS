@@ -8,7 +8,7 @@ levitar() {
     local alvo="${1:-.}"
 
     if ! command -v antigravity &> /dev/null; then
-        __err "'antigravity' nao encontrado no PATH."
+        __err "'antigravity' não encontrado no PATH."
         return 1
     fi
 
@@ -73,7 +73,7 @@ santuario() {
     fi
 
     if [ ! -d "$dir_alvo" ]; then
-        __err "Caminho nao existe: $dir_alvo"
+        __err "Caminho não existe: $dir_alvo"
         return 1
     fi
 
@@ -94,7 +94,7 @@ santuario() {
                 if git show-ref --verify --quiet "refs/remotes/origin/$branch_alvo"; then
                     git checkout "$branch_alvo"
                 else
-                    __warn "Branch '$branch_alvo' nao encontrada."
+                    __warn "Branch '$branch_alvo' não encontrada."
                     echo -e -n "  ${D_FG}Criar nova branch? (s/N)${D_RESET} "
                     read -k 1 reply
                     echo ""
@@ -121,7 +121,7 @@ santuario() {
             echo -e "  ${D_COMMENT}Projeto Rust detectado. Compilando...${D_RESET}"
             cargo build
         else
-            # Delegacao para install.sh do projeto (respeita configuracao de venv do projeto)
+            # Delegacao para install.sh do projeto (respeita configuração de venv do projeto)
             if [ -f "install.sh" ]; then
                 local venv_base="venv"
                 if [ ! -d "$venv_base" ] || [ "$sync_dependencias" = true ]; then
@@ -197,13 +197,13 @@ santuario() {
                         fi
                         echo -e "  ${D_GREEN}[NOVO]${D_RESET} Criando '$venv_target' ($req_nome) [${py_cmd}]..."
                         "$py_cmd" -m venv $venv_flags "$venv_target" || { __warn "Falha ao criar venv '$venv_target'"; continue; }
-                        [[ -f "$venv_target/bin/activate" ]] || { __warn "activate nao encontrado em '$venv_target'"; continue; }
+                        [[ -f "$venv_target/bin/activate" ]] || { __warn "activate não encontrado em '$venv_target'"; continue; }
                         source "$venv_target/bin/activate"
                         pip install -r "$req_nome"
                         typeset -f deactivate > /dev/null 2>&1 && deactivate
                     elif [ "$sync_dependencias" = true ]; then
                         echo -e "  ${D_ORANGE}[SYNC]${D_RESET} Atualizando '$venv_target' ($req_nome)..."
-                        [[ -f "$venv_target/bin/activate" ]] || { __warn "activate nao encontrado em '$venv_target'"; continue; }
+                        [[ -f "$venv_target/bin/activate" ]] || { __warn "activate não encontrado em '$venv_target'"; continue; }
                         source "$venv_target/bin/activate"
                         pip install -r "$req_nome"
                         typeset -f deactivate > /dev/null 2>&1 && deactivate
@@ -244,7 +244,7 @@ santuario() {
     __aplicar_contexto_git_automatico
     __aplicar_contexto_gh_automatico
 
-    # Verificacao e limpeza automatica de emojis
+    # Verificação e limpeza automatica de emojis
     echo ""
     local emoji_guardian="${BORDO_DIR:-$HOME/Controle de Bordo}/.sistema/scripts/emoji_guardian.py"
     if [ -f "$emoji_guardian" ]; then

@@ -201,10 +201,10 @@ vtask() {
     local today=$(date +%Y-%m-%d)
 
     if (( quinzena == 1 )); then
-        local periodo="${ano}-${(l:2::0:)mes_num}-01 a ${ano}-${(l:2::0:)mes_num}-15"
+        local período="${ano}-${(l:2::0:)mes_num}-01 a ${ano}-${(l:2::0:)mes_num}-15"
     else
         local ultimo_dia=$(date -d "${ano}-${(l:2::0:)mes_num}-01 +1 month -1 day" +%d 2>/dev/null || echo "30")
-        local periodo="${ano}-${(l:2::0:)mes_num}-16 a ${ano}-${(l:2::0:)mes_num}-${ultimo_dia}"
+        local período="${ano}-${(l:2::0:)mes_num}-16 a ${ano}-${(l:2::0:)mes_num}-${ultimo_dia}"
     fi
 
     local content=$(<"$template_file")
@@ -215,10 +215,10 @@ vtask() {
     content=$(echo "$content" | sed "s/^cliente: $/cliente: $cliente_tag/")
     content=$(echo "$content" | sed "s/^responsavel: $/responsavel: $responsavel/")
     content=$(echo "$content" | sed "s/^quinzena: $/quinzena: $quinzena/")
-    content=$(echo "$content" | sed "s/^periodo: \"\"$/periodo: \"$periodo\"/")
+    content=$(echo "$content" | sed "s/^período: \"\"$/período: \"$período\"/")
 
     content=$(echo "$content" | sed "s|> \*\*Origem:\*\*|> **Origem:** $cliente_tag|")
-    content=$(echo "$content" | sed "s|> \*\*Periodo:\*\*|> **Período:** $periodo|")
+    content=$(echo "$content" | sed "s|> \*\*Período:\*\*|> **Período:** $período|")
     content=$(echo "$content" | sed "s|> \*\*Responsavel:\*\*|> **Responsável:** $responsavel|")
 
     echo "$content" > "$filepath"

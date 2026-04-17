@@ -77,7 +77,7 @@ echo " Fix All Remotes - SSH Alias"
 echo "========================================"
 echo ""
 $DRY_RUN && echo "[DRY-RUN] Nenhuma alteracao sera feita."
-echo "Diretorio: $DEV_DIR"
+echo "Diretório: $DEV_DIR"
 echo "Contas gerenciadas: ${CONTAS_GERENCIADAS[*]}"
 echo ""
 
@@ -103,7 +103,7 @@ while IFS= read -r repo_path; do
     owner_repo=$(extrair_owner_repo "$remote_url")
     if [[ -z "$owner_repo" ]]; then
         ignorados=$((ignorados + 1))
-        $VERBOSE && echo "[SKIP] $repo_name (URL nao reconhecida: $remote_url)"
+        $VERBOSE && echo "[SKIP] $repo_name (URL não reconhecida: $remote_url)"
         continue
     fi
 

@@ -15,7 +15,7 @@ D_RESET="\033[0m"
 D_BOLD="\033[1m"
 D_DIM="\033[2m"
 
-# -- Compat: aliases antigos para nao quebrar nada --
+# -- Compat: aliases antigos para não quebrar nada --
 C_VERDE="$D_GREEN"
 C_VERMELHO="$D_RED"
 C_AMARELO="$D_YELLOW"
@@ -24,7 +24,7 @@ C_MAGENTA="$D_PINK"
 C_CYAN="$D_CYAN"
 C_NORMAL="$D_RESET"
 
-# -- Diretorio de desenvolvimento (portavel entre maquinas) --
+# -- Diretório de desenvolvimento (portavel entre maquinas) --
 export DEV_DIR="${DEV_DIR:-$HOME/Desenvolvimento}"
 
 # -- Helpers de formatacao --
@@ -48,9 +48,9 @@ __ok()   { echo -e "  ${D_GREEN}[OK]${D_RESET} $1"; }
 __warn() { echo -e "  ${D_YELLOW}[!]${D_RESET} $1"; }
 __err()  { echo -e "  ${D_RED}[ERRO]${D_RESET} $1" >&2; }
 
-__cd() { cd "$1" || { __err "Diretorio nao encontrado: $1"; return 1; } }
+__cd() { cd "$1" || { __err "Diretório não encontrado: $1"; return 1; } }
 
-# -- Verificacao de dependencias --
+# -- Verificação de dependencias --
 __verificar_dependencias() {
     local ferramentas_faltantes=()
     for ferramenta in "$@"; do
@@ -59,7 +59,7 @@ __verificar_dependencias() {
         fi
     done
     if [ ${#ferramentas_faltantes[@]} -gt 0 ]; then
-        __warn "Ferramentas nao encontradas: ${ferramentas_faltantes[*]}"
+        __warn "Ferramentas não encontradas: ${ferramentas_faltantes[*]}"
         echo "  Instalando via apt..." >&2
         if sudo apt update -qq && sudo apt install -y -qq "${ferramentas_faltantes[@]}"; then
             __ok "Instalado com sucesso." >&2
@@ -74,11 +74,11 @@ __verificar_dependencias() {
 __verificar_dependencias_python() {
     local PYTHON_EXEC="$1"; shift
     if ! command -v "$PYTHON_EXEC" &> /dev/null; then
-        __err "Python '$PYTHON_EXEC' nao encontrado."
+        __err "Python '$PYTHON_EXEC' não encontrado."
         return 1
     fi
     if ! "$PYTHON_EXEC" -m pip --version >/dev/null 2>&1; then
-        __err "pip nao disponivel em '$PYTHON_EXEC'. Rode: sudo apt install python3-pip"
+        __err "pip não disponivel em '$PYTHON_EXEC'. Rode: sudo apt install python3-pip"
         return 1
     fi
     local pacotes_instalados=$($PYTHON_EXEC -m pip list 2>/dev/null)
@@ -116,7 +116,7 @@ __resolver_python_projeto() {
         echo "/usr/bin/python3"
         return 0
     fi
-    # 3. Ultimo recurso: PATH
+    # 3. Último recurso: PATH
     echo "python3"
 }
 

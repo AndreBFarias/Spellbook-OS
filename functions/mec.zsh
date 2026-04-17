@@ -90,7 +90,7 @@ __mec_git_pull_seguro() {
             git -C "$proj_root" stash pop
         fi
         echo ""
-        echo -e "  ${D_GREEN}Ultimos 3 commits:${D_RESET}"
+        echo -e "  ${D_GREEN}Últimos 3 commits:${D_RESET}"
         git -C "$proj_root" log --oneline -3 HEAD
     else
         __err "git pull --rebase falhou."
@@ -108,7 +108,7 @@ __mec_exec_dbt() {
     local extra_args="$*"
 
     if [[ ! -x "$__MEC_DBT_BIN" ]]; then
-        __err "dbt nao encontrado em: ${__MEC_DBT_BIN}"
+        __err "dbt não encontrado em: ${__MEC_DBT_BIN}"
         return 1
     fi
 
@@ -126,27 +126,27 @@ __mec_exec_dbt() {
             echo ""
             "$__MEC_PYTHON" "$__MEC_RESULTS_SCRIPT" "$__MEC_RESULTS_JSON" 2>/dev/null \
                 || python3 "$__MEC_RESULTS_SCRIPT" "$__MEC_RESULTS_JSON" 2>/dev/null \
-                || __warn "Nao foi possivel renderizar run_results.json"
+                || __warn "Não foi possivel renderizar run_results.json"
         fi
     fi
 
     return $dbt_exit
 }
 
-# -- Selecao FZF de modelos e executa dbt --
+# -- Seleção FZF de modelos e executa dbt --
 __mec_exec_dbt_select() {
     local subcmd="$1"
     local models_dir="${__MEC_DBT_DIR}/models"
 
     if [[ ! -d "$models_dir" ]]; then
-        __warn "Diretorio de modelos nao encontrado: ${models_dir}"
+        __warn "Diretório de modelos não encontrado: ${models_dir}"
         __mec_exec_dbt "$subcmd"
         return
     fi
 
     local fzf_select_color="bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4"
-    local selecao
-    selecao=$(find "$models_dir" -name "*.sql" \
+    local seleção
+    seleção=$(find "$models_dir" -name "*.sql" \
         | sed "s|${models_dir}/||; s|\.sql$||" \
         | sort \
         | fzf --multi \
@@ -157,7 +157,7 @@ __mec_exec_dbt_select() {
               --header="  TAB multiplos | ESC = todos" \
               --color="$fzf_select_color")
 
-    if [[ -z "$selecao" ]]; then
+    if [[ -z "$seleção" ]]; then
         echo -e "  ${D_COMMENT}Nenhum modelo selecionado. Rodando todos...${D_RESET}"
         __mec_exec_dbt "$subcmd"
     else
@@ -166,13 +166,13 @@ __mec_exec_dbt_select() {
             local base
             base=$(basename "$m")
             modelos_args+="$base "
-        done <<< "$selecao"
+        done <<< "$seleção"
         modelos_args="${modelos_args%% }"
         __mec_exec_dbt "$subcmd" "--select $modelos_args"
     fi
 }
 
-# -- Checklist pre-push com 4 verificacoes --
+# -- Checklist pre-push com 4 verificações --
 __mec_checklist_push() {
     local proj_root="${1:-$__MEC_ROOT}"
     local passou=true
@@ -188,11 +188,11 @@ __mec_checklist_push() {
     if [[ "$email_local" == "$email_esperado" ]]; then
         echo -e "  ${D_GREEN}[1/4]${D_RESET} Identidade: ${D_FG}${email_local}${D_RESET}"
     else
-        echo -e "  ${D_RED}[1/4]${D_RESET} Identidade incorreta: ${D_FG}${email_local:-"(nao configurada)"}${D_RESET}"
+        echo -e "  ${D_RED}[1/4]${D_RESET} Identidade incorreta: ${D_FG}${email_local:-"(não configurada)"}${D_RESET}"
         passou=false
     fi
 
-    # [2/4] Branch nao e main/master
+    # [2/4] Branch não e main/master
     local branch_atual
     branch_atual=$(git -C "$proj_root" branch --show-current 2>/dev/null)
     if [[ "$branch_atual" =~ ^(main|master)$ ]]; then
@@ -214,10 +214,10 @@ __mec_checklist_push() {
             fi
             __cd "$orig" || true
         else
-            echo -e "  ${D_YELLOW}[3/4]${D_RESET} dbt dir nao encontrado — pulando compile"
+            echo -e "  ${D_YELLOW}[3/4]${D_RESET} dbt dir não encontrado — pulando compile"
         fi
     else
-        echo -e "  ${D_YELLOW}[3/4]${D_RESET} dbt nao encontrado — pulando compile"
+        echo -e "  ${D_YELLOW}[3/4]${D_RESET} dbt não encontrado — pulando compile"
     fi
 
     # [4/4] pre-commit
@@ -232,10 +232,10 @@ __mec_checklist_push() {
             fi
             __cd "$orig" || true
         else
-            echo -e "  ${D_YELLOW}[4/4]${D_RESET} proj_root nao encontrado — pulando pre-commit"
+            echo -e "  ${D_YELLOW}[4/4]${D_RESET} proj_root não encontrado — pulando pre-commit"
         fi
     else
-        echo -e "  ${D_COMMENT}[4/4]${D_RESET} pre-commit nao instalado — pulando"
+        echo -e "  ${D_COMMENT}[4/4]${D_RESET} pre-commit não instalado — pulando"
     fi
 
     echo ""
@@ -264,45 +264,45 @@ conjurar_mec() {
     __verificar_dependencias "fzf" "git" || return 1
 
     if [[ ! -d "$__MEC_ROOT" ]]; then
-        __err "Projeto MEC nao encontrado: ${__MEC_ROOT}"
+        __err "Projeto MEC não encontrado: ${__MEC_ROOT}"
         return 1
     fi
 
     if ! git -C "$__MEC_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        __err "Diretorio nao e um repositorio git: ${__MEC_ROOT}"
+        __err "Diretório não e um repositorio git: ${__MEC_ROOT}"
         return 1
     fi
 
-    echo -e "  ${D_COMMENT}Atualizando informacoes do remoto...${D_RESET}"
+    echo -e "  ${D_COMMENT}Atualizando informações do remoto...${D_RESET}"
     git -C "$__MEC_ROOT" fetch --quiet 2>/dev/null \
         && echo -e "  ${D_GREEN}fetch OK${D_RESET}" \
         || echo -e "  ${D_YELLOW}fetch falhou (offline?)${D_RESET}"
 
     __mec_mostrar_contexto "$__MEC_ROOT"
 
-    local -a opcoes=(
+    local -a opções=(
         "[SYNC]  git pull --rebase	SYNC	Atualizar branch (seguro, stash auto, sem reset --hard)"
         "[SYNC]  git fetch	SYNC	Buscar info do remoto sem alterar local"
         "[SYNC]  git status	SYNC	Status atual do repositorio"
-        "[SYNC]  git log recente	SYNC	Ultimos 10 commits com grafo"
+        "[SYNC]  git log recente	SYNC	Últimos 10 commits com grafo"
         "[DBT]   dbt run (todos)	DBT	Rodar todos os modelos no dataset dev"
         "[DBT]   dbt run (selecionar)	DBT	FZF de modelos + dbt run no dev"
         "[DBT]   dbt build (todos)	DBT	Build completo: run + test no dev"
         "[DBT]   dbt build (selecionar)	DBT	FZF de modelos + dbt build no dev"
         "[DBT]   dbt test	DBT	Rodar testes de qualidade no dev"
-        "[DBT]   dbt compile	DBT	Compilar SQL sem executar (validacao)"
+        "[DBT]   dbt compile	DBT	Compilar SQL sem executar (validação)"
         "[DBT]   dbt ls	DBT	Listar todos os modelos do projeto"
         "[GIT]   git add + commit	GIT	Stagear arquivos e commitar"
         "[GIT]   git diff staged	GIT	Ver diff dos arquivos em staging"
         "[GIT]   git stash	GIT	Guardar WIP com label automatico"
-        "[GIT]   git stash pop	GIT	Restaurar ultimo stash"
+        "[GIT]   git stash pop	GIT	Restaurar último stash"
         "[PUSH]  push com checklist	PUSH	4 checks + confirmar + git push"
         "[PUSH]  push direto	PUSH	Git push sem checklist (pede confirmacao)"
         "[AMB]   abrir santuario	AMB	santuario MEC pipelines-main"
         "[AMB]   pre-commit run	AMB	Rodar black/isort/flake8 em todos os arquivos"
         "[AMB]   verificar rastros IA	AMB	Scaneia arquivos staged por comentarios, emojis ou mencoes a IA"
         "[AMB]   ver identidade git	AMB	git_info (nome, email, branch, remote)"
-        "[INFO]  ver run_results	INFO	Tabela do ultimo dbt run/build/test"
+        "[INFO]  ver run_results	INFO	Tabela do último dbt run/build/test"
         "[INFO]  ver contexto	INFO	Reexibir painel de contexto"
         "[INFO]  ver PR status	INFO	gh pr view: status, checks e target branch do PR atual"
         "[MIG]   scan do projeto	MIG	Listar todos os SQLs com source censo pendente de migracao"
@@ -321,15 +321,15 @@ printf "\033[38;2;98;114;164m%s\033[0m\n" "────────────�
 printf "\033[38;2;241;250;140mGrupo:\033[0m %s\n\n" "$grupo"
 printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
 
-    local selecao
-    selecao=$(printf '%s\n' "${opcoes[@]}" | fzf \
+    local seleção
+    seleção=$(printf '%s\n' "${opções[@]}" | fzf \
         --height=70% \
         --layout=reverse \
         --border=rounded \
         --margin=1 \
         --padding=1 \
         --prompt="  MEC > " \
-        --header="  ENTER executar | ESC sair | 29 operacoes" \
+        --header="  ENTER executar | ESC sair | 29 operações" \
         --preview-window="right:45%:wrap" \
         --delimiter=$'\t' \
         --with-nth=1 \
@@ -338,13 +338,13 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
 
     local exit_code=$?
 
-    if [[ $exit_code -eq 130 || -z "$selecao" ]]; then
+    if [[ $exit_code -eq 130 || -z "$seleção" ]]; then
         echo -e "  ${D_COMMENT}Cancelado.${D_RESET}"
         return 0
     fi
 
     local label
-    label=$(printf '%s' "$selecao" | cut -d$'\t' -f1 | sed 's/[[:space:]]*$//')
+    label=$(printf '%s' "$seleção" | cut -d$'\t' -f1 | sed 's/[[:space:]]*$//')
 
     echo ""
     echo -e "  ${D_PURPLE}>>>${D_RESET} ${D_FG}${label}${D_RESET}"
@@ -428,7 +428,7 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
                 __cd "$__MEC_ROOT" && pre-commit run --all-files
                 __cd "$orig" || true
             else
-                __err "pre-commit nao instalado."
+                __err "pre-commit não instalado."
             fi
             ;;
         "[AMB]   verificar rastros IA")
@@ -447,7 +447,7 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
                     __cd "$orig" || true
                 fi
             else
-                __err "universal-sanitizer.py nao encontrado."
+                __err "universal-sanitizer.py não encontrado."
             fi
             ;;
         "[AMB]   ver identidade git")
@@ -460,7 +460,7 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
                 "$__MEC_PYTHON" "$__MEC_RESULTS_SCRIPT" "$__MEC_RESULTS_JSON" 2>/dev/null \
                     || python3 "$__MEC_RESULTS_SCRIPT" "$__MEC_RESULTS_JSON"
             else
-                __warn "run_results.json nao encontrado em: ${__MEC_RESULTS_JSON}"
+                __warn "run_results.json não encontrado em: ${__MEC_RESULTS_JSON}"
             fi
             ;;
         "[INFO]  ver contexto")
@@ -473,7 +473,7 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
                     --jq '"PR #\(.number): \(.title)\nDe: \(.headRefName) → Para: \(.baseRefName)\nStatus: \(.state)"' \
                     2>/dev/null || gh pr view 2>/dev/null || __warn "Nenhum PR encontrado para a branch atual."
             else
-                __err "gh CLI nao instalado."
+                __err "gh CLI não instalado."
             fi
             ;;
         "[MIG]   scan do projeto")
@@ -510,7 +510,7 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
                     apply --sql-file "$model_path"
             ;;
         *)
-            __warn "Acao nao mapeada: ${label}"
+            __warn "Ação não mapeada: ${label}"
             ;;
     esac
 }

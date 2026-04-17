@@ -1,6 +1,6 @@
 #!/bin/bash
 # Instalador e configurador do Spicetify para Spellbook-OS
-# Detecta tipo de instalacao do Spotify, instala Spicetify e aplica config padrao
+# Detecta tipo de instalação do Spotify, instala Spicetify e aplica config padrao
 
 set -euo pipefail
 
@@ -23,7 +23,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-# --- Configuracao padrao ---
+# --- Configuração padrao ---
 TEMA="Sleek"
 ESQUEMA="Dracula"
 EXTENSIONS="autoSkipExplicit.js|autoSkipVideo.js|bookmark.js|fullAppDisplay.js|keyboardShortcut.js|loopyLoop.js|popupLyrics.js|shuffle+.js|trashbin.js|webnowplaying.js"
@@ -80,7 +80,7 @@ instalar_temas() {
     if [[ -d "$THEMES_DIR/$TEMA" ]]; then
         _ok "Temas instalados (tema ativo: $TEMA)"
     else
-        _warn "Clone concluido mas tema $TEMA nao encontrado"
+        _warn "Clone concluido mas tema $TEMA não encontrado"
     fi
 }
 
@@ -96,15 +96,15 @@ instalar_marketplace() {
     if [[ -d "$CUSTOM_APPS_DIR/marketplace" ]]; then
         _ok "Marketplace instalado"
     else
-        _warn "Marketplace nao encontrado apos instalacao"
+        _warn "Marketplace não encontrado apos instalação"
     fi
 }
 
-# --- Configurar paths por tipo de instalacao ---
+# --- Configurar paths por tipo de instalação ---
 configurar_paths() {
     local tipo="$1"
 
-    _info "Configurando paths para instalacao $tipo..."
+    _info "Configurando paths para instalação $tipo..."
 
     case "$tipo" in
         flatpak)
@@ -113,7 +113,7 @@ configurar_paths() {
                 "$SPICETIFY_BIN" config prefs_path "$flatpak_prefs"
                 _ok "prefs_path configurado para Flatpak"
             else
-                _warn "prefs do Flatpak nao encontrado — abra o Spotify uma vez primeiro"
+                _warn "prefs do Flatpak não encontrado — abra o Spotify uma vez primeiro"
                 _info "Iniciando Spotify para gerar prefs..."
                 flatpak run com.spotify.Client &>/dev/null &
                 local pid=$!
@@ -138,14 +138,14 @@ configurar_paths() {
             fi
             ;;
         nativo)
-            _ok "prefs_path padrao para instalacao nativa"
+            _ok "prefs_path padrao para instalação nativa"
             ;;
     esac
 }
 
-# --- Aplicar configuracao via CLI ---
+# --- Aplicar configuração via CLI ---
 aplicar_config() {
-    _info "Aplicando configuracao..."
+    _info "Aplicando configuração..."
 
     "$SPICETIFY_BIN" config current_theme "$TEMA"
     "$SPICETIFY_BIN" config color_scheme "$ESQUEMA"
@@ -164,7 +164,7 @@ aplicar_config() {
     "$SPICETIFY_BIN" config disable_ui_logging 1
     "$SPICETIFY_BIN" config remove_rtl_rule 1
 
-    _ok "Configuracao aplicada via CLI"
+    _ok "Configuração aplicada via CLI"
 }
 
 # --- Configurar extensions e custom apps ---
@@ -213,19 +213,19 @@ restaurar_e_aplicar() {
     _ok "Spicetify aplicado com sucesso"
 }
 
-# --- Validacao ---
+# --- Validação ---
 validar() {
     local erros=0
 
-    _info "Validando instalacao..."
+    _info "Validando instalação..."
 
     if ! "$SPICETIFY_BIN" config extensions | grep -q "bookmark.js"; then
-        _warn "Extensions nao configuradas corretamente"
+        _warn "Extensions não configuradas corretamente"
         ((erros++))
     fi
 
     if ! "$SPICETIFY_BIN" config custom_apps | grep -q "marketplace"; then
-        _warn "Custom apps nao configurados corretamente"
+        _warn "Custom apps não configurados corretamente"
         ((erros++))
     fi
 
@@ -237,7 +237,7 @@ validar() {
     fi
 
     if [[ $erros -eq 0 ]]; then
-        _ok "Validacao completa: tudo OK"
+        _ok "Validação completa: tudo OK"
     else
         _warn "$erros problema(s) detectado(s)"
         return 1
@@ -255,7 +255,7 @@ main() {
     _info "Spotify detectado: $tipo_spotify"
 
     if [[ "$tipo_spotify" == "nenhum" ]]; then
-        _err "Spotify nao encontrado. Instale o Spotify primeiro."
+        _err "Spotify não encontrado. Instale o Spotify primeiro."
     fi
 
     instalar_spicetify

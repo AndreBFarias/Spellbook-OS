@@ -36,7 +36,7 @@ __conectar_rsync() {
     done
 
     echo ""
-    __err "Nao foi possivel conectar em '$host' apos $max_tentativas tentativas."
+    __err "Não foi possivel conectar em '$host' apos $max_tentativas tentativas."
     echo -e "  ${D_COMMENT}Verifique se a maquina esta ligada e acessivel na rede.${D_RESET}"
     echo ""
     return 1

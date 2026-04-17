@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gera arquivos de completion zsh (_<funcao>) a partir de metadados em
+Gera arquivos de completion zsh (_<função>) a partir de metadados em
 comentários nos arquivos functions/*.zsh.
 
 Convenção (ver completions/CONVENCAO.md):

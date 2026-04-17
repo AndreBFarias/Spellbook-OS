@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Buscar arquivos por padrao de nome em um diretorio
+# Proposito: Buscar arquivos por padrao de nome em um diretório
 # Uso: buscar <padrao> <pasta>
 buscar() {
     if [ -z "$1" ] || [ -z "$2" ]; then
@@ -12,7 +12,7 @@ buscar() {
     local caminho="$2"
 
     if [ ! -d "$caminho" ]; then
-        __err "Diretorio nao existe: $caminho"
+        __err "Diretório não existe: $caminho"
         return 1
     fi
 

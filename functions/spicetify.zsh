@@ -7,7 +7,7 @@
 __spicetify_bin() {
     local bin="$HOME/.spicetify/spicetify"
     if [[ ! -x "$bin" ]]; then
-        __err "Spicetify nao encontrado em $bin"
+        __err "Spicetify não encontrado em $bin"
         return 1
     fi
     echo "$bin"
@@ -21,7 +21,7 @@ __spicetify_config_value() {
 }
 
 # ---------------------------------------------------------------------------
-# Funcoes publicas
+# Funções publicas
 # ---------------------------------------------------------------------------
 
 # Propósito: Exibir status do Spicetify (tema, esquema, extensions, custom apps)
@@ -163,7 +163,7 @@ spicetify_instalar() {
     local script_dir="${ZDOTDIR:-$HOME/.config/zsh}/scripts/spicetify-setup.sh"
 
     if [[ ! -f "$script_dir" ]]; then
-        __err "Script de setup nao encontrado: $script_dir"
+        __err "Script de setup não encontrado: $script_dir"
         return 1
     fi
 

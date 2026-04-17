@@ -161,7 +161,7 @@ spellbook_sync_push() {
 # Uso: spellbook_sync_status
 spellbook_sync_status() {
     __spellbook_is_git_repo || {
-        __err "ZDOTDIR nao e um repositorio git com remote configurado"
+        __err "ZDOTDIR não e um repositorio git com remote configurado"
         return 1
     }
 
@@ -178,9 +178,9 @@ spellbook_sync_status() {
     local changes
     changes=$(git -C "$dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 
-    __item "Diretorio" "$dir"
+    __item "Diretório" "$dir"
     __item "Branch" "${branch:-desconhecida}" "$D_COMMENT" "$D_CYAN"
-    __item "Ultimo" "$last_commit" "$D_COMMENT" "$D_FG"
+    __item "Último" "$last_commit" "$D_COMMENT" "$D_FG"
     __item "Remote" "$remote" "$D_COMMENT" "$D_COMMENT"
     __item "Pendentes" "$changes arquivo(s)" "$D_COMMENT" "$D_FG"
 
@@ -210,7 +210,7 @@ spellbook_sync_status() {
 #        --remote=Pull força (sobrescreve local com remoto)
 spellbook_sync_force() {
     __spellbook_is_git_repo || {
-        __err "ZDOTDIR nao e um repositorio git com remote configurado"
+        __err "ZDOTDIR não e um repositorio git com remote configurado"
         return 1
     }
 
@@ -239,4 +239,4 @@ spellbook_sync_force() {
     esac
 }
 
-# "O que nao se pode medir, nao se pode melhorar." -- Lord Kelvin
+# "O que não se pode medir, não se pode melhorar." -- Lord Kelvin

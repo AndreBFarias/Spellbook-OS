@@ -63,7 +63,7 @@ _reconstruir_caches_icones() {
 # Propósito: Reaplicar Icon= corretos em .desktop de Flatpaks com path absoluto quebrado
 # Uso: _fix_flatpak_icons (chamado após flatpak update/repair em limpar_cache e atualizar_tudo)
 # Contexto: alguns .desktop de Flatpaks vêm com Icon= apontando para ~/.icons/Dracula-Icones/
-#           scalable/ que nao existe. Esta funcao sobrescreve para nomes canonicos.
+#           scalable/ que não existe. Esta função sobrescreve para nomes canonicos.
 _fix_flatpak_icons() {
     local exports_dir="$HOME/.local/share/flatpak/exports/share/applications"
     [ -d "$exports_dir" ] || return 0
@@ -103,7 +103,7 @@ _fix_flatpak_icons() {
 rebuild_dracula_theme() {
     local repo="$HOME/Desenvolvimento/Dracula_OS-Theme"
     if [ ! -d "$repo" ]; then
-        echo -e "  ${D_YELLOW}[!]${D_RESET} Repo nao encontrado em $repo"
+        echo -e "  ${D_YELLOW}[!]${D_RESET} Repo não encontrado em $repo"
         return 1
     fi
 
@@ -138,7 +138,7 @@ rebuild_dracula_theme() {
     echo ""
 }
 
-# Proposito: Exibir contexto de usuario no prompt (SSH e usuarios nao-padrao)
+# Proposito: Exibir contexto de usuario no prompt (SSH e usuarios não-padrao)
 # Uso: prompt_context
 prompt_context() {
   if [[ "$USER" != "$DEFAULT_USER" || -n "$SSH_CLIENT" ]]; then

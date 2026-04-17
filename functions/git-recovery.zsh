@@ -4,7 +4,7 @@
 # Uso: grecuperar [branch_ou_commit]
 grecuperar() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __err "Nao e um repositorio git."
+        __err "Não e um repositorio git."
         return 1
     fi
 
@@ -15,7 +15,7 @@ grecuperar() {
         echo -e "  ${D_PURPLE}Branches:${D_RESET}"
         git branch -v | sed 's/^/    /'
         echo ""
-        echo -e "  ${D_PURPLE}Reflog (ultimas 10):${D_RESET}"
+        echo -e "  ${D_PURPLE}Reflog (últimas 10):${D_RESET}"
         git reflog -10 --format="    %C(yellow)%h%Creset %C(blue)%gd%Creset %gs"
         echo ""
         return 1
@@ -41,7 +41,7 @@ grecuperar() {
 # Uso: gsos
 gsos() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __err "Nao e um repositorio git."
+        __err "Não e um repositorio git."
         return 1
     fi
 
@@ -58,7 +58,7 @@ gsos() {
     git branch -v | sed 's/^/    /'
     echo ""
 
-    echo -e "  ${D_PURPLE}Reflog (ultimas 15)${D_RESET}"
+    echo -e "  ${D_PURPLE}Reflog (últimas 15)${D_RESET}"
     git reflog -15 --format="    %C(yellow)%h%Creset %C(blue)%gd%Creset %C(green)%ar%Creset %gs"
     echo ""
 
@@ -79,7 +79,7 @@ gsos() {
 # Uso: grestore <ref>
 grestore() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __err "Nao e um repositorio git."
+        __err "Não e um repositorio git."
         return 1
     fi
 

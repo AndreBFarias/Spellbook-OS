@@ -10,7 +10,7 @@ set -e
 ERRORS=0
 WARNINGS=0
 
-echo "=== VALIDACAO DO SISTEMA AI TOOLS ==="
+echo "=== Validação DO SISTEMA AI TOOLS ==="
 echo ""
 
 # Cores

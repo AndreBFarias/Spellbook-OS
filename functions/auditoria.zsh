@@ -7,7 +7,7 @@ auditar_repos() {
     local script_path="$HOME/.config/zsh/scripts/auditoria-repos.sh"
 
     if [ ! -f "$script_path" ]; then
-        __err "Script de auditoria nao encontrado em $script_path"
+        __err "Script de auditoria não encontrado em $script_path"
         return 1
     fi
 

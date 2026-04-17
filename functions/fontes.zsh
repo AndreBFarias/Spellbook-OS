@@ -21,7 +21,7 @@ __fontes_pacote_disponivel() {
 }
 
 __fontes_instalar_pacotes() {
-    local descricao="$1"; shift
+    local descrição="$1"; shift
     local pacotes=("$@")
     local faltantes=()
 
@@ -38,15 +38,15 @@ __fontes_instalar_pacotes() {
     done
 
     if [[ ${#faltantes[@]} -eq 0 ]]; then
-        __ok "$descricao — já instalado"
+        __ok "$descrição — já instalado"
         return 0
     fi
 
-    echo -e "  ${D_COMMENT}Instalando ${descricao}...${D_RESET}"
+    echo -e "  ${D_COMMENT}Instalando ${descrição}...${D_RESET}"
     if sudo apt install -y -qq "${faltantes[@]}" 2>/dev/null; then
-        __ok "$descricao — instalado com sucesso"
+        __ok "$descrição — instalado com sucesso"
     else
-        __err "Falha ao instalar ${descricao}"
+        __err "Falha ao instalar ${descrição}"
         return 1
     fi
 }
@@ -387,11 +387,11 @@ fontes_verificar() {
 
     __fontes_verificar_arquivo() {
         local nome="$1"
-        local diretorio="$2"
+        local diretório="$2"
         ((total++))
 
-        if [[ -d "$diretorio" ]] && [[ -n "$(ls -A "$diretorio" 2>/dev/null)" ]]; then
-            local contagem=$(find "$diretorio" -type f \( -name "*.ttf" -o -name "*.ttc" -o -name "*.otf" \) 2>/dev/null | wc -l)
+        if [[ -d "$diretório" ]] && [[ -n "$(ls -A "$diretório" 2>/dev/null)" ]]; then
+            local contagem=$(find "$diretório" -type f \( -name "*.ttf" -o -name "*.ttc" -o -name "*.otf" \) 2>/dev/null | wc -l)
             __item "$nome" "${contagem} arquivo(s)" "$D_COMMENT" "$D_GREEN"
             ((instaladas++))
         else

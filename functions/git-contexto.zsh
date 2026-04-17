@@ -29,7 +29,7 @@ __resolver_identidade() {
     return 0
 }
 
-# --- Funcoes de contexto git ---
+# --- Funções de contexto git ---
 
 __definir_contexto_git() {
     local user_name="$1"
@@ -136,7 +136,7 @@ __aplicar_contexto_gh_automatico() {
     if gh auth switch --user "$conta_alvo" >/dev/null 2>&1; then
         echo -e "  ${D_COMMENT}gh:${D_RESET} ${D_CYAN}${conta_alvo}${D_RESET}"
     else
-        __warn "gh: conta '${conta_alvo}' nao cadastrada. Ativa: ${conta_ativa:-desconhecida}"
+        __warn "gh: conta '${conta_alvo}' não cadastrada. Ativa: ${conta_ativa:-desconhecida}"
     fi
 }
 
@@ -178,13 +178,13 @@ sincronizar_repositorio() {
 
     local repos=$(find "$DEV_DIR" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
 
-    local selecao=$(echo "$repos" | fzf --multi --height=60% \
+    local seleção=$(echo "$repos" | fzf --multi --height=60% \
         --prompt="  Sincronizar > " \
         --header="  TAB para selecionar multiplos" \
         --color="bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4" \
         --preview 'git -C {} status -s')
 
-    if [ -z "$selecao" ]; then echo -e "  ${D_COMMENT}Cancelado.${D_RESET}"; return 0; fi
+    if [ -z "$seleção" ]; then echo -e "  ${D_COMMENT}Cancelado.${D_RESET}"; return 0; fi
 
     __header "SINCRONIZACAO" "$D_ORANGE"
 
@@ -192,7 +192,7 @@ sincronizar_repositorio() {
         __cd "$repo_path" || continue
         __aplicar_contexto_git_automatico > /dev/null 2>&1
         __sinc_preservadora
-    done <<< "$selecao"
+    done <<< "$seleção"
     echo ""
 }
 
@@ -202,7 +202,7 @@ sincronizar_todos_os_repositorios() {
     __verificar_dependencias "git" "rsync" || return 1
 
     __header "SINCRONIZACAO EM MASSA" "$D_RED"
-    echo -e "  ${D_YELLOW}Arquivos locais nao versionados serao backupeados em '_VERSAO_ANTIGA/'.${D_RESET}"
+    echo -e "  ${D_YELLOW}Arquivos locais não versionados serao backupeados em '_VERSAO_ANTIGA/'.${D_RESET}"
     read -k 1 "reply?  Confirmar? (y/N) "
     echo ""
 
@@ -221,4 +221,4 @@ sincronizar_todos_os_repositorios() {
     echo ""
 }
 
-# "Nao e a consciencia que determina a vida, mas a vida que determina a consciencia." -- Karl Marx
+# "Não e a consciencia que determina a vida, mas a vida que determina a consciencia." -- Karl Marx

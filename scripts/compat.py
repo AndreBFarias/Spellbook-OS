@@ -82,4 +82,4 @@ def normalize_path(filepath):
     return Path(filepath).resolve()
 
 
-# "Nao ha vento favoravel para quem nao sabe aonde ir." -- Seneca
+# "Não ha vento favoravel para quem não sabe aonde ir." -- Seneca

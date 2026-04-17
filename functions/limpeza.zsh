@@ -21,7 +21,7 @@ limpeza_interativa() {
     local bordo_dir="${BORDO_DIR:-$HOME/Controle de Bordo}"
 
     if [ ! -d "$bordo_dir" ]; then
-        __err "Diretorio nao encontrado: $bordo_dir"
+        __err "Diretório não encontrado: $bordo_dir"
         return 1
     fi
 
@@ -50,14 +50,14 @@ limpeza_interativa() {
     fi
 
     if [ -z "$alvos" ]; then
-        echo -e "  ${D_COMMENT}Nenhuma selecao.${D_RESET}"
+        echo -e "  ${D_COMMENT}Nenhuma seleção.${D_RESET}"
         cd - > /dev/null
         echo ""
         return 0
     fi
 
     echo ""
-    echo -e "  ${D_PURPLE}Selecionado para remocao:${D_RESET}"
+    echo -e "  ${D_PURPLE}Selecionado para remoção:${D_RESET}"
     echo "$alvos" | sed "s/^/    /"
     echo ""
 

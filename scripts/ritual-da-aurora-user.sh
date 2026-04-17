@@ -13,4 +13,4 @@ if command -v nvidia-settings &> /dev/null; then
     nvidia-settings -a '[gpu:0]/GpuPowerMizerMode=1' > /dev/null 2>&1
 fi
 
-# "A excelencia nao e um ato, mas um habito." -- Aristoteles
+# "A excelencia não e um ato, mas um habito." -- Aristoteles

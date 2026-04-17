@@ -122,7 +122,7 @@ while read -r REPO_PATH; do
                 HOOKS_DETAIL="${HOOKS_DETAIL}${HOOK}(ausente-central) "
             elif [[ ! -x "$GLOBAL_HOOKS_PATH/$HOOK" ]]; then
                 HOOKS_OK=false
-                HOOKS_DETAIL="${HOOKS_DETAIL}${HOOK}(nao-exec-central) "
+                HOOKS_DETAIL="${HOOKS_DETAIL}${HOOK}(não-exec-central) "
             fi
         done
     else
@@ -134,7 +134,7 @@ while read -r REPO_PATH; do
                 HOOKS_DETAIL="${HOOKS_DETAIL}${HOOK}(ausente) "
             elif [[ ! -x "$HOOK_PATH" ]]; then
                 HOOKS_OK=false
-                HOOKS_DETAIL="${HOOKS_DETAIL}${HOOK}(nao-exec) "
+                HOOKS_DETAIL="${HOOKS_DETAIL}${HOOK}(não-exec) "
             fi
         done
 

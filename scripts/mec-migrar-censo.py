@@ -222,7 +222,7 @@ def validate_pair(client, old_col: str, new_col: str, verbose: bool = True) -> d
 
     if verbose:
         _p()
-        _p(f"  {PURPLE}{BOLD}VALIDACAO DE COLUNA{RESET}")
+        _p(f"  {PURPLE}{BOLD}Validação DE COLUNA{RESET}")
         _p(_hr())
         _p(f"  {GRAY}Antigo{RESET}   {FG}{OLD_TABLE}.{old_col}{RESET}")
         _p(f"  {GRAY}Novo  {RESET}   {FG}{NEW_TABLE}.{new_col}{RESET}")
@@ -292,7 +292,7 @@ def validate_pair(client, old_col: str, new_col: str, verbose: bool = True) -> d
     else:
         result["sum_ok"] = True
         if verbose:
-            _p(f"  {GRAY}[4/4]{RESET} SUM       {GRAY}(nao aplicavel para tipo {old_type}){RESET}")
+            _p(f"  {GRAY}[4/4]{RESET} SUM       {GRAY}(não aplicavel para tipo {old_type}){RESET}")
 
     result["all_ok"] = all([
         result["type_ok"], result["head_ok"],
@@ -305,7 +305,7 @@ def validate_pair(client, old_col: str, new_col: str, verbose: bool = True) -> d
             _p(f"  {GRAY}Alias sugerido:{RESET}")
             _p(f"  {CYAN}{result['alias']}{RESET}")
         else:
-            _p(f"  {YELLOW}Validacao com divergencias — revisar antes de aplicar.{RESET}")
+            _p(f"  {YELLOW}Validação com divergencias — revisar antes de aplicar.{RESET}")
 
     return result
 
@@ -343,7 +343,7 @@ def mock_validate(old_col: str, new_col: str, verbose: bool = True) -> dict:
 
     if verbose:
         _p()
-        _p(f"  {PURPLE}{BOLD}VALIDACAO DE COLUNA{RESET}  {YELLOW}[mock]{RESET}")
+        _p(f"  {PURPLE}{BOLD}Validação DE COLUNA{RESET}  {YELLOW}[mock]{RESET}")
         _p(_hr())
         _p(f"  {GRAY}Antigo{RESET}   {FG}{OLD_TABLE}.{old_col}{RESET}")
         _p(f"  {GRAY}Novo  {RESET}   {FG}{NEW_TABLE}.{new_col}{RESET}")
@@ -382,7 +382,7 @@ def mock_validate(old_col: str, new_col: str, verbose: bool = True) -> dict:
             _p(f"  {GRAY}Alias sugerido:{RESET}")
             _p(f"  {CYAN}{result['alias']}{RESET}")
         else:
-            _p(f"  {YELLOW}Validacao com divergencias — revisar antes de aplicar.{RESET}")
+            _p(f"  {YELLOW}Validação com divergencias — revisar antes de aplicar.{RESET}")
 
     return result
 
@@ -692,7 +692,7 @@ def cmd_scan(args) -> int:
         return EXIT_OK
 
     _p(
-        f"  {GRAY}{'ARQUIVO':<45} {'ACAO':<15} {'ALIASES':>7}  {'DESCONH.':>8}{RESET}"
+        f"  {GRAY}{'ARQUIVO':<45} {'Ação':<15} {'ALIASES':>7}  {'DESCONH.':>8}{RESET}"
     )
     _p(
         f"  {GRAY}{'─' * 45} {'─' * 15} {'─' * 7}  {'─' * 8}{RESET}"
@@ -749,7 +749,7 @@ def cmd_analyze(args, client) -> int:
         else:
             _p(
                 f"  {GRAY}Nenhuma referencia a '{OLD_TABLE}' encontrada. "
-                f"Arquivo ja migrado ou nao usa censo.{RESET}"
+                f"Arquivo ja migrado ou não usa censo.{RESET}"
             )
             _p(_hr())
         return EXIT_OK
@@ -769,7 +769,7 @@ def cmd_analyze(args, client) -> int:
         old_schema = get_table_schema(client, DATASET, OLD_TABLE)
         if not old_schema:
             print(
-                f"  {RED}Nao foi possivel obter schema de {OLD_TABLE}{RESET}",
+                f"  {RED}Não foi possivel obter schema de {OLD_TABLE}{RESET}",
                 file=sys.stderr,
             )
             return EXIT_ERROR
@@ -813,7 +813,7 @@ def cmd_analyze(args, client) -> int:
         if new_col:
             _p(f"  {FG}{old_col:<55}{RESET} {YELLOW}-> {new_col}{RESET}")
         else:
-            _p(f"  {FG}{old_col:<55}{RESET} {RED}nao mapeada{RESET}")
+            _p(f"  {FG}{old_col:<55}{RESET} {RED}não mapeada{RESET}")
 
     _p()
     _p(
@@ -916,7 +916,7 @@ def interactive_apply(
         old_schema = get_table_schema(client, DATASET, OLD_TABLE)
         if not old_schema:
             print(
-                f"  {RED}Nao foi possivel obter schema de {OLD_TABLE}{RESET}",
+                f"  {RED}Não foi possivel obter schema de {OLD_TABLE}{RESET}",
                 file=sys.stderr,
             )
             return EXIT_ERROR
@@ -1029,7 +1029,7 @@ def interactive_apply(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mec-migrar-censo",
-        description="Validacao e migracao semi-automatizada de colunas do Censo Escolar",
+        description="Validação e migracao semi-automatizada de colunas do Censo Escolar",
     )
     parser.add_argument(
         "--no-sync", action="store_true",
@@ -1064,7 +1064,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_apply.add_argument(
         "--quiet", action="store_true",
-        help="Suprimir passos de validacao; exibir apenas linha de rename",
+        help="Suprimir passos de validação; exibir apenas linha de rename",
     )
     p_apply.add_argument(
         "--source-only", action="store_true",

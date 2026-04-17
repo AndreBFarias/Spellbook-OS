@@ -139,8 +139,8 @@ conjurar() {
 
     [[ "$modo" == "search" && -n "$termo_busca" ]] && fzf_opts+=(--query="$termo_busca")
 
-    local selecao
-    selecao=$(fzf "${fzf_opts[@]}" < <(python3 "$helper_script" "${sources[@]}"))
+    local seleção
+    seleção=$(fzf "${fzf_opts[@]}" < <(python3 "$helper_script" "${sources[@]}"))
     local exit_code=$?
 
     if [[ $exit_code -eq 130 ]]; then
@@ -148,11 +148,11 @@ conjurar() {
         return 0
     fi
 
-    [[ $exit_code -ne 0 || -z "$selecao" ]] && return 0
+    [[ $exit_code -ne 0 || -z "$seleção" ]] && return 0
 
-    local comando=$(echo "$selecao" | cut -d$'\t' -f1)
-    local uso=$(echo "$selecao" | cut -d$'\t' -f5)
-    local descricao=$(echo "$selecao" | cut -d$'\t' -f4)
+    local comando=$(echo "$seleção" | cut -d$'\t' -f1)
+    local uso=$(echo "$seleção" | cut -d$'\t' -f5)
+    local descrição=$(echo "$seleção" | cut -d$'\t' -f4)
 
     local args_part="${uso#$comando}"
     args_part="${args_part# }"
@@ -168,7 +168,7 @@ conjurar() {
     elif [[ "$args_part" == *"<"* || "$args_part" == *"["* ]]; then
         echo ""
         echo -e "  ${D_PURPLE}${comando}${D_RESET} ${D_COMMENT}${args_part}${D_RESET}"
-        [ -n "$descricao" ] && echo -e "  ${D_DIM}${descricao}${D_RESET}"
+        [ -n "$descrição" ] && echo -e "  ${D_DIM}${descrição}${D_RESET}"
         echo ""
 
         local -a cmd_args=()
@@ -215,7 +215,7 @@ conjurar() {
     else
         echo ""
         echo -e "  ${D_PURPLE}${comando}${D_RESET} ${D_COMMENT}${args_part}${D_RESET}"
-        [ -n "$descricao" ] && echo -e "  ${D_DIM}${descricao}${D_RESET}"
+        [ -n "$descrição" ] && echo -e "  ${D_DIM}${descrição}${D_RESET}"
         echo ""
         local args_input
         args_input=$(__conjurar_read_timeout "  ${D_CYAN}args${D_RESET}: ") || return 0

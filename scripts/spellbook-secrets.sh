@@ -43,7 +43,7 @@ export_secrets() {
             count=$((count + 1))
             _info "Empacotando: $file"
         else
-            _warn "Nao encontrado (ignorado): $file"
+            _warn "Não encontrado (ignorado): $file"
         fi
     done
 
@@ -68,7 +68,7 @@ import_secrets() {
     local vault_src="${2:-$VAULT_FILE}"
 
     if [[ ! -f "$vault_src" ]]; then
-        _err "Arquivo vault nao encontrado: $vault_src"
+        _err "Arquivo vault não encontrado: $vault_src"
         return 1
     fi
 

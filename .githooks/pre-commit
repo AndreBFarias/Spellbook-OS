@@ -1,0 +1,75 @@
+#!/bin/bash
+# Hook pre-commit do Spellbook-OS / ~/.config/zsh
+# Valida acentuação PT-BR e emojis em arquivos staged antes do commit.
+#
+# Instalação (uma vez):
+#   git config core.hooksPath .githooks
+#
+# Para pular em commit urgente: SKIP_HOOKS=1 git commit -m "..."
+
+set -e
+
+if [[ "$SKIP_HOOKS" == "1" ]]; then
+    echo "[pre-commit] pulado (SKIP_HOOKS=1)"
+    exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Coleta arquivos staged relevantes
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(py|zsh|sh|md)$' || true)
+
+if [[ -z "$STAGED_FILES" ]]; then
+    exit 0
+fi
+
+# -------------------------------------------------------------------
+# 1. Validação de acentuação PT-BR
+# -------------------------------------------------------------------
+if [[ -f "scripts/validar-acentuacao.py" ]]; then
+    echo "[pre-commit] Verificando acentuação..."
+    ACENTO_PATHS=()
+    while IFS= read -r f; do
+        [[ -n "$f" ]] && ACENTO_PATHS+=("$f")
+    done <<< "$STAGED_FILES"
+
+    if ! python3 scripts/validar-acentuacao.py --paths "${ACENTO_PATHS[@]}" >/tmp/acento_violations.log 2>&1; then
+        echo "[pre-commit] Violações de acentuação PT-BR encontradas:"
+        cat /tmp/acento_violations.log
+        echo ""
+        echo "  Corrija com: python3 scripts/validar-acentuacao.py --fix --paths <arquivos>"
+        echo "  Ou adicione '# noqa-acento' na linha para suprimir."
+        echo "  Ou bypass: SKIP_HOOKS=1 git commit ..."
+        exit 1
+    fi
+fi
+
+# -------------------------------------------------------------------
+# 2. Detecção de emojis (CLAUDE.md: zero emojis)
+# -------------------------------------------------------------------
+EMOJI_FOUND=0
+for f in $STAGED_FILES; do
+    [[ -f "$f" ]] || continue
+    if python3 -c "
+import sys, re
+content = open(sys.argv[1], 'r', encoding='utf-8', errors='replace').read()
+emoji_pattern = re.compile(r'[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F900-\U0001F9FF]')
+matches = emoji_pattern.findall(content)
+if matches:
+    print(f'{sys.argv[1]}: {len(matches)} emoji(s)')
+    sys.exit(1)
+" "$f" 2>/dev/null; then
+        :
+    else
+        EMOJI_FOUND=1
+    fi
+done
+
+if (( EMOJI_FOUND > 0 )); then
+    echo "[pre-commit] Emojis detectados em arquivos staged (CLAUDE.md proíbe)."
+    echo "  Bypass: SKIP_HOOKS=1 git commit ..."
+    exit 1
+fi
+
+exit 0
