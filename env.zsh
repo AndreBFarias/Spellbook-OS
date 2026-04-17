@@ -102,3 +102,8 @@ if command -v gh &>/dev/null; then
 fi
 
 
+export ANDROID_HOME="$HOME/Android/sdk"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+
+
+
