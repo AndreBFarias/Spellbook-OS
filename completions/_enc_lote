@@ -2,13 +2,13 @@
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: encoding.zsh
 # Propósito: Conversão em lote (encoding + BOM + CRLF + scripts Python)
-# Uso: enc_lote <diretorio> [--perfil windows-para-linux|linux-para-windows] [--dry-run] [--no-backup]
+# Uso: enc_lote <diretório> [--perfil windows-para-linux|linux-para-windows] [--dry-run] [--no-backup]
 
 _enc_lote() {
     _arguments \
         '--perfil[Perfil de conversão (default\: windows-para-linux)]' \
         '--dry-run[Apenas lista, não altera nada]' \
         '--no-backup[Não cria .bak antes de converter]' \
-        '1:diretorio:__path_files -/'
+        '1:diretório:__path_files -/'
 }
 _enc_lote "$@"

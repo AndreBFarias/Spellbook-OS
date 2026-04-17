@@ -1,7 +1,7 @@
 #compdef buscar
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: busca.zsh
-# Propósito: Buscar arquivos por padrao de nome em um diretorio
+# Propósito: Buscar arquivos por padrao de nome em um diretório
 # Uso: buscar <padrao> <pasta>
 
 _buscar() {

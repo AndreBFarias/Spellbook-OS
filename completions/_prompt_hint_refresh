@@ -1,0 +1,10 @@
+#compdef prompt_hint_refresh
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: prompt-hint.zsh
+# Propósito: Recarrega cache de hints da RPROMPT (útil após editar uma função)
+# Uso: prompt_hint_refresh
+
+_prompt_hint_refresh() {
+    _message 'sem argumentos definidos'
+}
+_prompt_hint_refresh "$@"

@@ -1,7 +1,7 @@
 #compdef prompt_context
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: sistema.zsh
-# Propósito: Exibir contexto de usuario no prompt (SSH e usuarios nao-padrao)
+# Propósito: Exibir contexto de usuario no prompt (SSH e usuarios não-padrao)
 # Uso: prompt_context
 
 _prompt_context() {

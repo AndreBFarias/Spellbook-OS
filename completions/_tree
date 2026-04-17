@@ -1,12 +1,12 @@
 #compdef tree
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: arvore.zsh
-# Propósito: Arvore de diretorios com filtros e exportacao para arquivo
-# Uso: tree <profundidade> [diretorio]
+# Propósito: Arvore de diretórios com filtros e exportacao para arquivo
+# Uso: tree <profundidade> [diretório]
 
 _tree() {
     _arguments \
         '1:profundidade:_default' \
-        '::diretorio:_default'
+        '::diretório:_default'
 }
 _tree "$@"

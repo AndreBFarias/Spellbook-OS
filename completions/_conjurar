@@ -1,10 +1,14 @@
 #compdef conjurar
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: conjurar.zsh
-# Propósito: Menu FZF interativo de todos os aliases e funcoes disponiveis
-# Uso: conjurar
+# Propósito: Menu FZF interativo de aliases e funções do Spellbook
+# Uso: conjurar [--help] [--list] [--search <termo>] [--recent]
 
 _conjurar() {
-    _message 'sem argumentos definidos'
+    _arguments \
+        '--help[Exibe ajuda]' \
+        '--list[Listagem sem FZF]' \
+        '--search[Abre menu com filtro inicial]' \
+        '--recent[Últimos 5 comandos executados]'
 }
 _conjurar "$@"
