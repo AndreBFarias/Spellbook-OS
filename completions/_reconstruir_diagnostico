@@ -1,0 +1,11 @@
+#compdef reconstruir_diagnostico
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: diagnostico.zsh
+# Propósito: Reconstruir arquivos a partir de um diagnostico .md
+# Uso: reconstruir_diagnostico <arquivo.md>
+
+_reconstruir_diagnostico() {
+    _arguments \
+        '1:arquivo.md:_default'
+}
+_reconstruir_diagnostico "$@"

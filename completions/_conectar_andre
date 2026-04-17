@@ -1,0 +1,10 @@
+#compdef conectar_andre
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: remoto.zsh
+# Propósito: Sincronizar Beholder com o Nitro5 via rsync
+# Uso: conectar_andre
+
+_conectar_andre() {
+    _message 'sem argumentos definidos'
+}
+_conectar_andre "$@"

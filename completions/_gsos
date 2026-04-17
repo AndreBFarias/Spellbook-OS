@@ -1,0 +1,10 @@
+#compdef gsos
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-recovery.zsh
+# Propósito: Painel de emergencia git (status, branches, reflog, stashes)
+# Uso: gsos
+
+_gsos() {
+    _message 'sem argumentos definidos'
+}
+_gsos "$@"

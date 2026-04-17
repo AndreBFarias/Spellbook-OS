@@ -1,0 +1,10 @@
+#compdef sincronizar_repositorio
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-contexto.zsh
+# Propósito: Sincronizar repositorios selecionados via FZF (com backup de alteracoes)
+# Uso: sincronizar_repositorio
+
+_sincronizar_repositorio() {
+    _message 'sem argumentos definidos'
+}
+_sincronizar_repositorio "$@"

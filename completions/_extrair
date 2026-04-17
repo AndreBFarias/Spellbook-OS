@@ -1,0 +1,11 @@
+#compdef extrair
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: extrair.zsh
+# Propósito: Extrair arquivos compactados (tar, zip, rar, 7z, gz, xz, zst)
+# Uso: extrair <arquivo>
+
+_extrair() {
+    _arguments \
+        '1:arquivo:_default'
+}
+_extrair "$@"

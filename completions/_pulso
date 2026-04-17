@@ -1,0 +1,10 @@
+#compdef pulso
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: pulso.zsh
+# Propósito: Saude rapida do sistema (CPU, RAM, Disco, GPU, Uptime)
+# Uso: pulso
+
+_pulso() {
+    _message 'sem argumentos definidos'
+}
+_pulso "$@"

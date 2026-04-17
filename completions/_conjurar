@@ -1,0 +1,10 @@
+#compdef conjurar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: conjurar.zsh
+# Propósito: Menu FZF interativo de todos os aliases e funcoes disponiveis
+# Uso: conjurar
+
+_conjurar() {
+    _message 'sem argumentos definidos'
+}
+_conjurar "$@"

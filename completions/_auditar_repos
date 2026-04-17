@@ -1,0 +1,11 @@
+#compdef auditar_repos
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: auditoria.zsh
+# Propósito: Escanear todos os repos por violacoes de anonimato (co-autoria, IA, emojis)
+# Uso: auditar_repos [diretorio_base]
+
+_auditar_repos() {
+    _arguments \
+        '::diretorio_base:_default'
+}
+_auditar_repos "$@"

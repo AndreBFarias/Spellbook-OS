@@ -1,0 +1,10 @@
+#compdef limpeza_interativa
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: limpeza.zsh
+# Propósito: Limpeza interativa do Controle de Bordo com FZF
+# Uso: limpeza_interativa
+
+_limpeza_interativa() {
+    _message 'sem argumentos definidos'
+}
+_limpeza_interativa "$@"

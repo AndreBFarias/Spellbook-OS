@@ -1,0 +1,11 @@
+#compdef reinstalar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Reinstalar um pacote via apt
+# Uso: reinstalar <pacote>
+
+_reinstalar() {
+    _arguments \
+        '1:pacote:_default'
+}
+_reinstalar "$@"

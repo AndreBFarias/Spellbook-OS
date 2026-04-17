@@ -1,0 +1,10 @@
+#compdef git_info
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-contexto.zsh
+# Propósito: Exibir identidade git do repositorio atual (nome, email, branch, remote)
+# Uso: git_info
+
+_git_info() {
+    _message 'sem argumentos definidos'
+}
+_git_info "$@"

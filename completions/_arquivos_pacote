@@ -1,0 +1,11 @@
+#compdef arquivos_pacote
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Listar todos os arquivos de um pacote instalado
+# Uso: arquivos_pacote <pacote>
+
+_arquivos_pacote() {
+    _arguments \
+        '1:pacote:_default'
+}
+_arquivos_pacote "$@"

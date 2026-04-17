@@ -1,0 +1,11 @@
+#compdef servico_parar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Parar um servico systemd
+# Uso: servico_parar <servico>
+
+_servico_parar() {
+    _arguments \
+        '1:servico:_default'
+}
+_servico_parar "$@"

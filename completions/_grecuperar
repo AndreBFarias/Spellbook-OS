@@ -1,0 +1,11 @@
+#compdef grecuperar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-recovery.zsh
+# Propósito: Investigar branch ou commit para recuperacao (log, diff, sugestoes)
+# Uso: grecuperar [branch_ou_commit]
+
+_grecuperar() {
+    _arguments \
+        '::branch_ou_commit:_default'
+}
+_grecuperar "$@"

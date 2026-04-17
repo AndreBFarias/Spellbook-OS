@@ -1,0 +1,11 @@
+#compdef quem_instalou
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Descobrir qual pacote instalou um arquivo
+# Uso: quem_instalou <caminho>
+
+_quem_instalou() {
+    _arguments \
+        '1:caminho:_default'
+}
+_quem_instalou "$@"

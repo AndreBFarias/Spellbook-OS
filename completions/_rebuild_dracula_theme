@@ -1,0 +1,11 @@
+#compdef rebuild_dracula_theme
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Reconstruir Dracula_OS-Theme do zero (build + install --user)
+# Uso: rebuild_dracula_theme [--activate]
+
+_rebuild_dracula_theme() {
+    _arguments \
+        '--activate[--activate]'
+}
+_rebuild_dracula_theme "$@"

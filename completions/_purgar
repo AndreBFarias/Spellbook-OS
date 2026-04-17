@@ -1,0 +1,10 @@
+#compdef purgar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: pulso.zsh
+# Propósito: Limpar caches do sistema (pip, npm, apt, journalctl, pycache)
+# Uso: purgar
+
+_purgar() {
+    _message 'sem argumentos definidos'
+}
+_purgar "$@"

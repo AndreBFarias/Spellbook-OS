@@ -1,0 +1,11 @@
+#compdef servico_iniciar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Iniciar um servico systemd
+# Uso: servico_iniciar <servico>
+
+_servico_iniciar() {
+    _arguments \
+        '1:servico:_default'
+}
+_servico_iniciar "$@"

@@ -1,0 +1,10 @@
+#compdef conectar_maria
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: remoto.zsh
+# Propósito: Sincronizar Beholder com a maquina da Maria via rsync
+# Uso: conectar_maria
+
+_conectar_maria() {
+    _message 'sem argumentos definidos'
+}
+_conectar_maria "$@"

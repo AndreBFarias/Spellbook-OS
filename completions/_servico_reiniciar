@@ -1,0 +1,11 @@
+#compdef servico_reiniciar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Reiniciar um servico systemd
+# Uso: servico_reiniciar <servico>
+
+_servico_reiniciar() {
+    _arguments \
+        '1:servico:_default'
+}
+_servico_reiniciar "$@"

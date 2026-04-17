@@ -1,0 +1,11 @@
+#compdef limpar_pastas_vazias
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: limpeza.zsh
+# Propósito: Remover pastas vazias dos projetos (--dry-run para preview)
+# Uso: limpar_pastas_vazias [--dry-run]
+
+_limpar_pastas_vazias() {
+    _arguments \
+        '--dry-run[--dry-run]'
+}
+_limpar_pastas_vazias "$@"

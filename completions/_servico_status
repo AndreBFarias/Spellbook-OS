@@ -1,0 +1,11 @@
+#compdef servico_status
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Status de um servico systemd
+# Uso: servico_status <servico>
+
+_servico_status() {
+    _arguments \
+        '1:servico:_default'
+}
+_servico_status "$@"

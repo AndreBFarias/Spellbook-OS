@@ -1,0 +1,10 @@
+#compdef reparo_pop
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Reparo automatico do sistema (deps, pacotes, limpeza, atualizacao)
+# Uso: reparo_pop
+
+_reparo_pop() {
+    _message 'sem argumentos definidos'
+}
+_reparo_pop "$@"

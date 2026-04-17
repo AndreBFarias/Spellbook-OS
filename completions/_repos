@@ -1,0 +1,10 @@
+#compdef repos
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: pulso.zsh
+# Propósito: Status git de todos os repositorios (branch, alteracoes, sync)
+# Uso: repos
+
+_repos() {
+    _message 'sem argumentos definidos'
+}
+_repos "$@"

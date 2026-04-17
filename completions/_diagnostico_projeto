@@ -1,0 +1,12 @@
+#compdef diagnostico_projeto
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: diagnostico.zsh
+# Propósito: Gerar dossie completo de um projeto (ambiente, git, arvore, conteudo)
+# Uso: diagnostico_projeto <profundidade> [--max-linhas N]
+
+_diagnostico_projeto() {
+    _arguments \
+        '--max-linhas[--max-linhas]' \
+        '1:profundidade:_default'
+}
+_diagnostico_projeto "$@"

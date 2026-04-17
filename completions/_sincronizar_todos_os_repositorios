@@ -1,0 +1,10 @@
+#compdef sincronizar_todos_os_repositorios
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-contexto.zsh
+# Propósito: Sincronizar TODOS os repositorios com o remoto (com backup)
+# Uso: sincronizar_todos_os_repositorios
+
+_sincronizar_todos_os_repositorios() {
+    _message 'sem argumentos definidos'
+}
+_sincronizar_todos_os_repositorios "$@"

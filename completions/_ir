@@ -1,0 +1,10 @@
+#compdef ir
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: navegacao.zsh
+# Propósito: Navegacao rapida entre projetos com FZF (preview de git log e ls)
+# Uso: ir
+
+_ir() {
+    _message 'sem argumentos definidos'
+}
+_ir "$@"

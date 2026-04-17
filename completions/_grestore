@@ -1,0 +1,11 @@
+#compdef grestore
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-recovery.zsh
+# Propósito: Reset hard para um ponto do reflog (com confirmacao e preview)
+# Uso: grestore <ref>
+
+_grestore() {
+    _arguments \
+        '1:ref:_default'
+}
+_grestore "$@"

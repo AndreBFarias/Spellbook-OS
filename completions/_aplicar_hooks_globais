@@ -1,0 +1,11 @@
+#compdef aplicar_hooks_globais
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: hooks.zsh
+# Propósito: Copiar hooks git (pre-commit + commit-msg + pre-push + _lib.sh) para todos os repos
+# Uso: aplicar_hooks_globais [diretorio_base]
+
+_aplicar_hooks_globais() {
+    _arguments \
+        '::diretorio_base:_default'
+}
+_aplicar_hooks_globais "$@"

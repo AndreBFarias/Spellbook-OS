@@ -1,0 +1,10 @@
+#compdef conjurar_mec
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: mec.zsh
+# Propósito: Interface CLI completa para o projeto MEC (dbt, git, push, ambiente)
+# Uso: conjurar_mec
+
+_conjurar_mec() {
+    _message 'sem argumentos definidos'
+}
+_conjurar_mec "$@"

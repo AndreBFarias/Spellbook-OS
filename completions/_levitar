@@ -1,0 +1,11 @@
+#compdef levitar
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: projeto.zsh
+# Propósito: Abrir diretório no Antigravity (file manager)
+# Uso: levitar [caminho]
+
+_levitar() {
+    _arguments \
+        '::caminho:__path_files -/'
+}
+_levitar "$@"

@@ -1,0 +1,11 @@
+#compdef ga
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: git-add.zsh
+# Propósito: Git add com sanitizer automatico e ruff (lint + format) para Python
+# Uso: ga [arquivos]
+
+_ga() {
+    _arguments \
+        '::arquivos:_default'
+}
+_ga "$@"

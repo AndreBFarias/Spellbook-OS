@@ -1,0 +1,11 @@
+#compdef diagnostico_pop
+# Gerado automaticamente por scripts/gerar-completions.py
+# Fonte: sistema.zsh
+# Propósito: Gerar diagnostico completo do Pop!_OS (kernel, disco, processos, erros)
+# Uso: diagnostico_pop <profundidade>
+
+_diagnostico_pop() {
+    _arguments \
+        '1:profundidade:_default'
+}
+_diagnostico_pop "$@"
