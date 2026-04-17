@@ -84,6 +84,8 @@ __spellbook_resolve_conflict() {
     return 0
 }
 
+# Propósito: Pull sincronizado do Spellbook-OS (commit local + fetch + merge com tratamento de conflito)
+# Uso: spellbook_sync_pull
 spellbook_sync_pull() {
     __spellbook_is_git_repo || return 0
 
@@ -142,6 +144,8 @@ spellbook_sync_pull() {
     __spellbook_resolve_conflict
 }
 
+# Propósito: Push em background do Spellbook-OS (auto-commit local + push não-bloqueante)
+# Uso: spellbook_sync_push
 spellbook_sync_push() {
     __spellbook_is_git_repo || return 0
 
