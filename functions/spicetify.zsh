@@ -24,6 +24,8 @@ __spicetify_config_value() {
 # Funcoes publicas
 # ---------------------------------------------------------------------------
 
+# Propósito: Exibir status do Spicetify (tema, esquema, extensions, custom apps)
+# Uso: spicetify_status
 spicetify_status() {
     local bin
     bin=$(__spicetify_bin) || return 1

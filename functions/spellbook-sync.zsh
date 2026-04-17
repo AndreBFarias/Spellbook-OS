@@ -204,6 +204,10 @@ spellbook_sync_status() {
     echo ""
 }
 
+# Propósito: Forçar sync do Spellbook-OS sobrescrevendo local ou remoto
+# Uso: spellbook_sync_force [--local|--remote]
+# Flags: --local=Push força (sobrescreve remoto com local)
+#        --remote=Pull força (sobrescreve local com remoto)
 spellbook_sync_force() {
     __spellbook_is_git_repo || {
         __err "ZDOTDIR nao e um repositorio git com remote configurado"
