@@ -28,14 +28,15 @@ fi
     source "${ZDOTDIR:-$HOME/.config/zsh}/completions/completers.zsh"
 
 # fzf-tab: tema Dracula, preview à direita, descrições na mesma linha
-if (( $+functions[_fzf_tab_complete] )); then
+if (( $+functions[fzf-tab-complete] )); then
     zstyle ':fzf-tab:*' fzf-flags \
         --color=bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4 \
         --height=60% --layout=reverse --border
     zstyle ':fzf-tab:*' show-group full
     zstyle ':fzf-tab:*' single-group color header
-    zstyle ':fzf-tab:complete:*:*' fzf-preview 'echo $desc 2>/dev/null'
     zstyle ':completion:*:descriptions' format '[%d]'
+    zstyle ':completion:*' group-name ''
+    zstyle ':completion:*:*:*:*:*' menu select
 fi
 
 # --- 2. HISTORICO DE COMANDOS ---
