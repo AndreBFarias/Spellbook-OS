@@ -74,6 +74,8 @@ spicetify_status() {
     done
 }
 
+# Propósito: Reparar Spicetify (re-aplicar tema, extensions, custom apps, sidebar)
+# Uso: spicetify_reparar
 spicetify_reparar() {
     local bin
     bin=$(__spicetify_bin) || return 1
@@ -155,6 +157,8 @@ spicetify_reparar() {
     __ok "Spicetify reparado e reaplicado"
 }
 
+# Propósito: Instalar Spicetify via script de setup
+# Uso: spicetify_instalar
 spicetify_instalar() {
     local script_dir="${ZDOTDIR:-$HOME/.config/zsh}/scripts/spicetify-setup.sh"
 

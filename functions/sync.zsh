@@ -1,5 +1,12 @@
 #!/bin/zsh
 
+# Propósito: Sincronizar documentação dos repos em $DEV_DIR para o vault Obsidian
+# Uso: sincronizar_controle_de_bordo [--auto] [--dry-run] [--stats] [--cleanup] [--check-size]
+# Flags: --auto=Executa sem pedir confirmação
+#        --dry-run=Lista mudanças sem copiar
+#        --stats=Exibe estatísticas do rsync
+#        --cleanup=Remove caches Python antes do sync
+#        --check-size=Aborta se vault > 1GB
 sincronizar_controle_de_bordo() {
     local auto=0 dry_run=0 show_stats=0 cleanup=0 check_size=0
     for arg in "$@"; do
