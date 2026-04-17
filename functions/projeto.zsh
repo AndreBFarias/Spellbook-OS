@@ -1,7 +1,9 @@
 #!/bin/zsh
 
-# Proposito: Abrir diretorio no Antigravity (file manager)
+# Propósito: Abrir diretório no Antigravity (file manager)
 # Uso: levitar [caminho]
+# Completa:
+#   [caminho]=_path_files -/
 levitar() {
     local alvo="${1:-.}"
 
@@ -14,8 +16,13 @@ levitar() {
     nohup antigravity "$alvo" > /dev/null 2>&1 &
 }
 
-# Proposito: Setup completo de projeto (cd, branch, venv, deps, git context)
+# Propósito: Setup completo de projeto (cd, branch, venv, deps, git context)
 # Uso: santuario <Projeto> [Branch] [--sync] [--vit]
+# Flags: --sync=Sincroniza dependências via pip install -r
+#        --vit=Usa subdiretório VitoriaMariaDB/
+# Completa:
+#   <Projeto>=__santuario_pastas_dev
+#   [Branch]=__santuario_branches_git
 santuario() {
     local projeto_raiz="$1"
 
