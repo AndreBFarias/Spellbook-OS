@@ -2,7 +2,7 @@
 """
 Valida acentuação PT-BR em strings de código, comentários e documentação.
 
-Procura palavras comuns em PT-BR sem acento (ex.: "função", "não", "descrição")
+Procura palavras comuns em PT-BR sem acento (ex.: 'funcao', 'nao', 'descricao')  # noqa-acento
 em arquivos .py, .zsh, .sh, .md e reporta violações com arquivo:linha.
 
 Uso:
@@ -22,85 +22,65 @@ from pathlib import Path
 
 CONFIG_ROOT = Path(__file__).resolve().parent.parent
 
-# Palavra sem acento -> versão correta. Apenas casos inequívocos.
-# Nomes técnicos (func_name, sao_paulo como slug) devem ser ignorados via
-# # noqa-acento ou estarem dentro de strings que o regex não casa.
-CORRECOES = {
-    "não": "não",
-    "função": "função",
-    "funções": "funções",
-    "execução": "execução",
-    "execuções": "execuções",
-    "descrição": "descrição",
-    "descrições": "descrições",
-    "configuração": "configuração",
-    "configurações": "configurações",
-    "operação": "operação",
-    "operações": "operações",
-    "informação": "informação",
-    "informações": "informações",
-    "validação": "validação",
-    "validações": "validações",
-    "instalação": "instalação",
-    "instalações": "instalações",
-    "remoção": "remoção",
-    "remoções": "remoções",
-    "seleção": "seleção",
-    "seleções": "seleções",
-    "ação": "ação",
-    "ações": "ações",
-    "sessão": "sessão",
-    "sessões": "sessões",
-    "atenção": "atenção",
-    "atenções": "atenções",
-    "direção": "direção",
-    "direções": "direções",
-    "verificação": "verificação",
-    "verificações": "verificações",
-    "criação": "criação",
-    "criações": "criações",
-    "opção": "opção",
-    "opções": "opções",
-    "diretório": "diretório",
-    "diretórios": "diretórios",
-    "crítico": "crítico",
-    "críticos": "críticos",
-    "crítica": "crítica",
-    "críticas": "críticas",
-    "último": "último",
-    "últimos": "últimos",
-    "última": "última",
-    "últimas": "últimas",
-    "próximo": "próximo",
-    "próximos": "próximos",
-    "próxima": "próxima",
-    "próximas": "próximas",
-    "período": "período",
-    "períodos": "períodos",
-    "histórico": "histórico",
-    "históricos": "históricos",
-    "único": "único",
-    "únicos": "únicos",
-    "única": "única",
-    "únicas": "únicas",
-    "caractere": "caractere",  # já correto, só para ignorar
-    "caracteres": "caracteres",  # já correto, só para ignorar
-}
+# Par "sem acento" -> "com acento". Montado via tuplas para evitar que o próprio
+# script seja auto-corrompido quando rodado com --fix sobre si mesmo.
+_PARES = [
+    ("n" + "ao", "n" + "\u00e3o"),
+    ("func" + "ao", "fun" + "\u00e7\u00e3o"),
+    ("func" + "oes", "fun" + "\u00e7\u00f5es"),
+    ("execuc" + "ao", "execu" + "\u00e7\u00e3o"),
+    ("execuc" + "oes", "execu" + "\u00e7\u00f5es"),
+    ("descric" + "ao", "descri" + "\u00e7\u00e3o"),
+    ("descric" + "oes", "descri" + "\u00e7\u00f5es"),
+    ("configurac" + "ao", "configura" + "\u00e7\u00e3o"),
+    ("configurac" + "oes", "configura" + "\u00e7\u00f5es"),
+    ("operac" + "ao", "opera" + "\u00e7\u00e3o"),
+    ("operac" + "oes", "opera" + "\u00e7\u00f5es"),
+    ("informac" + "ao", "informa" + "\u00e7\u00e3o"),
+    ("informac" + "oes", "informa" + "\u00e7\u00f5es"),
+    ("validac" + "ao", "valida" + "\u00e7\u00e3o"),
+    ("validac" + "oes", "valida" + "\u00e7\u00f5es"),
+    ("instalac" + "ao", "instala" + "\u00e7\u00e3o"),
+    ("instalac" + "oes", "instala" + "\u00e7\u00f5es"),
+    ("remoc" + "ao", "remo" + "\u00e7\u00e3o"),
+    ("remoc" + "oes", "remo" + "\u00e7\u00f5es"),
+    ("selec" + "ao", "sele" + "\u00e7\u00e3o"),
+    ("selec" + "oes", "sele" + "\u00e7\u00f5es"),
+    ("ac" + "ao", "a" + "\u00e7\u00e3o"),
+    ("ac" + "oes", "a" + "\u00e7\u00f5es"),
+    ("sess" + "ao", "sess" + "\u00e3o"),
+    ("sess" + "oes", "sess" + "\u00f5es"),
+    ("atenc" + "ao", "aten" + "\u00e7\u00e3o"),
+    ("direc" + "ao", "dire" + "\u00e7\u00e3o"),
+    ("verificac" + "ao", "verifica" + "\u00e7\u00e3o"),
+    ("criac" + "ao", "cria" + "\u00e7\u00e3o"),
+    ("opc" + "ao", "op" + "\u00e7\u00e3o"),
+    ("opc" + "oes", "op" + "\u00e7\u00f5es"),
+    ("diretor" + "io", "diret" + "\u00f3rio"),
+    ("diretor" + "ios", "diret" + "\u00f3rios"),
+    ("crit" + "ico", "cr" + "\u00edtico"),
+    ("crit" + "ica", "cr" + "\u00edtica"),
+    ("ult" + "imo", "" + "\u00faltimo"),
+    ("ult" + "imos", "" + "\u00faltimos"),
+    ("ult" + "ima", "" + "\u00faltima"),
+    ("prox" + "imo", "pr" + "\u00f3ximo"),
+    ("peri" + "odo", "per" + "\u00edodo"),
+    ("hist" + "orico", "hist" + "\u00f3rico"),
+    ("un" + "ico", "" + "\u00fanico"),
+]
+# noqa-acento — o bloco acima é construído via concatenação para que o próprio
+# script não seja sobrescrito quando --fix rodar sobre si mesmo.
 
-# Remove entradas que são idênticas (adicionadas por engano)
-CORRECOES = {k: v for k, v in CORRECOES.items() if k != v}
+CORRECOES = {errada: correta for errada, correta in _PARES}
 
 EXTENSIONS = (".py", ".zsh", ".sh", ".md")
 
-# Contextos onde a palavra é detectada: apenas dentro de strings, comentários
-# e docstrings — NUNCA em identificadores (function names, variáveis).
-# Heurística: palavra precedida e seguida por espaço, aspas, hífen, acento
-# ou início/fim de linha. Se vem após "def ", "function ", "alias ", ignora.
-IDENT_PREFIX = re.compile(r"(?:def |function |alias |class )\s*$")
+# Contextos onde a palavra é detectada: strings, comentários, docstrings —
+# NUNCA identificadores (function names, variáveis).
+IDENT_PREFIX = re.compile(r"(?:def |function |alias |class |local )\s*$")
 
 
 def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]:
-    """Retorna lista de (linha_num, palavra_errada, palavra_correta, linha_texto)."""
     results = []
     try:
         lines = path.read_text(encoding="utf-8").splitlines(keepends=False)
@@ -111,28 +91,34 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
     fixed_lines = []
 
     for i, line in enumerate(lines, start=1):
-        if "# noqa-acento" in line:
+        if "# noqa-acento" in line or "noqa-acento" in line:
             fixed_lines.append(line)
             continue
 
         new_line = line
         for errada, correta in CORRECOES.items():
-            # Fronteira: início/fim de palavra, case-insensitive
-            pattern = re.compile(rf"(?<![a-zA-Z0-9_]){re.escape(errada)}(?![a-zA-Z0-9_])", re.IGNORECASE)
+            pattern = re.compile(
+                rf"(?<![a-zA-Z0-9_]){re.escape(errada)}(?![a-zA-Z0-9_])",
+                re.IGNORECASE,
+            )
             for m in pattern.finditer(line):
-                # Skip se for identificador de função/variável (precedido por def/function)
                 prefix = line[: m.start()]
+                # Skip se precedido por palavra-chave de declaração
                 if IDENT_PREFIX.search(prefix):
                     continue
-                # Skip se for dentro de identificador (ex.: minha_funcao)
-                if prefix.rstrip().endswith(("_", ".", "-")):
+                # Skip se é parte de identificador (prefixo _ . - ou $)
+                if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=")):
                     continue
                 results.append((i, m.group(), correta, line.strip()))
             if fix:
-                # Preserva caso da primeira letra
                 def repl(match):
-                    original = match.group()
-                    if original[0].isupper():
+                    orig = match.group()
+                    prefix = line[: match.start()]
+                    if IDENT_PREFIX.search(prefix):
+                        return orig
+                    if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=")):
+                        return orig
+                    if orig[0].isupper():
                         return correta[0].upper() + correta[1:]
                     return correta
                 new_line = pattern.sub(repl, new_line)
@@ -157,7 +143,6 @@ def iter_target_files(paths: list[Path]) -> list[Path]:
         elif root.is_dir():
             for ext in EXTENSIONS:
                 files.extend(root.rglob(f"*{ext}"))
-    # Skip venv, .oh-my-zsh, .git
     excluded = ("/.git/", "/venv/", "/.venv/", "/.oh-my-zsh/", "/node_modules/", "/__pycache__/")
     return [f for f in files if not any(e in str(f) for e in excluded)]
 
@@ -195,21 +180,20 @@ def main() -> int:
             check_file(f, fix=True)
             after = check_file(f, fix=False)
             total_fixed += len(before) - len(after)
-            for lineno, errada, correta, texto in after:
+            for lineno, errada, correta, _ in after:
                 rel = f.relative_to(CONFIG_ROOT) if str(f).startswith(str(CONFIG_ROOT)) else f
-                logging.warning("%s:%d: '%s' deveria ser '%s' (não corrigível)", rel, lineno, errada, correta)
+                logging.warning("%s:%d: %r → %r (pendente)", rel, lineno, errada, correta)
                 total_violations += 1
         else:
-            for lineno, errada, correta, texto in before:
+            for lineno, errada, correta, _ in before:
                 rel = f.relative_to(CONFIG_ROOT) if str(f).startswith(str(CONFIG_ROOT)) else f
-                logging.warning("%s:%d: '%s' deveria ser '%s'", rel, lineno, errada, correta)
+                logging.warning("%s:%d: %r → %r", rel, lineno, errada, correta)
                 total_violations += 1
 
     if args.fix:
         logging.info("Total: %d corrigidas, %d pendentes", total_fixed, total_violations)
-    else:
-        if total_violations:
-            logging.info("Total: %d violação(ões) em %d arquivo(s)", total_violations, len({f for f, *_ in []}))
+    elif total_violations:
+        logging.info("Total: %d violação(ões)", total_violations)
 
     return 1 if total_violations > 0 else 0
 
