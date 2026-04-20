@@ -263,6 +263,18 @@ santuario() {
         fi
     fi
 
+    # Sistema de validação de sprints (Claude Code subagente validador-sprint)
+    if [ -d ".git" ]; then
+        echo ""
+        if [ -f "VALIDATOR_BRIEF.md" ]; then
+            local brief_age=$(( ($(date +%s) - $(stat -c %Y VALIDATOR_BRIEF.md)) / 86400 ))
+            local brief_lines=$(wc -l < VALIDATOR_BRIEF.md)
+            echo -e "  ${D_CYAN}[VALIDADOR]${D_RESET} BRIEF ativo (${brief_lines}L, atualizado ha ${brief_age}d)"
+        else
+            echo -e "  ${D_YELLOW}[VALIDADOR]${D_RESET} sem VALIDATOR_BRIEF.md (sera criado no 1o /validar-sprint)"
+        fi
+    fi
+
     echo ""
     __ok "Santuario pronto."
 
@@ -272,6 +284,21 @@ santuario() {
     echo ""
     if [[ "$reply" == "s" || "$reply" == "S" ]]; then
         levitar .
+    fi
+
+    # Claude Code: abrir pronto pra validar sprint (usa cca/claude-safe para respeitar quota guard)
+    if [ -d ".git" ] && { typeset -f cca > /dev/null 2>&1 || command -v claude &> /dev/null; }; then
+        local claude_reply=""
+        read -k 1 "claude_reply?  Abrir Claude Code pronto pra validar sprint? (s/N) "
+        echo ""
+        if [[ "$claude_reply" == "s" || "$claude_reply" == "S" ]]; then
+            if typeset -f cca > /dev/null 2>&1; then
+                cca "/validar-sprint"
+            else
+                claude "/validar-sprint"
+            fi
+            return 0
+        fi
     fi
 
     if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
