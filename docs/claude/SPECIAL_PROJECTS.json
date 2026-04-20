@@ -1,0 +1,59 @@
+{
+  "_comment": "Mapa canonico de projetos com perfil especial. Consumido por hook session-start-briefing.py e script bootstrap-rico-brief.py. Chave = basename do diretorio (case-insensitive).",
+  "_schema_version": 1,
+  "projects": {
+    "luna": {
+      "dir_memoria": "-home-andrefarias-Desenvolvimento-Luna",
+      "template": "bootstrap-luna.md",
+      "tipo_projeto": "tui",
+      "root_hint": "/home/andrefarias/Desenvolvimento/Luna",
+      "smoke_cmd": "./run_luna.sh --cli-health",
+      "gauntlet_cmd": "./run_luna.sh --gauntlet",
+      "regras_especiais": [
+        "Opus 4.6 exclusivo em sessoes antigas (verificar modelo_luna feedback)",
+        "Screenshots TUI obrigatorios via scripts/tui_tests/capture.sh",
+        "ADR-018 GPU exclusiva com alternancia",
+        "Bypass consciente: LUNA_SKIP_EVIDENCE=1, LUNA_SKIP_REGISTRY_AUDIT=1"
+      ]
+    },
+    "nyx-code": {
+      "dir_memoria": "-home-andrefarias-Desenvolvimento-Nyx-Code",
+      "template": "bootstrap-nyx-code.md",
+      "tipo_projeto": "cli",
+      "root_hint": "/home/andrefarias/Desenvolvimento/Nyx-Code",
+      "smoke_cmd": "./run.sh --smoke",
+      "gauntlet_cmd": "./run.sh --gauntlet",
+      "regras_especiais": [
+        "Integracao obrigatoria (ADR-013): tools em ToolRegistry, commands @nyx_command",
+        "Testes apenas via Gauntlet (ADR-014)",
+        "Check #13 em scripts/sprint_invariants.sh = ./run.sh --smoke obrigatorio",
+        "SPRINT_ORDER_MASTER.md com bloco <!-- MANUAL_OVERRIDE -->"
+      ]
+    },
+    "protocolo-ouroboros": {
+      "dir_memoria": "-home-andrefarias-Desenvolvimento-protocolo-ouroboros",
+      "template": "bootstrap-ouroboros.md",
+      "tipo_projeto": "cli",
+      "root_hint": "/home/andrefarias/Desenvolvimento/protocolo-ouroboros",
+      "smoke_cmd": "./run.sh --smoke",
+      "gauntlet_cmd": "bash scripts/finish_sprint.sh",
+      "regras_especiais": [
+        "Claude Code e o supervisor (sem API programatica)",
+        "Fases ALFA/BETA/GAMA/DELTA/EPSILON/ZETA",
+        "Grafo SQLite + extracao granular em mappings/",
+        "ADRs 13/14/15 em docs/adr/"
+      ]
+    }
+  },
+  "aliases": {
+    "luna": "luna",
+    "Luna": "luna",
+    "nyx": "nyx-code",
+    "Nyx": "nyx-code",
+    "Nyx-Code": "nyx-code",
+    "nyx-code": "nyx-code",
+    "ouroboros": "protocolo-ouroboros",
+    "Ouroboros": "protocolo-ouroboros",
+    "protocolo-ouroboros": "protocolo-ouroboros"
+  }
+}
