@@ -14,14 +14,14 @@ if [ -f "$ZDOTDIR/env.zsh" ]; then
 fi
 
 # --- 3. SEGREDOS E ACESSOS ---
-# Carrega chaves de API e tokens (GitHub, Gemini, etc)
+# Carrega chaves de API e tokens de providers externos
 [ -f "$ZDOTDIR/.zsh_secrets" ] && source "$ZDOTDIR/.zsh_secrets"
 
 # --- 4. ARSENAL (ALIASES E FUNÇÕES) ---
 [ -f "$ZDOTDIR/aliases.zsh" ] && source "$ZDOTDIR/aliases.zsh"
 [ -f "$ZDOTDIR/functions.zsh" ] && source "$ZDOTDIR/functions.zsh"
 
-# --- 4.5. AI TOOLS (CCA) ---
+# --- 4.5. WRAPPERS ---
 [ -f "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_cca.zsh" ] && source "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_cca.zsh"
 [ -f "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_sprint.zsh" ] && source "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_sprint.zsh"
 
@@ -50,13 +50,8 @@ autoload -U bashcompinit && bashcompinit
     fi
 }
 
-# ==========================================
-# Kimi CLI Ultra - Dracula Theme
-# ==========================================
-
-# YOLO mode: executa ferramentas sem confirmacao
+# --- 4.6. WRAPPER AUXILIAR ---
 export KIMI_YOLO=1
-
 [ -f "$ZDOTDIR/kca/aliases_kca.zsh" ] && source "$ZDOTDIR/kca/aliases_kca.zsh"
 
 # --- 7. SPELLBOOK SYNC (ao abrir terminal) ---

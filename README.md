@@ -36,7 +36,7 @@ Configuração zsh modular e portável. 23 módulos de funções, 9 scripts Pyth
 | `functions/restaurar.zsh` | Backup e restauração de sistema via manifesto |
 | `functions/sistema.zsh` | Captura de manifesto e diagnóstico do sistema |
 | `functions/_helpers.zsh` | Paleta Dracula + utilitários base |
-| `kimi/` | Integração Kimi AI |
+| `kca/` | Wrapper CLI auxiliar |
 | `scripts/` | Scripts Python auxiliares (dbt, migração, análise) |
 
 ---
@@ -89,7 +89,7 @@ msoffcrypto-tool >= 5.0
 |--------|-----|
 | `mec-dbt-results.py` | Parser de `run_results.json` do dbt — exibe resultado colorido no terminal |
 | `mec-migrar-censo.py` | Migração semi-automatizada de tabelas INEP no BigQuery (scan + apply) |
-| `universal-sanitizer.py` | Detecta rastros de IA em arquivos staged antes do commit |
+| `universal-sanitizer.py` | Sanitizador de rastros externos em arquivos staged antes do commit |
 | `analisador-dados.py` | Analisa CSV, Excel, JSON, Parquet, PDF e imagens — gera markdown compatível com GitHub e Obsidian |
 
 Uso: `python3 ~/.config/zsh/scripts/<script>.py --help`

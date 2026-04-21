@@ -1,0 +1,84 @@
+#!/bin/bash
+# Hook commit-msg — Auto-fix de anonimato em mensagens de commit
+# Estrategia: auto-remove violacoes → so bloqueia se mensagem ficar vazia
+# Instalado via aplicar_hooks_globais()
+
+source "$HOME/.config/git/hooks/_lib.sh" 2>/dev/null || true
+
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+FIXES=0
+BLOCKED=0
+
+# [1/4] Auto-remove linhas Co-Authored-By / Paired-with / Assisted-by
+COAUTHOR_PATTERN='^\s*(Co-Authored-By|co_authored|Paired-with|Assisted-by):.*$'
+if echo "$MSG" | grep -qiE "$COAUTHOR_PATTERN"; then
+    MSG=$(echo "$MSG" | grep -viE '^\s*(Co-Authored-By|co_authored|Paired-with|Assisted-by):')
+    # Remover linhas em branco consecutivas no final
+    MSG=$(echo "$MSG" | sed -e :a -e '/^\n*$/{$d;N;ba}')
+    FIXES=$((FIXES + 1))
+    _hook_log "commit-msg" "auto-remove: co-autoria" 2>/dev/null
+fi
+
+# [2/4] Auto-remove emojis
+if echo "$MSG" | grep -qP "${EMOJI_RE:-[\x{1F600}-\x{1F64F}]}" 2>/dev/null; then
+    MSG=$(echo "$MSG" | perl -CSD -pe "s/${EMOJI_RE:-[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}]}//g" 2>/dev/null)
+    FIXES=$((FIXES + 1))
+    _hook_log "commit-msg" "auto-remove: emojis" 2>/dev/null
+fi
+
+# [3/4] Auto-remove mencoes a IA do body (preserva subject line)
+AI_PATTERN="${AI_MENTION_RE:-claude|anthropic|openai|chatgpt|copilot|gemini|gpt-[34]|deepseek|cursor|aider|windsurf|codeium|tabnine|noreply@anthropic}"
+SUBJECT=$(echo "$MSG" | head -1)
+BODY=$(echo "$MSG" | tail -n +2)
+
+if echo "$BODY" | grep -qiE "$AI_PATTERN" 2>/dev/null; then
+    BODY=$(echo "$BODY" | grep -viE "$AI_PATTERN")
+    MSG="${SUBJECT}"
+    if [[ -n "$BODY" ]]; then
+        MSG="${SUBJECT}
+${BODY}"
+    fi
+    # Remover linhas em branco consecutivas no final
+    MSG=$(echo "$MSG" | sed -e :a -e '/^\n*$/{$d;N;ba}')
+    FIXES=$((FIXES + 1))
+    _hook_log "commit-msg" "auto-remove: mencao IA no body" 2>/dev/null
+fi
+
+# [4/4] Verificar se subject menciona IA (BLOQUEIA -- subject e intencional)
+if echo "$SUBJECT" | grep -qiE "$AI_PATTERN" 2>/dev/null; then
+    echo "  [BLOQUEIO] Subject da mensagem menciona ferramenta de IA"
+    echo "    Remova qualquer referencia a IA do subject"
+    BLOCKED=1
+    _hook_log "commit-msg" "BLOQUEIO: mencao IA no subject" 2>/dev/null
+fi
+
+# Gravar mensagem limpa de volta
+echo "$MSG" > "$MSG_FILE"
+
+# Warning de formato (nao bloqueia)
+if ! echo "$SUBJECT" | grep -qE '^(feat|fix|refactor|docs|test|perf|chore|style|ci|build|release|micro):' 2>/dev/null; then
+    echo "  [aviso] Formato recomendado: tipo: descricao (feat, fix, refactor, docs, test, perf, chore, style, ci, build, release)"
+fi
+
+# Relatorio
+if [ $FIXES -gt 0 ]; then
+    echo "  [commit-msg] $FIXES auto-fix(es) aplicado(s) na mensagem"
+fi
+
+# Verificar se mensagem ficou vazia apos limpeza
+CLEAN_MSG=$(echo "$MSG" | sed '/^#/d' | sed '/^$/d' | tr -d '[:space:]')
+if [[ -z "$CLEAN_MSG" ]]; then
+    echo "  [BLOQUEIO] Mensagem ficou vazia apos limpeza de anonimato"
+    BLOCKED=1
+fi
+
+if [ $BLOCKED -gt 0 ]; then
+    _hook_log "commit-msg" "BLOQUEADO" 2>/dev/null
+    exit 1
+fi
+
+_hook_log "commit-msg" "OK (fixes=$FIXES)" 2>/dev/null
+exit 0
+
+# "Errare humanum est, perseverare autem diabolicum." — Seneca

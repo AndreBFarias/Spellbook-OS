@@ -4,6 +4,17 @@
 *.zwc
 .zsh_history
 
+# Toolchain e docs internos (não sobem pro repo público)
+docs/claude/
+.claude/
+VALIDATOR_BRIEF.md
+MAP_*.md
+PROTOCOLO.md
+FUNCOES.md
+mec-guide.md
+AGENTS.md
+KIMI_ULTRA.md
+
 # Framework (instalado pelo install.sh)
 .oh-my-zsh/
 
