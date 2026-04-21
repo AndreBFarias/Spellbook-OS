@@ -1,5 +1,5 @@
 {
-  "_comment": "Mapa canonico de projetos com perfil especial. Consumido por hook session-start-briefing.py e script bootstrap-rico-brief.py. Chave = basename do diretorio (case-insensitive).",
+  "_comment": "Mapa canônico de projetos com perfil especial. Consumido por hook session-start-briefing.py e script bootstrap-rico-brief.py. Chave = basename do diretório (case-insensitive).",
   "_schema_version": 1,
   "projects": {
     "luna": {
@@ -10,9 +10,9 @@
       "smoke_cmd": "./run_luna.sh --cli-health",
       "gauntlet_cmd": "./run_luna.sh --gauntlet",
       "regras_especiais": [
-        "Opus 4.6 exclusivo em sessoes antigas (verificar modelo_luna feedback)",
-        "Screenshots TUI obrigatorios via scripts/tui_tests/capture.sh",
-        "ADR-018 GPU exclusiva com alternancia",
+        "Opus 4.6 exclusivo em sessões antigas (verificar feedback modelo_luna)",
+        "Screenshots TUI obrigatórios via scripts/tui_tests/capture.sh",
+        "ADR-018 GPU exclusiva com alternância",
         "Bypass consciente: LUNA_SKIP_EVIDENCE=1, LUNA_SKIP_REGISTRY_AUDIT=1"
       ]
     },
@@ -24,9 +24,9 @@
       "smoke_cmd": "./run.sh --smoke",
       "gauntlet_cmd": "./run.sh --gauntlet",
       "regras_especiais": [
-        "Integracao obrigatoria (ADR-013): tools em ToolRegistry, commands @nyx_command",
+        "Integração obrigatória (ADR-013): tools em ToolRegistry, commands @nyx_command",
         "Testes apenas via Gauntlet (ADR-014)",
-        "Check #13 em scripts/sprint_invariants.sh = ./run.sh --smoke obrigatorio",
+        "Check #13 em scripts/sprint_invariants.sh = ./run.sh --smoke obrigatório",
         "SPRINT_ORDER_MASTER.md com bloco <!-- MANUAL_OVERRIDE -->"
       ]
     },
@@ -38,9 +38,9 @@
       "smoke_cmd": "./run.sh --smoke",
       "gauntlet_cmd": "bash scripts/finish_sprint.sh",
       "regras_especiais": [
-        "Claude Code e o supervisor (sem API programatica)",
+        "Claude Code é o supervisor (sem API programática)",
         "Fases ALFA/BETA/GAMA/DELTA/EPSILON/ZETA",
-        "Grafo SQLite + extracao granular em mappings/",
+        "Grafo SQLite + extração granular em mappings/",
         "ADRs 13/14/15 em docs/adr/"
       ]
     }

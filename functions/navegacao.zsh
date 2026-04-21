@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Navegacao rapida entre projetos com FZF (preview de git log e ls)
+# Propósito: Navegação rápida entre projetos com FZF (preview de git log e ls)
 # Uso: ir
 ir() {
     __verificar_dependencias "fzf" || return 1

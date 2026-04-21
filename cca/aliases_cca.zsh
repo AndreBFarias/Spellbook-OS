@@ -1,9 +1,44 @@
 # Aliases para controle de uso do Claude
 
+# Propósito: Exportar variáveis de ambiente consumidas pelo hook session-start-briefing.py
+# Uso: __cca_export_contexto (interno, não chamar direto)
+__cca_export_contexto() {
+    local _root
+    _root=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [ -n "$_root" ]; then
+        export CLAUDE_PROJECT_ROOT="$_root"
+        export CLAUDE_PROJECT_NAME="$(basename "$_root")"
+        export CLAUDE_BRIEF_PATH="$_root/VALIDATOR_BRIEF.md"
+        if [ -f "$CLAUDE_BRIEF_PATH" ]; then
+            export CLAUDE_BRIEF_STATUS="exists"
+        else
+            export CLAUDE_BRIEF_STATUS="missing"
+        fi
+        local _proj_lower
+        _proj_lower=$(basename "$_root" | tr '[:upper:]' '[:lower:]')
+        case "$_proj_lower" in
+            luna)                export CLAUDE_PROJECT_KIND="luna" ;;
+            nyx-code)            export CLAUDE_PROJECT_KIND="nyx-code" ;;
+            protocolo-ouroboros) export CLAUDE_PROJECT_KIND="protocolo-ouroboros" ;;
+            *)                   export CLAUDE_PROJECT_KIND="generic" ;;
+        esac
+        export CLAUDE_SANTUARIO_READY=1
+    fi
+    export CLAUDE_VISUAL_TOOLS_EXPECTED=1
+    export CLAUDE_SPRINT_CICLO_MAX_RETRIES="${CLAUDE_SPRINT_CICLO_MAX_RETRIES:-3}"
+}
+
+__cca_unset_contexto() {
+    unset CLAUDE_PROJECT_ROOT CLAUDE_PROJECT_NAME CLAUDE_BRIEF_PATH \
+          CLAUDE_BRIEF_STATUS CLAUDE_PROJECT_KIND CLAUDE_SANTUARIO_READY \
+          CLAUDE_VISUAL_TOOLS_EXPECTED CLAUDE_SPRINT_CICLO_MAX_RETRIES
+}
+
 # Proposito: Wrapper seguro para Claude Code com quota guard
 # Uso: claude <args>
 claude-safe() {
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
+    __cca_export_contexto
 
     local start_time=$(date +%s)
     command claude "$@"
@@ -11,6 +46,7 @@ claude-safe() {
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
 
+    __cca_unset_contexto
     local estimated_tokens=$((duration * 100))
     bash "$HOME/.config/zsh/cca/cca_guard.sh" after "$estimated_tokens"
 
@@ -104,15 +140,16 @@ claude-init() {
     echo "  claude-force       - Forçar (não recomendado)"
 }
 
-# Proposito: Claude Code com permissoes completas (--dangerously-skip-permissions)
+# Propósito: Claude Code com permissões completas (--dangerously-skip-permissions)
 # Uso: cca [args]
 cca() {
     if ! command -v claude &> /dev/null; then
-        echo "[ERRO] Claude Code nao instalado. Rode: npm install -g @anthropic-ai/claude-code"
+        echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
         return 1
     fi
 
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
+    __cca_export_contexto
 
     local start_time=$(date +%s)
     command claude --dangerously-skip-permissions "$@"
@@ -120,6 +157,7 @@ cca() {
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
 
+    __cca_unset_contexto
     local estimated_tokens=$((duration * 100))
     bash "$HOME/.config/zsh/cca/cca_guard.sh" after "$estimated_tokens"
 

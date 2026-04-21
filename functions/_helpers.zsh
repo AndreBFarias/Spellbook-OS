@@ -24,7 +24,7 @@ C_MAGENTA="$D_PINK"
 C_CYAN="$D_CYAN"
 C_NORMAL="$D_RESET"
 
-# -- Diretório de desenvolvimento (portavel entre maquinas) --
+# -- Diretório de desenvolvimento (portável entre máquinas) --
 export DEV_DIR="${DEV_DIR:-$HOME/Desenvolvimento}"
 
 # -- Helpers de formatacao --
@@ -50,7 +50,7 @@ __err()  { echo -e "  ${D_RED}[ERRO]${D_RESET} $1" >&2; }
 
 __cd() { cd "$1" || { __err "Diretório não encontrado: $1"; return 1; } }
 
-# -- Verificação de dependencias --
+# -- Verificação de dependências --
 __verificar_dependencias() {
     local ferramentas_faltantes=()
     for ferramenta in "$@"; do
@@ -78,7 +78,7 @@ __verificar_dependencias_python() {
         return 1
     fi
     if ! "$PYTHON_EXEC" -m pip --version >/dev/null 2>&1; then
-        __err "pip não disponivel em '$PYTHON_EXEC'. Rode: sudo apt install python3-pip"
+        __err "pip não disponível em '$PYTHON_EXEC'. Rode: sudo apt install python3-pip"
         return 1
     fi
     local pacotes_instalados=$($PYTHON_EXEC -m pip list 2>/dev/null)
@@ -101,7 +101,7 @@ __verificar_dependencias_python() {
 }
 
 __resolver_python_projeto() {
-    # 1. .python-version (convencao pyenv/asdf)
+    # 1. .python-version (convenção pyenv/asdf)
     if [ -f ".python-version" ]; then
         local ver=$(head -1 .python-version | tr -d '[:space:]')
         for candidato in "python${ver}" "/usr/bin/python${ver}"; do

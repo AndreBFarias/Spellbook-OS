@@ -21,7 +21,7 @@ __spicetify_config_value() {
 }
 
 # ---------------------------------------------------------------------------
-# Funções publicas
+# Funções públicas
 # ---------------------------------------------------------------------------
 
 # Propósito: Exibir status do Spicetify (tema, esquema, extensions, custom apps)
@@ -34,7 +34,7 @@ spicetify_status() {
 
     local versao
     versao=$("$bin" --version 2>/dev/null || echo "desconhecida")
-    __item "Versao:" "$versao" "$D_COMMENT" "$D_GREEN"
+    __item "Versão:" "$versao" "$D_COMMENT" "$D_GREEN"
 
     local tema esquema
     tema=$(__spicetify_config_value current_theme)
@@ -80,7 +80,7 @@ spicetify_reparar() {
     local bin
     bin=$(__spicetify_bin) || return 1
 
-    __header "Spicetify Reparacao"
+    __header "Spicetify Reparação"
 
     local ext_esperadas="autoSkipExplicit.js|autoSkipVideo.js|bookmark.js|fullAppDisplay.js|keyboardShortcut.js|loopyLoop.js|popupLyrics.js|shuffle+.js|trashbin.js|webnowplaying.js"
     local apps_esperados="marketplace|lyrics-plus|reddit|new-releases"

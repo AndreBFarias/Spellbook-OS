@@ -8,9 +8,9 @@ __conectar_rsync() {
     local max_tentativas="${5:-5}"
     local tentativa=0
 
-    __header "CONEXAO REMOTA" "$D_CYAN"
+    __header "CONEXÃO REMOTA" "$D_CYAN"
     __item "Host" "$host" "$D_COMMENT" "$D_CYAN"
-    __item "Usuario" "$usuario" "$D_COMMENT" "$D_FG"
+    __item "Usuário" "$usuario" "$D_COMMENT" "$D_FG"
     __item "Remoto" "$pasta_remota" "$D_COMMENT" "$D_FG"
     __item "Local" "$pasta_local" "$D_COMMENT" "$D_GREEN"
     echo ""
@@ -23,7 +23,7 @@ __conectar_rsync() {
         if rsync -avzP --exclude='.cache' --exclude='venv' -e "ssh -p 22" \
             "${usuario}@${host}:${pasta_remota}" "$pasta_local"; then
             echo ""
-            __ok "Sincronia com '$usuario@$host' concluida."
+            __ok "Sincronização com '$usuario@$host' concluída."
             echo ""
             return 0
         fi
@@ -36,19 +36,19 @@ __conectar_rsync() {
     done
 
     echo ""
-    __err "Não foi possivel conectar em '$host' apos $max_tentativas tentativas."
-    echo -e "  ${D_COMMENT}Verifique se a maquina esta ligada e acessivel na rede.${D_RESET}"
+    __err "Não foi possível conectar em '$host' após $max_tentativas tentativas."
+    echo -e "  ${D_COMMENT}Verifique se a máquina está ligada e acessível na rede.${D_RESET}"
     echo ""
     return 1
 }
 
-# Proposito: Sincronizar Beholder com a maquina da Maria via rsync
+# Propósito: Sincronizar Beholder com a máquina da Maria via rsync
 # Uso: conectar_maria
 conectar_maria() {
     __conectar_rsync "vitoriamaria" "vitoriamaria.local" "/home/vitoriamaria/Beholder/"
 }
 
-# Proposito: Sincronizar Beholder com o Nitro5 via rsync
+# Propósito: Sincronizar Beholder com o Nitro5 via rsync
 # Uso: conectar_andre
 conectar_andre() {
     __conectar_rsync "andrefarias" "nitro5.local" "/home/andrefarias/Beholder/"

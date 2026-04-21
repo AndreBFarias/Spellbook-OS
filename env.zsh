@@ -2,7 +2,7 @@
 # Variáveis específicas por máquina (gitignored). Gerado pelo install.sh.
 [[ -f "${ZDOTDIR:-$HOME/.config/zsh}/config.local.zsh" ]] && source "${ZDOTDIR:-$HOME/.config/zsh}/config.local.zsh"
 
-# Bridge: config.local.zsh exporta CONTROLE_BORDO_DIR, funcoes usam BORDO_DIR
+# Bridge: config.local.zsh exporta CONTROLE_BORDO_DIR, funções usam BORDO_DIR
 export BORDO_DIR="${CONTROLE_BORDO_DIR:-$HOME/Controle de Bordo}"
 
 # --- 1. TEMA E OH MY ZSH ---
@@ -79,10 +79,10 @@ if [[ -o interactive && -z "$TMUX" ]]; then
 fi
 
 # --- 5. PROMPT COM CORES DE FUNDO ---
-# Prompt: usuario@hostname com fundo colorido
+# Prompt: usuário@hostname com fundo colorido
 autoload -U colors && colors
 
-# Fundo azul para usuario@hostname, fundo escuro para diretorio
+# Fundo azul para usuário@hostname, fundo escuro para diretório
 export PS1='%{$bg[blue]%}%{$fg[white]%} %n@%m %{$reset_color%}%{$bg[black]%}%{$fg[cyan]%} %~ %{$reset_color%} '
 
 # --- 6. SEGREDOS E AJUSTES FINAIS ---

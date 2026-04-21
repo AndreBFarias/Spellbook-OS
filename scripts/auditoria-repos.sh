@@ -109,7 +109,7 @@ while read -r REPO_PATH; do
     REPO_VIOLATIONS=$((REPO_VIOLATIONS + FILE_HITS))
 
     # [3/3] Verificar integridade dos hooks
-    # Se core.hooksPath esta configurado globalmente, os hooks centrais sao usados
+    # Se core.hooksPath está configurado globalmente, os hooks centrais são usados
     GLOBAL_HOOKS_PATH=$(git config --global core.hooksPath 2>/dev/null || true)
     HOOKS_OK=true
     HOOKS_DETAIL=""

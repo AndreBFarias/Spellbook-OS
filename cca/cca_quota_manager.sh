@@ -64,8 +64,8 @@ check_quota() {
     echo ""
 
     if [ $tokens_used -ge $CRITICAL_THRESHOLD ]; then
-        echo "[CRITICO] $percent% do limite usado!"
-        echo "    Evite comandos grandes. Use --skip-context quando possivel."
+        echo "[CRÍTICO] $percent% do limite usado!"
+        echo "    Evite comandos grandes. Use --skip-context quando possível."
         return 2
     elif [ $tokens_used -ge $WARNING_THRESHOLD ]; then
         echo "[AVISO] $percent% do limite usado!"
@@ -93,7 +93,7 @@ pre_request_check() {
         echo "   Espere até $(date -d "$(get_week_start) + 7 days" +%Y-%m-%d) para nova semana."
         return 1
     elif [ $tokens_used -ge $CRITICAL_THRESHOLD ]; then
-        echo "[AVISO] ZONA CRITICA: $((WEEKLY_LIMIT - tokens_used)) tokens restantes"
+        echo "[AVISO] ZONA CRÍTICA: $((WEEKLY_LIMIT - tokens_used)) tokens restantes"
         echo "   Deseja continuar? (y/n)"
         read -r response
         if [ "$response" != "y" ]; then

@@ -121,7 +121,7 @@ santuario() {
             echo -e "  ${D_COMMENT}Projeto Rust detectado. Compilando...${D_RESET}"
             cargo build
         else
-            # Delegacao para install.sh do projeto (respeita configuração de venv do projeto)
+            # Delegação para install.sh do projeto (respeita configuração de venv do projeto)
             if [ -f "install.sh" ]; then
                 local venv_base="venv"
                 if [ ! -d "$venv_base" ] || [ "$sync_dependencias" = true ]; then
@@ -175,8 +175,8 @@ santuario() {
                         continue
                     fi
 
-                    # Skip sub-requirements de um setup script ja delegado
-                    # Ex: tts_coqui e tts_chatterbox sao consumidos por tts_setup.sh
+                    # Skip sub-requirements de um setup script já delegado
+                    # Ex: tts_coqui e tts_chatterbox são consumidos por tts_setup.sh
                     if [[ -n "$sufixo" && ${#sufixos_delegados[@]} -gt 0 ]]; then
                         local skip_sub=false
                         for delegado in "${sufixos_delegados[@]}"; do
@@ -244,7 +244,7 @@ santuario() {
     __aplicar_contexto_git_automatico
     __aplicar_contexto_gh_automatico
 
-    # Verificação e limpeza automatica de emojis
+    # Verificação e limpeza automática de emojis
     echo ""
     local emoji_guardian="${BORDO_DIR:-$HOME/Controle de Bordo}/.sistema/scripts/emoji_guardian.py"
     if [ -f "$emoji_guardian" ]; then
@@ -263,15 +263,20 @@ santuario() {
         fi
     fi
 
-    # Sistema de validação de sprints (Claude Code subagente validador-sprint)
+    # Sistema de validação de sprints (Claude Code v2 - subagente validador-sprint)
     if [ -d ".git" ]; then
+        # Doctor silencioso: avisa apenas se detectar issues
+        if typeset -f __sprint_doctor_quick > /dev/null 2>&1; then
+            __sprint_doctor_quick
+        fi
+
         echo ""
         if [ -f "VALIDATOR_BRIEF.md" ]; then
             local brief_age=$(( ($(date +%s) - $(stat -c %Y VALIDATOR_BRIEF.md)) / 86400 ))
             local brief_lines=$(wc -l < VALIDATOR_BRIEF.md)
-            echo -e "  ${D_CYAN}[VALIDADOR]${D_RESET} BRIEF ativo (${brief_lines}L, atualizado ha ${brief_age}d)"
+            echo -e "  ${D_CYAN}[VALIDADOR]${D_RESET} BRIEF ativo (${brief_lines}L, atualizado há ${brief_age}d)"
         else
-            echo -e "  ${D_YELLOW}[VALIDADOR]${D_RESET} sem VALIDATOR_BRIEF.md (sera criado no 1o /validar-sprint)"
+            echo -e "  ${D_YELLOW}[VALIDADOR]${D_RESET} sem VALIDATOR_BRIEF.md (hook SessionStart do cca cria automaticamente na próxima sessão)"
         fi
     fi
 
@@ -286,20 +291,10 @@ santuario() {
         levitar .
     fi
 
-    # Claude Code: abrir pronto pra validar sprint (usa cca/claude-safe para respeitar quota guard)
-    if [ -d ".git" ] && { typeset -f cca > /dev/null 2>&1 || command -v claude &> /dev/null; }; then
-        local claude_reply=""
-        read -k 1 "claude_reply?  Abrir Claude Code pronto pra validar sprint? (s/N) "
-        echo ""
-        if [[ "$claude_reply" == "s" || "$claude_reply" == "S" ]]; then
-            if typeset -f cca > /dev/null 2>&1; then
-                cca "/validar-sprint"
-            else
-                claude "/validar-sprint"
-            fi
-            return 0
-        fi
-    fi
+    # Nota v2: prompt de abrir Claude Code removido - rodar `cca` diretamente já carrega
+    # VALIDATOR_BRIEF.md, capacidades visuais e ciclo automatico via hook SessionStart.
+    # Para validar sprint: `cca "/validar-sprint"` ou `sval`.
+    # Para ciclo completo: `cca "/sprint-ciclo <ideia>"` ou `sciclo <ideia>`.
 
     if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
         echo -e -n "  ${D_ORANGE}Abrir menu MEC? (s/N)${D_RESET} "

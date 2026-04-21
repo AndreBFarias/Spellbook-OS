@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Proposito: Parte do Ritual da Aurora que roda como usuario (sem sudo).
+# Propósito: Parte do Ritual da Aurora que roda como usuário (sem sudo).
 #            Configura GPU Nvidia no modo performance via nvidia-settings.
 #            A parte com sudo (earlyoom, system76-power) roda via systemd:
 #            ritual-aurora-root.service

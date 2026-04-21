@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Saude rapida do sistema (CPU, RAM, Disco, GPU, Uptime)
+# Propósito: Saúde rápida do sistema (CPU, RAM, Disco, GPU, Uptime)
 # Uso: pulso
 pulso() {
     __header "PULSO DO SISTEMA" "$D_CYAN"
@@ -56,7 +56,7 @@ pulso() {
     echo ""
 }
 
-# Proposito: Status git de todos os repositorios (branch, alteracoes, sync)
+# Propósito: Status git de todos os repositórios (branch, alterações, sync)
 # Uso: repos
 repos() {
     if [ ! -d "$DEV_DIR" ]; then
@@ -64,7 +64,7 @@ repos() {
         return 1
     fi
 
-    __header "REPOSITORIOS" "$D_PURPLE"
+    __header "REPOSITÓRIOS" "$D_PURPLE"
 
     local repos=$(find "$DEV_DIR" -maxdepth 3 -name ".git" -type d -prune 2>/dev/null | sed 's/\/\.git//' | sort)
 
@@ -108,7 +108,7 @@ repos() {
     echo ""
 }
 
-# Proposito: Limpar caches do sistema (pip, npm, apt, journalctl, pycache)
+# Propósito: Limpar caches do sistema (pip, npm, apt, journalctl, pycache)
 # Uso: purgar
 purgar() {
     __header "LIMPEZA DE CACHES" "$D_PINK"
@@ -135,6 +135,6 @@ purgar() {
     echo -e " ${D_GREEN}ok${D_RESET}"
 
     echo ""
-    __ok "Limpeza concluida."
+    __ok "Limpeza concluída."
     echo ""
 }

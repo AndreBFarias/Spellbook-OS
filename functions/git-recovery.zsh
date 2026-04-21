@@ -1,15 +1,15 @@
 #!/bin/zsh
 
-# Proposito: Investigar branch ou commit para recuperacao (log, diff, sugestoes)
+# Propósito: Investigar branch ou commit para recuperação (log, diff, sugestões)
 # Uso: grecuperar [branch_ou_commit]
 grecuperar() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __err "Não e um repositorio git."
+        __err "Não é um repositório git."
         return 1
     fi
 
     if [[ -z "$1" ]]; then
-        __header "RECUPERACAO GIT" "$D_ORANGE"
+        __header "RECUPERAÇÃO GIT" "$D_ORANGE"
         echo -e "  ${D_COMMENT}Uso: grecuperar <branch_ou_commit>${D_RESET}"
         echo ""
         echo -e "  ${D_PURPLE}Branches:${D_RESET}"
@@ -37,11 +37,11 @@ grecuperar() {
     echo ""
 }
 
-# Proposito: Painel de emergencia git (status, branches, reflog, stashes)
+# Propósito: Painel de emergência git (status, branches, reflog, stashes)
 # Uso: gsos
 gsos() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __err "Não e um repositorio git."
+        __err "Não é um repositório git."
         return 1
     fi
 
@@ -75,11 +75,11 @@ gsos() {
     echo ""
 }
 
-# Proposito: Reset hard para um ponto do reflog (com confirmacao e preview)
+# Propósito: Reset hard para um ponto do reflog (com confirmação e preview)
 # Uso: grestore <ref>
 grestore() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __err "Não e um repositorio git."
+        __err "Não é um repositório git."
         return 1
     fi
 
@@ -94,7 +94,7 @@ grestore() {
 
     __header "RESTORE: $1" "$D_RED"
 
-    echo -e "  ${D_YELLOW}Commits que serao perdidos do HEAD atual:${D_RESET}"
+    echo -e "  ${D_YELLOW}Commits que serão perdidos do HEAD atual:${D_RESET}"
     git log --oneline "$1"..HEAD | sed 's/^/    /'
     echo ""
 

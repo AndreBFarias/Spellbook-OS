@@ -38,13 +38,13 @@ __mec_mostrar_contexto() {
     printf "  ${D_COMMENT}%-12s${D_RESET} ${D_CYAN}%s${D_RESET}\n" "Branch" "$branch"
 
     local sync_color="$D_GREEN"
-    local sync_label="${behind} commit(s) atras do remoto"
+    local sync_label="${behind} commit(s) atrás do remoto"
     [[ "$behind" -gt 0 ]] && sync_color="$D_RED"
     printf "  ${D_COMMENT}%-12s${D_RESET} ${sync_color}%s${D_RESET}\n" "Sync" "$sync_label"
 
     if [[ "$sql_count" -gt 0 || "$yml_count" -gt 0 || "$py_count" -gt 0 ]]; then
         echo ""
-        echo -e "  ${D_COMMENT}Alteracoes detectadas:${D_RESET}"
+        echo -e "  ${D_COMMENT}Alterações detectadas:${D_RESET}"
         [[ "$sql_count" -gt 0 ]] && printf "    ${D_YELLOW}%-8s${D_RESET} ${D_FG}%s modelo(s)${D_RESET}\n" "SQL" "$sql_count"
         [[ "$yml_count" -gt 0 ]] && printf "    ${D_YELLOW}%-8s${D_RESET} ${D_FG}%s schema(s)${D_RESET}\n" "YAML" "$yml_count"
         [[ "$py_count" -gt 0 ]]  && printf "    ${D_YELLOW}%-8s${D_RESET} ${D_FG}%s script(s)${D_RESET}\n" "Python" "$py_count"
@@ -52,7 +52,7 @@ __mec_mostrar_contexto() {
 
     local tem_sugestao=false
     echo ""
-    echo -e "  ${D_COMMENT}Sugestoes:${D_RESET}"
+    echo -e "  ${D_COMMENT}Sugestões:${D_RESET}"
 
     if [[ "$behind" -gt 0 ]]; then
         echo -e "  ${D_ORANGE}->  [SYNC] git pull --rebase  (${behind} commits pendentes)${D_RESET}"
@@ -64,7 +64,7 @@ __mec_mostrar_contexto() {
         tem_sugestao=true
     fi
     if [[ "$tem_sugestao" == false ]]; then
-        echo -e "  ${D_COMMENT}(nenhuma sugestao no momento)${D_RESET}"
+        echo -e "  ${D_COMMENT}(nenhuma sugestão no momento)${D_RESET}"
     fi
 
     echo -e "  ${D_COMMENT}$(printf '%.0s─' {1..50})${D_RESET}"
@@ -126,7 +126,7 @@ __mec_exec_dbt() {
             echo ""
             "$__MEC_PYTHON" "$__MEC_RESULTS_SCRIPT" "$__MEC_RESULTS_JSON" 2>/dev/null \
                 || python3 "$__MEC_RESULTS_SCRIPT" "$__MEC_RESULTS_JSON" 2>/dev/null \
-                || __warn "Não foi possivel renderizar run_results.json"
+                || __warn "Não foi possível renderizar run_results.json"
         fi
     fi
 
@@ -145,8 +145,8 @@ __mec_exec_dbt_select() {
     fi
 
     local fzf_select_color="bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4"
-    local seleção
-    seleção=$(find "$models_dir" -name "*.sql" \
+    local selecao
+    selecao=$(find "$models_dir" -name "*.sql" \
         | sed "s|${models_dir}/||; s|\.sql$||" \
         | sort \
         | fzf --multi \
@@ -154,10 +154,10 @@ __mec_exec_dbt_select() {
               --layout=reverse \
               --border \
               --prompt="  Modelo > " \
-              --header="  TAB multiplos | ESC = todos" \
+              --header="  TAB múltiplos | ESC = todos" \
               --color="$fzf_select_color")
 
-    if [[ -z "$seleção" ]]; then
+    if [[ -z "$selecao" ]]; then
         echo -e "  ${D_COMMENT}Nenhum modelo selecionado. Rodando todos...${D_RESET}"
         __mec_exec_dbt "$subcmd"
     else
@@ -166,7 +166,7 @@ __mec_exec_dbt_select() {
             local base
             base=$(basename "$m")
             modelos_args+="$base "
-        done <<< "$seleção"
+        done <<< "$selecao"
         modelos_args="${modelos_args%% }"
         __mec_exec_dbt "$subcmd" "--select $modelos_args"
     fi
@@ -269,7 +269,7 @@ conjurar_mec() {
     fi
 
     if ! git -C "$__MEC_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        __err "Diretório não e um repositorio git: ${__MEC_ROOT}"
+        __err "Diretório não é um repositório git: ${__MEC_ROOT}"
         return 1
     fi
 
@@ -280,10 +280,10 @@ conjurar_mec() {
 
     __mec_mostrar_contexto "$__MEC_ROOT"
 
-    local -a opções=(
+    local -a opcoes=(
         "[SYNC]  git pull --rebase	SYNC	Atualizar branch (seguro, stash auto, sem reset --hard)"
         "[SYNC]  git fetch	SYNC	Buscar info do remoto sem alterar local"
-        "[SYNC]  git status	SYNC	Status atual do repositorio"
+        "[SYNC]  git status	SYNC	Status atual do repositório"
         "[SYNC]  git log recente	SYNC	Últimos 10 commits com grafo"
         "[DBT]   dbt run (todos)	DBT	Rodar todos os modelos no dataset dev"
         "[DBT]   dbt run (selecionar)	DBT	FZF de modelos + dbt run no dev"
@@ -294,18 +294,18 @@ conjurar_mec() {
         "[DBT]   dbt ls	DBT	Listar todos os modelos do projeto"
         "[GIT]   git add + commit	GIT	Stagear arquivos e commitar"
         "[GIT]   git diff staged	GIT	Ver diff dos arquivos em staging"
-        "[GIT]   git stash	GIT	Guardar WIP com label automatico"
+        "[GIT]   git stash	GIT	Guardar WIP com label automático"
         "[GIT]   git stash pop	GIT	Restaurar último stash"
         "[PUSH]  push com checklist	PUSH	4 checks + confirmar + git push"
-        "[PUSH]  push direto	PUSH	Git push sem checklist (pede confirmacao)"
+        "[PUSH]  push direto	PUSH	Git push sem checklist (pede confirmação)"
         "[AMB]   abrir santuario	AMB	santuario MEC pipelines-main"
         "[AMB]   pre-commit run	AMB	Rodar black/isort/flake8 em todos os arquivos"
-        "[AMB]   verificar rastros IA	AMB	Scaneia arquivos staged por comentarios, emojis ou mencoes a IA"
+        "[AMB]   verificar rastros IA	AMB	Scaneia arquivos staged por comentários, emojis ou menções a IA"
         "[AMB]   ver identidade git	AMB	git_info (nome, email, branch, remote)"
         "[INFO]  ver run_results	INFO	Tabela do último dbt run/build/test"
         "[INFO]  ver contexto	INFO	Reexibir painel de contexto"
         "[INFO]  ver PR status	INFO	gh pr view: status, checks e target branch do PR atual"
-        "[MIG]   scan do projeto	MIG	Listar todos os SQLs com source censo pendente de migracao"
+        "[MIG]   scan do projeto	MIG	Listar todos os SQLs com source censo pendente de migração"
         "[MIG]   validar coluna	MIG	Comparar old_col vs new_col no BQ (tipos + distinct + sum)"
         "[MIG]   migrar source_only	MIG	Trocar apenas source ID em um SQL (sem aliases)"
         "[MIG]   migrar aliases (auto)	MIG	Apply yes-all: aceitar todos aliases inferidos automaticamente"
@@ -321,8 +321,8 @@ printf "\033[38;2;98;114;164m%s\033[0m\n" "────────────�
 printf "\033[38;2;241;250;140mGrupo:\033[0m %s\n\n" "$grupo"
 printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
 
-    local seleção
-    seleção=$(printf '%s\n' "${opções[@]}" | fzf \
+    local selecao
+    selecao=$(printf '%s\n' "${opcoes[@]}" | fzf \
         --height=70% \
         --layout=reverse \
         --border=rounded \
@@ -338,13 +338,13 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
 
     local exit_code=$?
 
-    if [[ $exit_code -eq 130 || -z "$seleção" ]]; then
+    if [[ $exit_code -eq 130 || -z "$selecao" ]]; then
         echo -e "  ${D_COMMENT}Cancelado.${D_RESET}"
         return 0
     fi
 
     local label
-    label=$(printf '%s' "$seleção" | cut -d$'\t' -f1 | sed 's/[[:space:]]*$//')
+    label=$(printf '%s' "$selecao" | cut -d$'\t' -f1 | sed 's/[[:space:]]*$//')
 
     echo ""
     echo -e "  ${D_PURPLE}>>>${D_RESET} ${D_FG}${label}${D_RESET}"
@@ -515,8 +515,8 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
     esac
 }
 
-# Proposito: Alias curto para conjurar_mec
+# Propósito: Alias curto para conjurar_mec
 # Uso: mec
 alias mec='conjurar_mec'
 
-# "A ordem e o dom natural da mente que age com proposito." — Marco Aurelio
+# "A ordem é o dom natural da mente que age com propósito." — Marco Aurélio

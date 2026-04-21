@@ -30,7 +30,7 @@ RE_FUNC_DEF = re.compile(
 
 # Mapeamento arquivo -> domínio humano
 DOMAIN_LABELS = {
-    "arvore.zsh": "Navegação e exploração",
+    "árvore.zsh": "Navegação e exploração",
     "auditoria.zsh": "Navegação e exploração",
     "busca.zsh": "Navegação e exploração",
     "navegacao.zsh": "Navegação e exploração",
@@ -141,8 +141,8 @@ def render_markdown(by_domain: dict) -> str:
         lines.append("|---|---|---|")
         for f in funcs:
             uso = f["usage"].replace("|", "\\|") if f["usage"] else "—"
-            proposito = f["purpose"].replace("|", "\\|") if f["purpose"] else "*(sem descrição)*"
-            lines.append(f"| `{f['name']}` | {proposito} | `{uso}` |")
+            propósito = f["purpose"].replace("|", "\\|") if f["purpose"] else "*(sem descrição)*"
+            lines.append(f"| `{f['name']}` | {propósito} | `{uso}` |")
         lines.append("")
         # Flags agrupadas por função
         flagged = [f for f in funcs if f["flags"]]

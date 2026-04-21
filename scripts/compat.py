@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modulo de compatibilidade cross-platform para scripts do Spellbook-OS.
-Zero dependencias externas. Funciona em Linux, macOS e Windows.
+Módulo de compatibilidade cross-platform para scripts do Spellbook-OS.
+Zero dependências externas. Funciona em Linux, macOS e Windows.
 """
 
 import sys

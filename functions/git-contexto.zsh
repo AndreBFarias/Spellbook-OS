@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# --- Resolucao de identidade por path (lê de config.local.zsh) ---
+# --- Resolução de identidade por path (lê de config.local.zsh) ---
 
 __resolver_identidade() {
     local repo_path="${1:-$(pwd)}"
@@ -36,7 +36,7 @@ __definir_contexto_git() {
     local user_email="$2"
 
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        __warn "Sem repositorio git. Execute 'git init' e reabra o santuario."
+        __warn "Sem repositório git. Execute 'git init' e reabra o santuário."
         return 1
     fi
 

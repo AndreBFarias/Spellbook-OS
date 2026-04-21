@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Arvore de diretórios com filtros e exportacao para arquivo
+# Propósito: Árvore de diretórios com filtros e exportação para arquivo
 # Uso: tree <profundidade> [diretório]
 tree() {
     __verificar_dependencias "tree" || return 1

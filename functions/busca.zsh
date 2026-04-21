@@ -1,10 +1,10 @@
 #!/bin/zsh
 
-# Proposito: Buscar arquivos por padrao de nome em um diretório
-# Uso: buscar <padrao> <pasta>
+# Propósito: Buscar arquivos por padrão de nome em um diretório
+# Uso: buscar <padrão> <pasta>
 buscar() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        echo -e "  ${D_COMMENT}Uso: buscar <padrao> <pasta>${D_RESET}"
+        echo -e "  ${D_COMMENT}Uso: buscar <padrão> <pasta>${D_RESET}"
         return 1
     fi
 

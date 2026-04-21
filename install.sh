@@ -10,13 +10,66 @@ REPO_URL_SSH="git@github.com-personal:[REDACTED]/Spellbook-OS.git"
 REPO_URL_HTTPS="https://github.com/[REDACTED]/Spellbook-OS.git"
 DRY_RUN=false
 IS_UPDATE=false
+IS_RELINK=false
 
 for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=true ;;
         --update)  IS_UPDATE=true ;;
+        --relink)  IS_RELINK=true ;;
     esac
 done
+
+# --- Modo --relink: apenas refaz symlinks de ~/.claude/ -> docs/claude/ ---
+# Uso pos-install para garantir que agents/commands/skills/templates/hooks
+# em ~/.claude/ apontam para origem canonica versionada em docs/claude/.
+# Idempotente: ln -sfv so recria se destino muda.
+if [ "$IS_RELINK" = "true" ]; then
+    DOCS="${SCRIPT_DIR}/docs/claude"
+    CLAUDE="${HOME}/.claude"
+
+    echo "[relink] Criando symlinks de $CLAUDE/* -> $DOCS/*"
+
+    mkdir -p "$CLAUDE/agents" "$CLAUDE/commands" "$CLAUDE/skills" "$CLAUDE/templates" "$CLAUDE/hooks"
+
+    # Docs de nivel raiz
+    for f in PLUGINS.md SETTINGS.md SPECIAL_PROJECTS.json; do
+        [ -f "$DOCS/$f" ] && ln -sfv "$DOCS/$f" "$CLAUDE/$f"
+    done
+
+    # Agents
+    for f in "$DOCS"/agents/*.md; do
+        [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/agents/$(basename "$f")"
+    done
+
+    # Commands
+    for f in "$DOCS"/commands/*.md; do
+        [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/commands/$(basename "$f")"
+    done
+
+    # Skills (diretorios: usar -n para nao dereferenciar symlink existente)
+    for d in "$DOCS"/skills/*/; do
+        name=$(basename "$d")
+        if [ -d "$d" ]; then
+            # Remove link/dir existente antes (ln -n nao sobrescreve dir com link)
+            [ -L "$CLAUDE/skills/$name" ] && rm "$CLAUDE/skills/$name"
+            ln -sfnv "$d" "$CLAUDE/skills/$name"
+        fi
+    done
+
+    # Templates
+    for f in "$DOCS"/templates/*.md; do
+        [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/templates/$(basename "$f")"
+    done
+
+    # Hooks
+    for f in "$DOCS"/hooks/*.py; do
+        [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/hooks/$(basename "$f")"
+    done
+
+    echo "[relink] Concluido. Verifique com: ls -la ~/.claude/"
+    exit 0
+fi
 
 # --- Paleta Dracula para whiptail (NEWT_COLORS) ---
 export NEWT_COLORS='

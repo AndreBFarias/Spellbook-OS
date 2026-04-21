@@ -213,7 +213,7 @@ vtask() {
 
     content=$(echo "$content" | sed "s/^autor: $/autor: $responsavel/")
     content=$(echo "$content" | sed "s/^cliente: $/cliente: $cliente_tag/")
-    content=$(echo "$content" | sed "s/^responsavel: $/responsavel: $responsavel/")
+    content=$(echo "$content" | sed "s/^responsável: $/responsável: $responsavel/")
     content=$(echo "$content" | sed "s/^quinzena: $/quinzena: $quinzena/")
     content=$(echo "$content" | sed "s/^período: \"\"$/período: \"$período\"/")
 

@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Extrair arquivos compactados (tar, zip, rar, 7z, gz, xz, zst)
+# Propósito: Extrair arquivos compactados (tar, zip, rar, 7z, gz, xz, zst)
 # Uso: extrair <arquivo>
 extrair() {
     if [ -z "$1" ]; then
@@ -9,7 +9,7 @@ extrair() {
     fi
 
     if [ ! -f "$1" ]; then
-        __err "'$1' não e um arquivo valido."
+        __err "'$1' não é um arquivo válido."
         return 1
     fi
 

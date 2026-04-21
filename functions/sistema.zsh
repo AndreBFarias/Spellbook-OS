@@ -16,19 +16,19 @@ _reconstruir_caches_icones() {
         if sudo gtk-update-icon-cache -f -q "$tema_dir" 2>/dev/null; then
             echo -e "  ${D_GREEN}[OK]${D_RESET} $tema"
         else
-            echo -e "  ${D_YELLOW}[!]${D_RESET}  $tema (cache invalido, pode haver arquivos corrompidos)"
+            echo -e "  ${D_YELLOW}[!]${D_RESET}  $tema (cache inválido, pode haver arquivos corrompidos)"
             ((falhas++))
         fi
     done
 
-    # Temas instalados em nivel user (~/.local/share/icons)
+    # Temas instalados em nível user (~/.local/share/icons)
     for tema_dir in "$HOME/.local/share/icons/"*/; do
         [ -f "${tema_dir}index.theme" ] || continue
         local tema=$(basename "$tema_dir")
         if gtk-update-icon-cache -f -q "$tema_dir" 2>/dev/null; then
             echo -e "  ${D_GREEN}[OK]${D_RESET} $tema (user)"
         else
-            echo -e "  ${D_YELLOW}[!]${D_RESET}  $tema (user, cache invalido)"
+            echo -e "  ${D_YELLOW}[!]${D_RESET}  $tema (user, cache inválido)"
             ((falhas++))
         fi
     done
@@ -53,9 +53,9 @@ _reconstruir_caches_icones() {
 
     echo ""
     if [ $falhas -eq 0 ]; then
-        __ok "Todos os caches reconstruidos"
+        __ok "Todos os caches reconstruídos"
     else
-        __warn "$falhas tema(s) com problemas (verifique arquivos com nomes invalidos)"
+        __warn "$falhas tema(s) com problemas (verifique arquivos com nomes inválidos)"
     fi
     echo ""
 }
@@ -98,7 +98,7 @@ _fix_flatpak_icons() {
     echo ""
 }
 
-# Proposito: Reconstruir Dracula_OS-Theme do zero (build + install --user)
+# Propósito: Reconstruir Dracula_OS-Theme do zero (build + install --user)
 # Uso: rebuild_dracula_theme [--activate]
 rebuild_dracula_theme() {
     local repo="$HOME/Desenvolvimento/Dracula_OS-Theme"
@@ -112,7 +112,7 @@ rebuild_dracula_theme() {
     (
         cd "$repo" || return 1
 
-        # Garantir que upstreams estao presentes (.gitignore esconde do repo)
+        # Garantir que upstreams estão presentes (.gitignore esconde do repo)
         if [ ! -d "src/icons/upstream/dracula-icons-main" ]; then
             echo -e "  ${D_COMMENT}Baixando upstreams ausentes...${D_RESET}"
             ./scripts/baixar_upstreams.sh || return 1
@@ -134,11 +134,11 @@ rebuild_dracula_theme() {
         }
     ) || return 1
 
-    __ok "Dracula_OS-Theme reconstruido e instalado"
+    __ok "Dracula_OS-Theme reconstruído e instalado"
     echo ""
 }
 
-# Proposito: Exibir contexto de usuario no prompt (SSH e usuarios não-padrao)
+# Propósito: Exibir contexto de usuário no prompt (SSH e usuários não-padrão)
 # Uso: prompt_context
 prompt_context() {
   if [[ "$USER" != "$DEFAULT_USER" || -n "$SSH_CLIENT" ]]; then
@@ -146,32 +146,32 @@ prompt_context() {
   fi
 }
 
-# Proposito: Reinstalar um pacote via apt
+# Propósito: Reinstalar um pacote via apt
 # Uso: reinstalar <pacote>
 reinstalar() { if [ -z "$1" ]; then echo "Uso: reinstalar <pacote>"; return 1; fi; sudo apt install --reinstall "$1"; }
 
-# Proposito: Descobrir qual pacote instalou um arquivo
+# Propósito: Descobrir qual pacote instalou um arquivo
 # Uso: quem_instalou <caminho>
 quem_instalou() { if [ -z "$1" ]; then echo "Uso: quem_instalou <caminho>"; return 1; fi; dpkg -S "$1"; }
 
-# Proposito: Listar todos os arquivos de um pacote instalado
+# Propósito: Listar todos os arquivos de um pacote instalado
 # Uso: arquivos_pacote <pacote>
 arquivos_pacote() { if [ -z "$1" ]; then echo "Uso: arquivos_pacote <pacote>"; return 1; fi; dpkg -L "$1"; }
 
-# Proposito: Status de um servico systemd
-# Uso: servico_status <servico>
+# Propósito: Status de um serviço systemd
+# Uso: servico_status <serviço>
 servico_status() { systemctl status "$1"; }
-# Proposito: Iniciar um servico systemd
-# Uso: servico_iniciar <servico>
+# Propósito: Iniciar um serviço systemd
+# Uso: servico_iniciar <serviço>
 servico_iniciar() { sudo systemctl start "$1"; }
-# Proposito: Parar um servico systemd
-# Uso: servico_parar <servico>
+# Propósito: Parar um serviço systemd
+# Uso: servico_parar <serviço>
 servico_parar() { sudo systemctl stop "$1"; }
-# Proposito: Reiniciar um servico systemd
-# Uso: servico_reiniciar <servico>
+# Propósito: Reiniciar um serviço systemd
+# Uso: servico_reiniciar <serviço>
 servico_reiniciar() { sudo systemctl restart "$1"; }
 
-# Proposito: Gerar diagnostico completo do Pop!_OS (kernel, disco, processos, erros)
+# Propósito: Gerar diagnóstico completo do Pop!_OS (kernel, disco, processos, erros)
 # Uso: diagnostico_pop <profundidade>
 diagnostico_pop() {
     if ! [[ "$1" =~ ^[0-9]+$ ]] || [ -z "$1" ]; then
@@ -183,7 +183,7 @@ diagnostico_pop() {
     local timestamp=$(date +'%Y-%m-%d_%Hh%M')
     local output_file="diagnostico_popos_${timestamp}.txt"
 
-    __header "DIAGNOSTICO POP!_OS" "$D_ORANGE"
+    __header "DIAGNÓSTICO POP!_OS" "$D_ORANGE"
 
     {
         echo "--- DIAGNÓSTICO DO SISTEMA POP!_OS ---"
@@ -206,7 +206,7 @@ diagnostico_pop() {
     echo ""
 }
 
-# Proposito: Reparo automatico do sistema (deps, pacotes, limpeza, atualizacao)
+# Propósito: Reparo automático do sistema (deps, pacotes, limpeza, atualização)
 # Uso: reparo_pop
 reparo_pop() {
     __header "REPARO DO SISTEMA" "$D_RED"
@@ -217,14 +217,14 @@ reparo_pop() {
 
     echo -e "  ${D_COMMENT}Corrigindo dependências...${D_RESET}";  sudo apt install -f
     echo -e "  ${D_COMMENT}Reconfigurando pacotes...${D_RESET}";   sudo dpkg --configure -a
-    echo -e "  ${D_COMMENT}Limpando orfaos...${D_RESET}";          sudo apt autoremove --purge -y; sudo apt clean
+    echo -e "  ${D_COMMENT}Limpando órfãos...${D_RESET}";          sudo apt autoremove --purge -y; sudo apt clean
     echo -e "  ${D_COMMENT}Atualizando sistema...${D_RESET}";      sudo apt update; sudo apt full-upgrade -y
     echo -e "  ${D_COMMENT}Reparando Flatpak...${D_RESET}";        flatpak repair --user 2>/dev/null; sudo flatpak repair 2>/dev/null
-    echo -e "  ${D_COMMENT}Reconstruindo icones...${D_RESET}";     _reconstruir_caches_icones
+    echo -e "  ${D_COMMENT}Reconstruindo ícones...${D_RESET}";     _reconstruir_caches_icones
 
     exec >&2
 
-    __ok "Reparo concluido. Log: $log_file"
+    __ok "Reparo concluído. Log: $log_file"
     echo ""
 
     read -p "  Reiniciar agora? (s/N) " confirmacao

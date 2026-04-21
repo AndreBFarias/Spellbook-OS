@@ -149,7 +149,7 @@ def sync_sql_files(mec_root: Path, quiet: bool = False) -> dict:
                 file=sys.stderr,
             )
         else:
-            print(f"  {GRAY}[sync] ja atualizado{RESET}", file=sys.stderr)
+            print(f"  {GRAY}[sync] já atualizado{RESET}", file=sys.stderr)
 
     return {"error": None, "updated": changed}
 
@@ -591,7 +591,7 @@ def inject_alias_in_cte(sql: str, col_map: dict[str, str]) -> str:
     alias_lines = []
     indent = "    "
     for new_col, old_col in col_map.items():
-        alias_lines.append(f"{indent}-- migracao censo: alias para compatibilidade de painel")
+        alias_lines.append(f"{indent}-- migração censo: alias para compatibilidade de painel")
         alias_lines.append(f"{indent}{new_col} AS {old_col},")
 
     from_pattern = re.compile(r"(\bFROM\b)", re.IGNORECASE)
@@ -625,7 +625,7 @@ def _show_diff(original: str, modified: str, filepath: str) -> None:
     )
     lines = list(diff)
     if not lines:
-        _p(f"  {GRAY}(sem alteracoes){RESET}")
+        _p(f"  {GRAY}(sem alterações){RESET}")
         return
 
     for line in lines:
@@ -691,7 +691,7 @@ def cmd_scan(args) -> int:
     _p(_hr("─", 70))
 
     if not files_result:
-        _p(f"  {GREEN}Nenhum arquivo com referencia a '{OLD_TABLE}' encontrado.{RESET}")
+        _p(f"  {GREEN}Nenhum arquivo com referência a '{OLD_TABLE}' encontrado.{RESET}")
         _p(_hr("─", 70))
         return EXIT_OK
 
@@ -710,7 +710,7 @@ def cmd_scan(args) -> int:
         )
 
     _p()
-    _p(f"  {YELLOW}{pending_count} arquivo(s) precisam de migracao.{RESET}")
+    _p(f"  {YELLOW}{pending_count} arquivo(s) precisam de migração.{RESET}")
     _p(_hr("─", 70))
 
     return EXIT_NEEDS_MIGRATION if pending_count > 0 else EXIT_OK
@@ -731,7 +731,7 @@ def cmd_analyze(args, client) -> int:
 
     if not json_mode:
         _p()
-        _p(f"  {PURPLE}{BOLD}ANALISE DE MODELO SQL{RESET}  {YELLOW}{'[mock]' if args.mock else ''}{RESET}")
+        _p(f"  {PURPLE}{BOLD}ANÁLISE DE MODELO SQL{RESET}  {YELLOW}{'[mock]' if args.mock else ''}{RESET}")
         _p(_hr())
         _p(f"  {GRAY}Arquivo{RESET}  {FG}{sql_path.name}{RESET}")
 
@@ -752,14 +752,14 @@ def cmd_analyze(args, client) -> int:
             }, ensure_ascii=False, indent=2))
         else:
             _p(
-                f"  {GRAY}Nenhuma referencia a '{OLD_TABLE}' encontrada. "
-                f"Arquivo ja migrado ou não usa censo.{RESET}"
+                f"  {GRAY}Nenhuma referência a '{OLD_TABLE}' encontrada. "
+                f"Arquivo já migrado ou não usa censo.{RESET}"
             )
             _p(_hr())
         return EXIT_OK
 
     if not json_mode:
-        _p(f"  {GREEN}Referencia a '{OLD_TABLE}' detectada.{RESET}")
+        _p(f"  {GREEN}Referência a '{OLD_TABLE}' detectada.{RESET}")
         _p(_hr())
 
     if args.mock:
@@ -773,7 +773,7 @@ def cmd_analyze(args, client) -> int:
         old_schema = get_table_schema(client, DATASET, OLD_TABLE)
         if not old_schema:
             print(
-                f"  {RED}Não foi possivel obter schema de {OLD_TABLE}{RESET}",
+                f"  {RED}Não foi possível obter schema de {OLD_TABLE}{RESET}",
                 file=sys.stderr,
             )
             return EXIT_ERROR
@@ -795,12 +795,12 @@ def cmd_analyze(args, client) -> int:
         return EXIT_OK
 
     _p(f"\n  {GRAY}Colunas do schema antigo referenciadas no SQL: {CYAN}{len(referenced)}{RESET}")
-    _p(f"  {GRAY}Colunas com renomeacao detectada:             {ORANGE}{len(renamed)}{RESET}")
+    _p(f"  {GRAY}Colunas com renomeação detectada:             {ORANGE}{len(renamed)}{RESET}")
     _p()
 
     if not renamed:
         _p(
-            f"  {YELLOW}Nenhuma coluna renomeada detectada pelos padroes conhecidos.{RESET}"
+            f"  {YELLOW}Nenhuma coluna renomeada detectada pelos padrões conhecidos.{RESET}"
         )
         _p(
             f"  {GRAY}Mas o source ainda precisa ser trocado. Use:{RESET}"
@@ -838,7 +838,7 @@ def apply_source_only(sql_path: Path, dry_run: bool) -> int:
 
     if new_sql == sql:
         _p(
-            f"  {YELLOW}Nenhuma referencia a '{OLD_TABLE}' encontrada. Nada a fazer.{RESET}"
+            f"  {YELLOW}Nenhuma referência a '{OLD_TABLE}' encontrada. Nada a fazer.{RESET}"
         )
         return EXIT_OK
 
@@ -892,7 +892,7 @@ def interactive_apply(
 
     _p()
     _p(
-        f"  {PURPLE}{BOLD}MIGRACAO INTERATIVA{RESET}"
+        f"  {PURPLE}{BOLD}MIGRAÇÃO INTERATIVA{RESET}"
         f"  {YELLOW}{'[mock]' if mock else ''}{RESET}"
         f"  {GRAY}{'[dry-run]' if dry_run else ''}{RESET}"
         f"  {GRAY}{'[yes-all]' if yes_all else ''}{RESET}"
@@ -906,7 +906,7 @@ def interactive_apply(
         sql,
     )
     if not source_ref:
-        _p(f"  {YELLOW}Nenhuma referencia a '{OLD_TABLE}' encontrada. Nada a migrar.{RESET}")
+        _p(f"  {YELLOW}Nenhuma referência a '{OLD_TABLE}' encontrada. Nada a migrar.{RESET}")
         return EXIT_OK
 
     if mock:
@@ -920,7 +920,7 @@ def interactive_apply(
         old_schema = get_table_schema(client, DATASET, OLD_TABLE)
         if not old_schema:
             print(
-                f"  {RED}Não foi possivel obter schema de {OLD_TABLE}{RESET}",
+                f"  {RED}Não foi possível obter schema de {OLD_TABLE}{RESET}",
                 file=sys.stderr,
             )
             return EXIT_ERROR
@@ -935,7 +935,7 @@ def interactive_apply(
         )
         return EXIT_OK
 
-    _p(f"\n  {FG}{len(renamed)} coluna(s) detectada(s) para migracao:{RESET}\n")
+    _p(f"\n  {FG}{len(renamed)} coluna(s) detectada(s) para migração:{RESET}\n")
 
     col_map: dict[str, str] = {}
 
@@ -990,7 +990,7 @@ def interactive_apply(
                 _p(f"  {GRAY}Ignorado.{RESET}")
 
     if not col_map:
-        _p(f"\n  {GRAY}Nenhuma coluna selecionada para aplicacao.{RESET}")
+        _p(f"\n  {GRAY}Nenhuma coluna selecionada para aplicação.{RESET}")
         return EXIT_OK
 
     new_sql = inject_alias_in_cte(sql, col_map)
@@ -1033,11 +1033,11 @@ def interactive_apply(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mec-migrar-censo",
-        description="Validação e migracao semi-automatizada de colunas do Censo Escolar",
+        description="Validação e migração semi-automatizada de colunas do Censo Escolar",
     )
     parser.add_argument(
         "--no-sync", action="store_true",
-        help="Pular sync automatico com origin/main",
+        help="Pular sync automático com origin/main",
     )
     parser.add_argument(
         "--json", action="store_true",
@@ -1058,7 +1058,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_analyze.add_argument("--json", action="store_true")
     p_analyze.add_argument("--no-sync", action="store_true")
 
-    p_apply = sub.add_parser("apply", help="Migracao interativa em SQL file")
+    p_apply = sub.add_parser("apply", help="Migração interativa em SQL file")
     p_apply.add_argument("--sql-file", required=True, metavar="PATH")
     p_apply.add_argument("--mock", action="store_true", help="Usar dados ficticios (sem BQ)")
     p_apply.add_argument("--dry-run", action="store_true", help="Exibir diff sem escrever")
@@ -1134,7 +1134,7 @@ def main() -> int:
                 _p()
                 return EXIT_OK
             if resp == "s":
-                _p(f"  {GRAY}Use o modo 'apply' para aplicar em um arquivo especifico.{RESET}")
+                _p(f"  {GRAY}Use o modo 'apply' para aplicar em um arquivo específico.{RESET}")
         return EXIT_OK
 
     elif args.cmd == "analyze":
@@ -1158,4 +1158,4 @@ def main() -> int:
 if __name__ == "__main__":
     sys.exit(main())
 
-# "A virtude consiste na disposicao para agir com proposito." — Aristoteles
+# "A virtude consiste na disposição para agir com propósito." — Aristóteles

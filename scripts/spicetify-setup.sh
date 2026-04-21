@@ -49,7 +49,7 @@ instalar_spicetify() {
     if [[ -x "$SPICETIFY_BIN" ]]; then
         local versao
         versao=$("$SPICETIFY_BIN" --version 2>/dev/null || echo "desconhecida")
-        _ok "Spicetify ja instalado (v${versao})"
+        _ok "Spicetify já instalado (v${versao})"
         return 0
     fi
 
@@ -65,7 +65,7 @@ instalar_spicetify() {
 # --- Instalar temas ---
 instalar_temas() {
     if [[ -d "$THEMES_DIR/$TEMA" ]]; then
-        _ok "Tema $TEMA ja presente"
+        _ok "Tema $TEMA já presente"
         return 0
     fi
 
@@ -87,7 +87,7 @@ instalar_temas() {
 # --- Instalar Marketplace ---
 instalar_marketplace() {
     if [[ -d "$CUSTOM_APPS_DIR/marketplace" ]]; then
-        _ok "Marketplace ja instalado"
+        _ok "Marketplace já instalado"
         return 0
     fi
 
@@ -96,7 +96,7 @@ instalar_marketplace() {
     if [[ -d "$CUSTOM_APPS_DIR/marketplace" ]]; then
         _ok "Marketplace instalado"
     else
-        _warn "Marketplace não encontrado apos instalação"
+        _warn "Marketplace não encontrado após instalação"
     fi
 }
 

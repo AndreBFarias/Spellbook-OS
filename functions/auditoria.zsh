@@ -1,7 +1,7 @@
 #!/bin/zsh
 
-# Proposito: Escanear todos os repos por violacoes de anonimato (co-autoria, IA, emojis)
-# Uso: auditar_repos [diretorio_base]
+# Propósito: Escanear todos os repos por violações de anonimato (co-autoria, IA, emojis)
+# Uso: auditar_repos [diretório_base]
 auditar_repos() {
     local base_dir="${1:-$DEV_DIR}"
     local script_path="$HOME/.config/zsh/scripts/auditoria-repos.sh"

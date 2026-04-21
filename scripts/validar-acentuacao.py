@@ -2,7 +2,7 @@
 """
 Valida acentuação PT-BR em strings de código, comentários e documentação.
 
-Procura palavras comuns em PT-BR sem acento (ex.: 'funcao', 'nao', 'descricao')  # noqa-acento
+Procura palavras comuns em PT-BR sem acento (ex.: 'função', 'não', 'descrição')  # noqa-acento
 em arquivos .py, .zsh, .sh, .md e reporta violações com arquivo:linha.
 
 Uso:

@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Gerar dossie completo de um projeto (ambiente, git, arvore, conteudo)
+# Propósito: Gerar dossiê completo de um projeto (ambiente, git, árvore, conteúdo)
 # Uso: diagnostico_projeto <profundidade> [--max-linhas N]
 diagnostico_projeto() {
     __verificar_dependencias "git" "tree" "fzf" "pv" "jq" || return 1
@@ -47,7 +47,7 @@ diagnostico_projeto() {
     local depth_label="$profundidade"
     [ "$profundidade" -eq 0 ] && depth_label="infinita"
 
-    __header "DIAGNOSTICO: $nome_projeto" "$D_PURPLE"
+    __header "DIAGNÓSTICO: $nome_projeto" "$D_PURPLE"
     __item "Profundidade" "$depth_label" "$D_COMMENT" "$D_CYAN"
     __item "Max linhas" "$max_linhas" "$D_COMMENT" "$D_CYAN"
     __item "Saída" "$output_file" "$D_COMMENT" "$D_GREEN"
@@ -469,7 +469,7 @@ __dossie_arquivos_avancado() {
     echo -e "  \033[38;2;98;114;164mETAPA 3/3:\033[0m Finalizando dossiê..." >&2
 }
 
-# Proposito: Reconstruir arquivos a partir de um diagnostico .md
+# Propósito: Reconstruir arquivos a partir de um diagnóstico .md
 # Uso: reconstruir_diagnostico <arquivo.md>
 reconstruir_diagnostico() {
     local arquivo_entrada="$1"

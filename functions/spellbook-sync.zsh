@@ -57,18 +57,18 @@ __spellbook_resolve_conflict() {
             [Ll])
                 git -C "$dir" checkout --ours -- "$arquivo"
                 git -C "$dir" add "$arquivo"
-                __ok "Mantido versao local: $arquivo"
+                __ok "Mantido versão local: $arquivo"
                 ;;
             [Rr])
                 git -C "$dir" checkout --theirs -- "$arquivo"
                 git -C "$dir" add "$arquivo"
-                __ok "Aceito versao remota: $arquivo"
+                __ok "Aceito versão remota: $arquivo"
                 ;;
             [Mm])
                 echo -e "  ${D_COMMENT}Abrindo ${EDITOR:-vim}...${D_RESET}"
                 ${EDITOR:-vim} "$dir/$arquivo"
                 git -C "$dir" add "$arquivo"
-                __ok "Merge manual concluido: $arquivo"
+                __ok "Merge manual concluído: $arquivo"
                 ;;
             [Aa]|*)
                 echo -e "  ${D_YELLOW}Sync adiado. Resolva manualmente com:${D_RESET}"
@@ -92,7 +92,7 @@ spellbook_sync_pull() {
     local dir="$(__spellbook_sync_dir)"
     local start_time=$SECONDS
 
-    # Commit mudancas locais pendentes
+    # Commit mudanças locais pendentes
     local had_local=false
     if __spellbook_auto_commit; then
         had_local=true
@@ -109,7 +109,7 @@ spellbook_sync_pull() {
     # Fetch
     git -C "$dir" fetch origin --quiet 2>/dev/null
 
-    # Verificar divergencia
+    # Verificar divergência
     local behind
     behind=$(git -C "$dir" rev-list --count HEAD..origin/main 2>/dev/null)
     local ahead
@@ -133,7 +133,7 @@ spellbook_sync_pull() {
     fi
 
     # Fast-forward falhou — tentar merge real
-    echo -e "  ${D_YELLOW}Spellbook: divergencia detectada (local: $ahead, remoto: $behind)${D_RESET}"
+    echo -e "  ${D_YELLOW}Spellbook: divergência detectada (local: $ahead, remoto: $behind)${D_RESET}"
     if git -C "$dir" merge origin/main --no-edit --quiet 2>/dev/null; then
         local elapsed=$(( SECONDS - start_time ))
         echo -e "  ${D_GREEN}Spellbook merged:${D_RESET} ${D_FG}$behind commit(s) integrado(s) (${elapsed}s)${D_RESET}"
@@ -161,7 +161,7 @@ spellbook_sync_push() {
 # Uso: spellbook_sync_status
 spellbook_sync_status() {
     __spellbook_is_git_repo || {
-        __err "ZDOTDIR não e um repositorio git com remote configurado"
+        __err "ZDOTDIR não é um repositório git com remote configurado"
         return 1
     }
 
@@ -210,7 +210,7 @@ spellbook_sync_status() {
 #        --remote=Pull força (sobrescreve local com remoto)
 spellbook_sync_force() {
     __spellbook_is_git_repo || {
-        __err "ZDOTDIR não e um repositorio git com remote configurado"
+        __err "ZDOTDIR não é um repositório git com remote configurado"
         return 1
     }
 
@@ -219,22 +219,22 @@ spellbook_sync_force() {
 
     case "$modo" in
         --local)
-            echo -e "  ${D_YELLOW}Forcando versao local para o remote...${D_RESET}"
+            echo -e "  ${D_YELLOW}Forçando versão local para o remote...${D_RESET}"
             __spellbook_auto_commit
             git -C "$dir" push origin main --force-with-lease
-            __ok "Push forcado concluido"
+            __ok "Push forçado concluído"
             ;;
         --remote)
-            echo -e "  ${D_YELLOW}Forcando versao remota para local...${D_RESET}"
+            echo -e "  ${D_YELLOW}Forçando versão remota para local...${D_RESET}"
             git -C "$dir" fetch origin
             git -C "$dir" reset --hard origin/main
-            __ok "Reset para versao remota concluido"
+            __ok "Reset para versão remota concluído"
             ;;
         *)
             echo -e "  ${D_FG}Uso: spellbook_sync_force [--local|--remote]${D_RESET}"
             echo ""
-            echo -e "  ${D_COMMENT}--local   Forca push (sobrescreve remote com local)${D_RESET}"
-            echo -e "  ${D_COMMENT}--remote  Forca pull (sobrescreve local com remote)${D_RESET}"
+            echo -e "  ${D_COMMENT}--local   Força push (sobrescreve remote com local)${D_RESET}"
+            echo -e "  ${D_COMMENT}--remote  Força pull (sobrescreve local com remote)${D_RESET}"
             ;;
     esac
 }

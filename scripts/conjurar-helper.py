@@ -106,7 +106,7 @@ def format_preview(full_line):
         print(f"{D_COMMENT}{'─' * 40}{D_RESET}")
 
         if purpose:
-            print(f"\n{D_YELLOW}Proposito:{D_RESET}")
+            print(f"\n{D_YELLOW}Propósito:{D_RESET}")
             print(f"{D_FG}{purpose}{D_RESET}")
         else:
             print(f"\n{D_COMMENT}(sem descrição){D_RESET}")

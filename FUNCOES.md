@@ -78,7 +78,7 @@ dos metadados `# Propósito:` / `# Uso:` / `# Flags:` em `functions/*.zsh`.
 
 | Função | Propósito | Uso |
 |---|---|---|
-| `ga` | Git add com sanitizer automatico e ruff (lint + format) para Python | `ga [arquivos]` |
+| `ga` | Git add com sanitizer automático e ruff (lint + format) para Python | `ga [arquivos]` |
 | `git_info` | Exibir identidade git do repositorio atual (nome, email, branch, remote) | `git_info` |
 | `grecuperar` | Investigar branch ou commit para recuperacao (log, diff, sugestoes) | `grecuperar [branch_ou_commit]` |
 | `grestore` | Reset hard para um ponto do reflog (com confirmacao e preview) | `grestore <ref>` |
@@ -92,7 +92,7 @@ dos metadados `# Propósito:` / `# Uso:` / `# Flags:` em `functions/*.zsh`.
 |---|---|---|
 | `aplicar_hooks_globais` | Copiar hooks git (pre-commit + commit-msg + pre-push + _lib.sh) para todos os repos | `aplicar_hooks_globais [diretorio_base]` |
 | `conectar_andre` | Sincronizar Beholder com o Nitro5 via rsync | `conectar_andre` |
-| `conectar_maria` | Sincronizar Beholder com a maquina da Maria via rsync | `conectar_maria` |
+| `conectar_maria` | Sincronizar Beholder com a máquina da Maria via rsync | `conectar_maria` |
 
 ## MEC
 
@@ -128,7 +128,7 @@ dos metadados `# Propósito:` / `# Uso:` / `# Flags:` em `functions/*.zsh`.
 |---|---|---|
 | `auditar_repos` | Escanear todos os repos por violacoes de anonimato (co-autoria, IA, emojis) | `auditar_repos [diretorio_base]` |
 | `buscar` | Buscar arquivos por padrao de nome em um diretório | `buscar <padrao> <pasta>` |
-| `diagnostico_projeto` | Gerar dossie completo de um projeto (ambiente, git, arvore, conteudo) | `diagnostico_projeto <profundidade> [--max-linhas N]` |
+| `diagnostico_projeto` | Gerar dossiê completo de um projeto (ambiente, git, árvore, conteúdo) | `diagnostico_projeto <profundidade> [--max-linhas N]` |
 | `ir` | Navegacao rapida entre projetos com FZF (preview de git log e ls) | `ir` |
 | `reconstruir_diagnostico` | Reconstruir arquivos a partir de um diagnostico .md | `reconstruir_diagnostico <arquivo.md>` |
 | `tree` | Arvore de diretórios com filtros e exportacao para arquivo | `tree <profundidade> [diretório]` |
@@ -169,11 +169,11 @@ dos metadados `# Propósito:` / `# Uso:` / `# Flags:` em `functions/*.zsh`.
 |---|---|---|
 | `arquivos_pacote` | Listar todos os arquivos de um pacote instalado | `arquivos_pacote <pacote>` |
 | `diagnostico_pop` | Gerar diagnostico completo do Pop!_OS (kernel, disco, processos, erros) | `diagnostico_pop <profundidade>` |
-| `prompt_context` | Exibir contexto de usuario no prompt (SSH e usuarios não-padrao) | `prompt_context` |
+| `prompt_context` | Exibir contexto de usuário no prompt (SSH e usuários não-padrão) | `prompt_context` |
 | `quem_instalou` | Descobrir qual pacote instalou um arquivo | `quem_instalou <caminho>` |
 | `rebuild_dracula_theme` | Reconstruir Dracula_OS-Theme do zero (build + install --user) | `rebuild_dracula_theme [--activate]` |
 | `reinstalar` | Reinstalar um pacote via apt | `reinstalar <pacote>` |
-| `reparo_pop` | Reparo automatico do sistema (deps, pacotes, limpeza, atualizacao) | `reparo_pop` |
+| `reparo_pop` | Reparo automático do sistema (deps, pacotes, limpeza, atualização) | `reparo_pop` |
 | `servico_iniciar` | Iniciar um servico systemd | `servico_iniciar <servico>` |
 | `servico_parar` | Parar um servico systemd | `servico_parar <servico>` |
 | `servico_reiniciar` | Reiniciar um servico systemd | `servico_reiniciar <servico>` |

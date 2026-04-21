@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Proposito: Limpar caches de dev ao abrir terminal (previne pacotes stale e libera disco)
+# Propósito: Limpar caches de dev ao abrir terminal (previne pacotes stale e libera disco)
 _limpar_caches_dev() {
     local dirs=(
         "$HOME/.npm/_cacache"
@@ -35,14 +35,14 @@ limpeza_interativa() {
 
     local JUNK_PATTERNS=(-name "*.zip" -o -name "*.exe" -o -path "*/data_input" -o -path "*/data_output")
     local alvos=$(find . \( "${JUNK_PATTERNS[@]}" \) 2>/dev/null | \
-        fzf --multi --prompt="  Selecionar > " --header="  TAB para multiplos" $FZF_DRACULA)
+        fzf --multi --prompt="  Selecionar > " --header="  TAB para múltiplos" $FZF_DRACULA)
 
-    echo -e -n "  ${D_COMMENT}Buscar padrao customizado? (ex: *.tmp) (s/N)${D_RESET} "
+    echo -e -n "  ${D_COMMENT}Buscar padrão customizado? (ex: *.tmp) (s/N)${D_RESET} "
     read -k 1 confirmacao
     echo ""
 
     if [[ "$confirmacao" == "s" || "$confirmacao" == "S" ]]; then
-        echo -e -n "  ${D_COMMENT}Padrao:${D_RESET} "
+        echo -e -n "  ${D_COMMENT}Padrão:${D_RESET} "
         read padrao_customizado
         local extras=$(find . -name "$padrao_customizado" 2>/dev/null | \
             fzf --multi --prompt="  Selecionar '$padrao_customizado' > " $FZF_DRACULA)

@@ -98,7 +98,7 @@ import_secrets() {
         local dst="$ZDOTDIR_TARGET/$file"
         if [[ -f "$src" ]]; then
             if [[ -f "$dst" ]]; then
-                _warn "$file ja existe — sobrescrever? (s/n)"
+                _warn "$file já existe — sobrescrever? (s/n)"
                 read -r resp
                 [[ "$resp" != "s" ]] && { _info "Ignorado: $file"; continue; }
             fi

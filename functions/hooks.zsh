@@ -1,7 +1,7 @@
 #!/bin/zsh
 
-# Proposito: Copiar hooks git (pre-commit + commit-msg + pre-push + _lib.sh) para todos os repos
-# Uso: aplicar_hooks_globais [diretorio_base]
+# Propósito: Copiar hooks git (pre-commit + commit-msg + pre-push + _lib.sh) para todos os repos
+# Uso: aplicar_hooks_globais [diretório_base]
 aplicar_hooks_globais() {
     __verificar_dependencias "git" || return 1
 
@@ -19,11 +19,11 @@ aplicar_hooks_globais() {
     local total=$(echo "$repos" | wc -l | xargs)
 
     if [ -z "$repos" ]; then
-        __warn "Nenhum repositorio encontrado."
+        __warn "Nenhum repositório encontrado."
         return 0
     fi
 
-    echo -e "  ${D_COMMENT}${total} repositorios encontrados.${D_RESET}"
+    echo -e "  ${D_COMMENT}${total} repositórios encontrados.${D_RESET}"
     echo ""
 
     local count=0
@@ -41,7 +41,7 @@ aplicar_hooks_globais() {
         cp "$hooks_source/pre-push" "$repo_path/.git/hooks/pre-push" 2>/dev/null
         cp "$hooks_source/commit-msg" "$repo_path/.git/hooks/commit-msg" 2>/dev/null
 
-        # Garantir permissoes de execução
+        # Garantir permissões de execução
         chmod +x "$repo_path/.git/hooks/_lib.sh" 2>/dev/null
         chmod +x "$repo_path/.git/hooks/pre-commit" 2>/dev/null
         chmod +x "$repo_path/.git/hooks/pre-push" 2>/dev/null

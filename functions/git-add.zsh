@@ -2,7 +2,7 @@
 
 unalias ga 2>/dev/null
 
-# Proposito: Git add com sanitizer automatico e ruff (lint + format) para Python
+# Propósito: Git add com sanitizer automático e ruff (lint + format) para Python
 # Uso: ga [arquivos]
 ga() {
     local targets="${@:-.}"
