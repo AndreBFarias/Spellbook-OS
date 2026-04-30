@@ -1,0 +1,4 @@
+// Aurora 2.0 - Re-aplica tunings apos toda acao do apt (kernel updates etc)
+DPkg::Post-Invoke {
+  "test -x /home/andrefarias/.config/zsh/aurora/aurora-bootstrap.sh && sudo -u andrefarias /home/andrefarias/.config/zsh/aurora/aurora-bootstrap.sh --post-update --quiet || true";
+};

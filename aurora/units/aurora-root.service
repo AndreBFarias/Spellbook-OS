@@ -1,0 +1,14 @@
+[Unit]
+Description=Aurora 2.0 - Performance tuning persistente (root)
+After=multi-user.target
+Wants=earlyoom.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/aurora-root-apply
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

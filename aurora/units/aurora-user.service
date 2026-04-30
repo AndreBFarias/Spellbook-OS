@@ -1,0 +1,13 @@
+[Unit]
+Description=Aurora 2.0 - User-level tuning (NVIDIA, X11)
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/andrefarias/.config/zsh/aurora/aurora-user-apply.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target

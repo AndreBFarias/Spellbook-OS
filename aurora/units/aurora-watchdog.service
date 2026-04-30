@@ -1,0 +1,8 @@
+[Unit]
+Description=Aurora 2.0 - Watchdog (re-aplica se desviou)
+
+[Service]
+Type=oneshot
+ExecStart=/home/andrefarias/.config/zsh/aurora/aurora-watchdog-check.sh
+StandardOutput=journal
+StandardError=journal

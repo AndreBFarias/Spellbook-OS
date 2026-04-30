@@ -1,0 +1,11 @@
+[Unit]
+Description=Aurora 2.0 - Watchdog Timer (a cada 15min)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Persistent=true
+Unit=aurora-watchdog.service
+
+[Install]
+WantedBy=timers.target

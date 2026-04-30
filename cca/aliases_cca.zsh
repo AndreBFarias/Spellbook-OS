@@ -140,7 +140,40 @@ claude-init() {
     echo "  claude-force       - Forçar (não recomendado)"
 }
 
-# Propósito: Claude Code com permissões completas (--dangerously-skip-permissions)
+# Aurora 2.0 - helper interno: executa Claude com slice + token tracking real
+# Não chamar direto. Use 'cca'.
+__cca_run() {
+    bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
+    __cca_export_contexto
+
+    # Token tracking REAL: tamanho do dir de transcripts antes/depois
+    local enc_dir="$HOME/.claude/projects/$(printf '%s' "$PWD" | sed 's|/|-|g')"
+    local pre_size=0 post_size=0
+    [ -d "$enc_dir" ] && pre_size=$(du -bs "$enc_dir" 2>/dev/null | awk '{print $1}')
+
+    local exit_code
+    # Se claude.slice esta instalado no user systemd, rodar dentro dele (limites de memoria)
+    if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
+        systemd-run --user --slice=claude.slice --scope --quiet --collect \
+            command claude --dangerously-skip-permissions "$@"
+        exit_code=$?
+    else
+        command claude --dangerously-skip-permissions "$@"
+        exit_code=$?
+    fi
+
+    [ -d "$enc_dir" ] && post_size=$(du -bs "$enc_dir" 2>/dev/null | awk '{print $1}')
+    local delta=$(( post_size - pre_size ))
+    [ $delta -lt 0 ] && delta=0
+    local estimated_tokens=$(( delta / 4 ))   # ~4 bytes por token (heuristica realista)
+
+    __cca_unset_contexto
+    bash "$HOME/.config/zsh/cca/cca_guard.sh" after "$estimated_tokens"
+
+    return $exit_code
+}
+
+# Propósito: Claude Code com permissões completas + auto-tmux + memory slice
 # Uso: cca [args]
 cca() {
     if ! command -v claude &> /dev/null; then
@@ -148,20 +181,75 @@ cca() {
         return 1
     fi
 
-    bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
-    __cca_export_contexto
+    # Se ja em tmux, rodar direto (sem nesting)
+    if [ -n "${TMUX:-}" ]; then
+        __cca_run "$@"
+        return $?
+    fi
 
-    local start_time=$(date +%s)
-    command claude --dangerously-skip-permissions "$@"
-    local exit_code=$?
-    local end_time=$(date +%s)
-    local duration=$((end_time - start_time))
+    # Sem tmux instalado? Fallback para execução direta (com warning)
+    if ! command -v tmux &> /dev/null; then
+        echo "[cca][WARN] tmux não instalado - rodando sem proteção contra freeze do DE"
+        __cca_run "$@"
+        return $?
+    fi
 
-    __cca_unset_contexto
-    local estimated_tokens=$((duration * 100))
-    bash "$HOME/.config/zsh/cca/cca_guard.sh" after "$estimated_tokens"
+    # Nome de sessão deterministico por cwd
+    local sha proj sess
+    sha=$(printf '%s' "$PWD" | sha1sum | awk '{print substr($1,1,6)}')
+    proj=$(basename "$PWD")
+    sess="claude-${proj}-${sha}"
 
-    return $exit_code
+    if tmux has-session -t "$sess" 2>/dev/null; then
+        echo "[cca] Sessão tmux '$sess' ja existe. Anexando (Ctrl-b d para detach)..."
+        exec tmux attach -t "$sess"
+    fi
+
+    echo "[cca] Criando sessão tmux: $sess (Ctrl-b d para detach, sobrevive freeze do DE)"
+    if [ $# -eq 0 ]; then
+        exec tmux new -s "$sess" -c "$PWD" "zsh -ic '__cca_run'"
+    else
+        local args_str="$*"
+        exec tmux new -s "$sess" -c "$PWD" "zsh -ic '__cca_run ${args_str}'"
+    fi
+}
+
+# Propósito: Listar sessões tmux do Claude ativas
+# Uso: cca-list
+cca-list() {
+    if ! command -v tmux &> /dev/null; then
+        echo "tmux não instalado"
+        return 1
+    fi
+    echo "=== Sessões Claude ativas (tmux) ==="
+    tmux ls 2>/dev/null | grep -E '^claude-' || echo "(nenhuma)"
+}
+
+# Propósito: Retomar última sessão Claude no cwd atual
+# Uso: cca-resume [args]
+cca-resume() {
+    if [ -n "${TMUX:-}" ]; then
+        bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
+        __cca_export_contexto
+        if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
+            systemd-run --user --slice=claude.slice --scope --quiet --collect \
+                command claude --continue --dangerously-skip-permissions "$@"
+        else
+            command claude --continue --dangerously-skip-permissions "$@"
+        fi
+        local rc=$?
+        __cca_unset_contexto
+        return $rc
+    fi
+    # Embrulha em tmux como o cca normal
+    local sha proj sess
+    sha=$(printf '%s' "$PWD" | sha1sum | awk '{print substr($1,1,6)}')
+    proj=$(basename "$PWD")
+    sess="claude-${proj}-${sha}"
+    if tmux has-session -t "$sess" 2>/dev/null; then
+        exec tmux attach -t "$sess"
+    fi
+    exec tmux new -s "$sess" -c "$PWD" "zsh -ic 'cca-resume $*'"
 }
 
 # Proposito: Claude Code com wrapper seguro

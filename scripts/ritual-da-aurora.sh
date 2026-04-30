@@ -1,5 +1,10 @@
 #!/bin/bash
 #
+# DEPRECATED em 2026-04-29 — substituído por Aurora 2.0
+# Ver: ~/.config/zsh/aurora/ (units systemd + watchdog + bootstrap idempotente)
+# Recovery: ~/.config/zsh/aurora/RECOVERY.md
+# Este script é mantido APENAS para referência histórica; nada o invoca mais.
+#
 
 # Propósito: Ajusta a GPU e garante que serviços essenciais estejam rodando.
 #            Lógica: Só pede senha (sudo) se encontrar algo desligado.

@@ -1,0 +1,80 @@
+#!/bin/bash
+# Aurora 2.0 - Root tunings (idempotente, logs no journalctl)
+# Invocado por aurora-root.service e aurora-watchdog.service
+set -u
+
+log() { printf '[aurora-root] %s\n' "$*"; }
+warn() { printf '[aurora-root][WARN] %s\n' "$*" >&2; }
+
+ALVO_GOVERNOR="performance"
+ALVO_EPP="performance"
+SYSCTL_FILE="/etc/sysctl.d/99-aurora.conf"
+
+# 1. system76-power profile performance (idempotente)
+if command -v system76-power >/dev/null 2>&1; then
+  atual=$(system76-power profile 2>/dev/null | awk -F': ' '/Power Profile/ {print tolower($2)}')
+  if [ "$atual" = "performance" ]; then
+    log "system76-power ja em performance"
+  else
+    if system76-power profile performance 2>&1; then
+      log "system76-power -> performance (era: ${atual:-?})"
+    else
+      warn "system76-power profile performance falhou"
+    fi
+  fi
+else
+  warn "system76-power nao instalado"
+fi
+
+# 2. CPU governor para todos os cores
+desviou=0
+for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+  cur=$(cat "$gov" 2>/dev/null) || continue
+  if [ "$cur" != "$ALVO_GOVERNOR" ]; then
+    if echo "$ALVO_GOVERNOR" > "$gov" 2>/dev/null; then
+      desviou=$((desviou + 1))
+    else
+      warn "falha escrevendo $gov"
+    fi
+  fi
+done
+[ $desviou -gt 0 ] && log "governor: $desviou cores ajustados para $ALVO_GOVERNOR" || log "governor: ja em $ALVO_GOVERNOR"
+
+# 3. Energy Performance Preference (amd_pstate)
+desviou=0
+for epp in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
+  [ -f "$epp" ] || continue
+  cur=$(cat "$epp" 2>/dev/null) || continue
+  if [ "$cur" != "$ALVO_EPP" ]; then
+    if echo "$ALVO_EPP" > "$epp" 2>/dev/null; then
+      desviou=$((desviou + 1))
+    fi
+  fi
+done
+[ $desviou -gt 0 ] && log "EPP: $desviou cores ajustados para $ALVO_EPP" || log "EPP: ja em $ALVO_EPP"
+
+# 4. earlyoom
+if systemctl is-enabled earlyoom.service >/dev/null 2>&1; then
+  log "earlyoom ja enabled"
+else
+  systemctl enable earlyoom.service >/dev/null 2>&1 && log "earlyoom enabled"
+fi
+if systemctl is-active earlyoom.service >/dev/null 2>&1; then
+  log "earlyoom ja active"
+else
+  systemctl start earlyoom.service && log "earlyoom started" || warn "earlyoom start falhou"
+fi
+
+# 5. sysctl
+if [ -f "$SYSCTL_FILE" ]; then
+  if sysctl -p "$SYSCTL_FILE" >/dev/null 2>&1; then
+    log "sysctl aplicado: $SYSCTL_FILE"
+  else
+    warn "sysctl -p falhou em $SYSCTL_FILE"
+  fi
+else
+  warn "$SYSCTL_FILE nao existe"
+fi
+
+log "aurora-root-apply concluido"
+exit 0
