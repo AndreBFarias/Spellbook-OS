@@ -30,6 +30,22 @@ err() { printf '[bootstrap][ERR] %s\n' "$*" >&2; exit 1; }
 # Sanity check
 [ -d "$AURORA_REPO" ] || err "Repo não encontrado: $AURORA_REPO"
 
+# Garante env de user dbus/runtime para systemctl --user funcionar fora de sessão gráfica
+# (cron, sudo -i, ssh non-interactive, apt postinvoke hook, etc).
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+  export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+# Se ainda assim não há bus de usuário, avisa e segue só com system bus
+if ! [ -S "${XDG_RUNTIME_DIR:-/dev/null}/bus" ]; then
+  warn "user dbus indisponível (XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR) — systemctl --user será pulado"
+  USER_BUS_OK=0
+else
+  USER_BUS_OK=1
+fi
+
 log "Modo: $MODE"
 
 # 1. Kernelstub args (so em first-install OU se faltando algum param-chave)
@@ -106,7 +122,9 @@ copia_user "$AURORA_REPO/units/claude.slice"        "$USER_SYSTEMD_DIR/claude.sl
 
 # 4. Reload systemd e enable
 sudo -n systemctl daemon-reload
-systemctl --user daemon-reload
+if [ $USER_BUS_OK -eq 1 ]; then
+  systemctl --user daemon-reload
+fi
 
 # 5. Enable services (idempotente)
 for s in earlyoom.service aurora-root.service aurora-watchdog.timer; do
@@ -125,13 +143,17 @@ for s in aurora-root.service aurora-watchdog.timer earlyoom.service; do
 done
 
 # User services
-if ! systemctl --user is-enabled --quiet aurora-user.service 2>/dev/null; then
-  systemctl --user enable aurora-user.service 2>&1 | grep -v "Created symlink" || true
-  log "Enabled (user): aurora-user.service"
-fi
-# Tentar start (so funciona dentro de sessão grafica)
-if [ -n "${DISPLAY:-}${XDG_RUNTIME_DIR:-}" ]; then
-  systemctl --user start aurora-user.service 2>/dev/null || log "aurora-user.service start falhou (talvez fora de sessão grafica)"
+if [ $USER_BUS_OK -eq 1 ]; then
+  if ! systemctl --user is-enabled --quiet aurora-user.service 2>/dev/null; then
+    systemctl --user enable aurora-user.service 2>&1 | grep -v "Created symlink" || true
+    log "Enabled (user): aurora-user.service"
+  fi
+  # Tentar start (so funciona dentro de sessão grafica)
+  if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    systemctl --user start aurora-user.service 2>/dev/null || log "aurora-user.service start falhou (talvez fora de sessão grafica)"
+  fi
+else
+  log "Pulando enable/start de aurora-user.service (sem dbus de usuário)"
 fi
 
 # 6. Sunset do ritual antigo (so se ainda ativo)

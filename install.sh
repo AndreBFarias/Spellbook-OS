@@ -47,11 +47,11 @@ if [ "$IS_RELINK" = "true" ]; then
         [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/commands/$(basename "$f")"
     done
 
-    # Skills (diretorios: usar -n para nao dereferenciar symlink existente)
+    # Skills (diretórios: usar -n para não dereferenciar symlink existente)
     for d in "$DOCS"/skills/*/; do
         name=$(basename "$d")
         if [ -d "$d" ]; then
-            # Remove link/dir existente antes (ln -n nao sobrescreve dir com link)
+            # Remove link/dir existente antes (ln -n não sobrescreve dir com link)
             [ -L "$CLAUDE/skills/$name" ] && rm "$CLAUDE/skills/$name"
             ln -sfnv "$d" "$CLAUDE/skills/$name"
         fi
@@ -301,7 +301,7 @@ _tui_sim_nao() {
             result=$("$tui" --title "$title" --backtitle "Spellbook-OS" \
                 --cancel-button "Voltar" --notags \
                 --menu "$question" 12 65 2 \
-                "sim" "Sim" "nao" "Não" 3>&1 1>&2 2>&3) || return 2
+                "sim" "Sim" "não" "Não" 3>&1 1>&2 2>&3) || return 2
             [[ "$result" == "sim" ]] && return 0 || return 1 ;;
         plain)
             printf "  %s (S/n/v=voltar): " "$question" >&2
@@ -314,7 +314,7 @@ _tui_sim_nao() {
 _step_deps() {
     _step "Verificando dependências"
 
-    local pkgs=(zsh fzf git python3-pip rsync tree jq pv)
+    local pkgs=(zsh fzf git python3-pip rsync tree jq pv tmux)
 
     local mgr
     mgr=$(_detect_pkg_manager)
@@ -787,7 +787,7 @@ _step_hooks() {
     local template_dest="$HOME/.config/git/commit-template"
     local log_dir="$HOME/.local/share/spellbook"
 
-    # Criar diretorios
+    # Criar diretórios
     _run mkdir -p "$hooks_dest"
     _run mkdir -p "$log_dir"
 
@@ -799,7 +799,7 @@ _step_hooks() {
             _run chmod +x "$hooks_dest/$hook"
             _ok "$hook instalado"
         else
-            _warn "$hook nao encontrado em $hooks_source"
+            _warn "$hook não encontrado em $hooks_source"
         fi
     done
 
@@ -867,7 +867,7 @@ DESK
         _run chmod +x "$user_script"
         _ok "Autostart configurado (nvidia-settings)"
     else
-        _warn "Script $user_script nao encontrado"
+        _warn "Script $user_script não encontrado"
     fi
 
     # Systemd service (root) — pede sudo apenas se necessario
@@ -887,7 +887,7 @@ DESK
             _ok "Systemd service ja instalado e atualizado"
         fi
     else
-        _warn "Service file nao encontrado: $service_source"
+        _warn "Service file não encontrado: $service_source"
     fi
 }
 
@@ -909,6 +909,9 @@ _step_validate() {
 
     [[ -f "$ZDOTDIR_TARGET/cca/aliases_cca.zsh" ]] \
         || { _warn "cca/aliases_cca.zsh não encontrado — comando cca indisponível"; ((erros++)); }
+
+    command -v tmux &>/dev/null \
+        || { _warn "tmux não instalado — cca rodará sem proteção contra freeze do DE"; ((erros++)); }
 
     [[ -d "$ZDOTDIR_TARGET/kca" ]] \
         || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; ((erros++)); }
@@ -985,7 +988,7 @@ Comandos disponíveis:
   spellbook_export       -- criptografar credentials no vault
   spellbook_import       -- restaurar credentials do vault
   spellbook_sync_status  -- estado do sync bidirecional
-  spellbook_sync_force   -- forcar direcao do sync
+  spellbook_sync_force   -- forcar direção do sync
 
 Sync automatico:
   Ao abrir terminal: commit local + pull remoto
@@ -1041,7 +1044,7 @@ _step_deploy() {
         return 0
     fi
 
-    # Caso 3: Instalacao nova — backup + git clone
+    # Caso 3: Instalação nova — backup + git clone
     local tmp_locals=""
     if [[ -d "$ZDOTDIR_TARGET" ]]; then
         local backup_dir="$HOME/.config/zsh.backup.$(date +%Y%m%d_%H%M%S)"
@@ -1106,8 +1109,8 @@ _step_deploy_symlink() {
         fi
         rm -f "$link_path"
     elif [[ -d "$link_path" ]]; then
-        # Diretorio real ainda existe — nao sobrescrever automaticamente
-        _warn "Spellbook-OS/ em $dev_dir ainda e um diretorio (nao symlink)"
+        # Diretório real ainda existe — não sobrescrever automaticamente
+        _warn "Spellbook-OS/ em $dev_dir ainda e um diretório (não symlink)"
         _info "Apos verificar, remova-o e crie o symlink: ln -s $ZDOTDIR_TARGET $link_path"
         return 0
     fi

@@ -14,6 +14,19 @@
 
 set -u
 
+# Garante env de user dbus/runtime para systemctl --user funcionar fora de sessão gráfica
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+  export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+if [ -S "${XDG_RUNTIME_DIR:-/dev/null}/bus" ]; then
+  USER_BUS_OK=1
+else
+  USER_BUS_OK=0
+fi
+
 DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
 STATUS_FILE="$HOME/.config/zsh/aurora/.last-status"
 OK_FILE="$DESKTOP_DIR/AURORA-OK.md"
@@ -89,15 +102,17 @@ journalctl -u $s --no-pager -n 30
   fi
 done
 
-# --- Check 3: aurora-user.service ---
-if ! systemctl --user is-active --quiet aurora-user.service 2>/dev/null; then
-  falhas+=("aurora-user.service inativo")
-  status_dump=$(systemctl --user status aurora-user.service --no-pager 2>&1 | head -15)
-  add_contexto "### aurora-user.service (NVIDIA tuning)
+# --- Check 3: aurora-user.service (só se houver dbus de usuário) ---
+if [ $USER_BUS_OK -eq 1 ]; then
+  if ! systemctl --user is-active --quiet aurora-user.service 2>/dev/null; then
+    falhas+=("aurora-user.service inativo")
+    status_dump=$(systemctl --user status aurora-user.service --no-pager 2>&1 | head -15)
+    add_contexto "### aurora-user.service (NVIDIA tuning)
 \`\`\`
 $status_dump
 \`\`\`
 "
+  fi
 fi
 
 # --- Diagnostico final ---
@@ -128,7 +143,7 @@ $(cat /proc/cmdline | tr ' ' '\n' | grep -E "mitigations|max_cstate|amd_pstate|t
 
 \`\`\`
 $(systemctl is-active aurora-root.service aurora-watchdog.timer earlyoom.service | paste -d' ' - <(echo aurora-root.service; echo aurora-watchdog.timer; echo earlyoom.service))
-aurora-user.service: $(systemctl --user is-active aurora-user.service)
+aurora-user.service: $([ $USER_BUS_OK -eq 1 ] && systemctl --user is-active aurora-user.service || echo "skipped (no user dbus)")
 \`\`\`
 
 Este arquivo so aparece quando: (a) e a primeira vez que tudo passa, ou (b) o sistema voltou ao normal apos um erro. Em boots seguintes com tudo OK, nada e gerado.
