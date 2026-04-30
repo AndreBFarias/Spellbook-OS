@@ -121,7 +121,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-TOTAL_STEPS=17
+TOTAL_STEPS=16
 CURRENT_STEP=0
 _EXISTING_CONFIG=false
 
@@ -713,32 +713,6 @@ _step_zshenv() {
     fi
 }
 
-# --- Etapa: Configuração do tmux (mouse on, true-color, scrollback) ---
-_step_tmux_conf() {
-    _step "Configurando tmux (mouse + true-color)"
-    local src="$ZDOTDIR_TARGET/tmux/tmux.conf"
-    local dst="$HOME/.tmux.conf"
-    if [[ ! -f "$src" ]]; then
-        _warn "tmux/tmux.conf não encontrado em $src — pulando"
-        return 0
-    fi
-    if [[ -L "$dst" ]] && [[ "$(readlink -f "$dst")" == "$(readlink -f "$src")" ]]; then
-        _ok "~/.tmux.conf já aponta para $src"
-        return 0
-    fi
-    if [[ -e "$dst" ]] && [[ ! -L "$dst" ]]; then
-        _info "Backup do ~/.tmux.conf existente para ~/.tmux.conf.bak"
-        _run mv "$dst" "$dst.bak"
-    fi
-    _run ln -sf "$src" "$dst"
-    _ok "~/.tmux.conf -> $src"
-    # Aplicar imediatamente em qualquer daemon tmux ativo (sem afetar nada se vazio)
-    if command -v tmux &>/dev/null && tmux info &>/dev/null 2>&1; then
-        _run tmux source-file "$dst"
-        _ok "Config aplicada nas sessões tmux ativas"
-    fi
-}
-
 # --- Etapa 7: Trocar shell padrão ---
 _step_chsh() {
     _step "Shell padrão"
@@ -938,11 +912,6 @@ _step_validate() {
 
     command -v tmux &>/dev/null \
         || { _warn "tmux não instalado — cca rodará sem proteção contra freeze do DE"; ((erros++)); }
-
-    if command -v tmux &>/dev/null; then
-        [[ -f "$HOME/.tmux.conf" ]] \
-            || { _warn "~/.tmux.conf não encontrado — scroll do mouse no cca pode virar setas"; ((erros++)); }
-    fi
 
     [[ -d "$ZDOTDIR_TARGET/kca" ]] \
         || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; ((erros++)); }
@@ -1183,7 +1152,6 @@ main() {
     _step_hooks
     _step_ritual
     _step_zshenv
-    _step_tmux_conf
     _step_chsh
     _step_validate
     _step_manifest
