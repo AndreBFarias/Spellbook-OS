@@ -939,6 +939,11 @@ _step_validate() {
     command -v tmux &>/dev/null \
         || { _warn "tmux não instalado — cca rodará sem proteção contra freeze do DE"; ((erros++)); }
 
+    if command -v tmux &>/dev/null; then
+        [[ -f "$HOME/.tmux.conf" ]] \
+            || { _warn "~/.tmux.conf não encontrado — scroll do mouse no cca pode virar setas"; ((erros++)); }
+    fi
+
     [[ -d "$ZDOTDIR_TARGET/kca" ]] \
         || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; ((erros++)); }
 
