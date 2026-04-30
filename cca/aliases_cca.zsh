@@ -155,7 +155,7 @@ __cca_run() {
     # Se claude.slice esta instalado no user systemd, rodar dentro dele (limites de memoria)
     if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
         systemd-run --user --slice=claude.slice --scope --quiet --collect \
-            command claude --dangerously-skip-permissions "$@"
+            claude --dangerously-skip-permissions "$@"
         exit_code=$?
     else
         command claude --dangerously-skip-permissions "$@"
@@ -233,7 +233,7 @@ cca-resume() {
         __cca_export_contexto
         if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
             systemd-run --user --slice=claude.slice --scope --quiet --collect \
-                command claude --continue --dangerously-skip-permissions "$@"
+                claude --continue --dangerously-skip-permissions "$@"
         else
             command claude --continue --dangerously-skip-permissions "$@"
         fi
