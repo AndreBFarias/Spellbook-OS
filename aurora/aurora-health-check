@@ -1,0 +1,103 @@
+#!/bin/bash
+# Aurora 2.1 - Health monitor (SMART + thermal + disk + VRAM)
+# Roda como root via aurora-health.timer (a cada 30min).
+# Alerta no Desktop do usuário se algo crítico.
+# Idempotente: arquivo no Desktop só existe enquanto há falha.
+
+set -u
+
+USUARIO="andrefarias"   # repo é single-user — hardcoded propositalmente
+USUARIO_HOME="/home/${USUARIO}"
+DESKTOP_DIR=$(runuser -u "$USUARIO" -- xdg-user-dir DESKTOP 2>/dev/null || echo "${USUARIO_HOME}/Desktop")
+WARN_FILE="${DESKTOP_DIR}/AURORA-AVISO.md"
+
+LOG_TAG="aurora-health"
+log() { logger -t "$LOG_TAG" "$*"; }
+
+falhas=()
+TS=$(date -Iseconds)
+
+# --- SMART (precisa root, ok pq rodamos como root) ---
+if command -v smartctl >/dev/null 2>&1; then
+  while read -r dev; do
+    [ -z "$dev" ] && continue
+    status=$(smartctl -H "/dev/${dev}" 2>/dev/null | awk -F': ' '/SMART overall/ {print $2}')
+    if [ -n "$status" ] && [ "$status" != "PASSED" ]; then
+      falhas+=("SMART /dev/${dev}: ${status}")
+    fi
+  done < <(lsblk -dno NAME,TYPE | awk '$2=="disk"{print $1}')
+fi
+
+# --- Disk space (>=90% = crítico) em / e /home ---
+while read -r pct mp; do
+  [ -z "$pct" ] && continue
+  pct_num=${pct%\%}
+  case "$pct_num" in ''|*[!0-9]*) continue ;; esac
+  if [ "$pct_num" -ge 90 ]; then
+    falhas+=("Disco ${mp}: ${pct} cheio")
+  fi
+done < <(df -h --output=pcent,target / /home 2>/dev/null | tail -n +2)
+
+# --- Thermal CPU (>85°C) via lm-sensors ---
+if command -v sensors >/dev/null 2>&1; then
+  cpu_max=$(sensors 2>/dev/null | awk '
+    /^(Tctl|Package id 0|Tdie|Core 0)/ {
+      for(i=2;i<=NF;i++) {
+        if ($i ~ /^[+-]?[0-9.]+°C/) {
+          val=$i; gsub(/[+°C]/,"",val); n=val+0
+          if (n>max) max=n
+        }
+      }
+    }
+    END { printf "%d\n", max+0 }')
+  if [ "${cpu_max:-0}" -gt 85 ]; then
+    falhas+=("CPU térmica: ${cpu_max}°C")
+  fi
+fi
+
+# --- Thermal GPU (>80°C) via nvidia-smi ---
+if command -v nvidia-smi >/dev/null 2>&1; then
+  gpu_temp=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
+  case "${gpu_temp:-}" in
+    ''|*[!0-9]*) ;;
+    *)
+      if [ "$gpu_temp" -gt 80 ]; then
+        falhas+=("GPU térmica: ${gpu_temp}°C")
+      fi
+    ;;
+  esac
+fi
+
+# --- Resultado ---
+if [ ${#falhas[@]} -eq 0 ]; then
+  if [ -f "$WARN_FILE" ]; then
+    rm -f "$WARN_FILE"
+    log "Sistema OK — removido aviso anterior"
+  fi
+  exit 0
+fi
+
+log "ALERTAS: ${falhas[*]}"
+
+# --- Gera arquivo de aviso ---
+mkdir -p "$DESKTOP_DIR"
+{
+  echo "# Aurora 2.1 — Avisos de saúde do sistema"
+  echo
+  echo "**Data:** $TS"
+  echo "**Host:** $(hostname)"
+  echo
+  printf -- '- %s\n' "${falhas[@]}"
+  echo
+  echo "## Diagnóstico"
+  echo '```'
+  df -h /
+  command -v sensors >/dev/null 2>&1 && sensors 2>/dev/null | head -25
+  command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi 2>/dev/null | head -12
+  echo '```'
+} > "$WARN_FILE"
+
+chown "${USUARIO}:${USUARIO}" "$WARN_FILE" 2>/dev/null || true
+chmod 0644 "$WARN_FILE"
+
+exit 0
