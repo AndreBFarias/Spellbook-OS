@@ -173,39 +173,43 @@ __cca_run() {
     return $exit_code
 }
 
-# Propósito: Claude Code com permissões completas + auto-tmux + memory slice
+# Propósito: Claude Code com permissões completas (modo direto, scroll do mouse nativo)
 # Uso: cca [args]
 cca() {
     if ! command -v claude &> /dev/null; then
         echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
         return 1
     fi
+    __cca_run "$@"
+}
 
-    # Se ja em tmux, rodar direto (sem nesting)
+# Propósito: Claude Code dentro de tmux (sobrevive freeze do DE).
+# Trade-off: scroll do mouse não funciona dentro do tmux — o gnome-terminal
+# converte wheel em arrow keys no alternate screen, e o Claude Code as
+# interpreta como navegação. Use PgUp/PgDn pra scroll quando estiver aqui.
+# Uso: cca-tmux [args]
+cca-tmux() {
+    if ! command -v claude &> /dev/null; then
+        echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
+        return 1
+    fi
+    if ! command -v tmux &> /dev/null; then
+        echo "[ERRO] tmux não instalado. Use 'cca' (modo direto) ou rode 'sudo apt install tmux'"
+        return 1
+    fi
     if [ -n "${TMUX:-}" ]; then
         __cca_run "$@"
         return $?
     fi
-
-    # Sem tmux instalado? Fallback para execução direta (com warning)
-    if ! command -v tmux &> /dev/null; then
-        echo "[cca][WARN] tmux não instalado - rodando sem proteção contra freeze do DE"
-        __cca_run "$@"
-        return $?
-    fi
-
-    # Nome de sessão deterministico por cwd
     local sha proj sess
     sha=$(printf '%s' "$PWD" | sha1sum | awk '{print substr($1,1,6)}')
     proj=$(basename "$PWD")
     sess="claude-${proj}-${sha}"
-
     if tmux has-session -t "$sess" 2>/dev/null; then
-        echo "[cca] Sessão tmux '$sess' ja existe. Anexando (Ctrl-b d para detach)..."
+        echo "[cca-tmux] Sessão tmux '$sess' já existe. Anexando (Ctrl-b d para detach)..."
         exec tmux attach -t "$sess"
     fi
-
-    echo "[cca] Criando sessão tmux: $sess (Ctrl-b d para detach, sobrevive freeze do DE)"
+    echo "[cca-tmux] Criando sessão tmux: $sess (Ctrl-b d para detach)"
     if [ $# -eq 0 ]; then
         exec tmux new -s "$sess" -c "$PWD" "zsh -ic '__cca_run'"
     else
@@ -214,7 +218,7 @@ cca() {
     fi
 }
 
-# Propósito: Listar sessões tmux do Claude ativas
+# Propósito: Listar sessões tmux do Claude ativas (criadas via cca-tmux)
 # Uso: cca-list
 cca-list() {
     if ! command -v tmux &> /dev/null; then
@@ -225,31 +229,26 @@ cca-list() {
     tmux ls 2>/dev/null | grep -E '^claude-' || echo "(nenhuma)"
 }
 
-# Propósito: Retomar última sessão Claude no cwd atual
+# Propósito: Retomar última sessão Claude no cwd atual (modo direto)
 # Uso: cca-resume [args]
 cca-resume() {
-    if [ -n "${TMUX:-}" ]; then
-        bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
-        __cca_export_contexto
-        if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
-            systemd-run --user --slice=claude.slice --scope --quiet --collect \
-                claude --continue --dangerously-skip-permissions "$@"
-        else
-            command claude --continue --dangerously-skip-permissions "$@"
-        fi
-        local rc=$?
-        __cca_unset_contexto
-        return $rc
+    if ! command -v claude &> /dev/null; then
+        echo "[ERRO] Claude Code não instalado."
+        return 1
     fi
-    # Embrulha em tmux como o cca normal
-    local sha proj sess
-    sha=$(printf '%s' "$PWD" | sha1sum | awk '{print substr($1,1,6)}')
-    proj=$(basename "$PWD")
-    sess="claude-${proj}-${sha}"
-    if tmux has-session -t "$sess" 2>/dev/null; then
-        exec tmux attach -t "$sess"
+    bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
+    __cca_export_contexto
+    local rc
+    if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
+        systemd-run --user --slice=claude.slice --scope --quiet --collect \
+            claude --continue --dangerously-skip-permissions "$@"
+        rc=$?
+    else
+        command claude --continue --dangerously-skip-permissions "$@"
+        rc=$?
     fi
-    exec tmux new -s "$sess" -c "$PWD" "zsh -ic 'cca-resume $*'"
+    __cca_unset_contexto
+    return $rc
 }
 
 # Proposito: Claude Code com wrapper seguro

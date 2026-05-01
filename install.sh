@@ -1152,7 +1152,6 @@ main() {
     _step_hooks
     _step_ritual
     _step_zshenv
-    _step_terminal_scroll
     _step_chsh
     _step_validate
     _step_manifest
