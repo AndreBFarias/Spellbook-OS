@@ -1,0 +1,10 @@
+[Unit]
+Description=Aurora 2.1 - Timer do VRAM watchdog (a cada 30s)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

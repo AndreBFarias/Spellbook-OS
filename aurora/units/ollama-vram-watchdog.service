@@ -1,0 +1,7 @@
+[Unit]
+Description=Aurora 2.1 - Verifica VRAM e reinicia ollama se >=90%
+After=ollama.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/aurora-vram-check
