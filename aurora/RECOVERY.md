@@ -59,3 +59,6 @@ tmux a -t claude-<projeto>-<sha>
 - **Kernel cmdline não atualizou**: `sudo kernelstub --print-config` — verifique flag por flag
 - **earlyoom matando o que não devia**: `journalctl -u earlyoom -n 100` — ajuste regex em `~/.config/zsh/aurora/earlyoom.default` e re-rode bootstrap
 - **`claude.slice` não aplica**: `systemctl --user status claude.slice` deve mostrar `MemoryHigh=10G`
+- **Freeze após acordar de suspend**: bug do driver NVIDIA Optimus. Mitigação: `sudo systemctl restart nvidia-persistenced`. Para preservar VRAM em transições futuras, garanta que `nvidia-suspend.service`, `nvidia-resume.service` e `nvidia-hibernate.service` estão `enabled` (Aurora 2.1 habilita automaticamente no `aurora-bootstrap.sh`).
+- **Freeze quando ollama satura VRAM**: o watchdog `ollama-vram-watchdog.timer` checa a cada 30s e reinicia `ollama.service` se ele for o top consumer e VRAM ≥ 90%. Logs em `journalctl -t aurora-vram-watchdog -n 50`. Se o problema persistir, ajuste limites em `aurora/units/ollama.slice` (default `MemoryHigh=6G MemoryMax=9G`).
+- **Habilitar kdump (debug de panic)**: `sudo apt install linux-crashdump`, responder `yes` ao reservar memória pro crash kernel. Dumps em `/var/crash`. Não habilitamos automático: reserva ~256 MiB e mexe em kernel cmdline (risco de regressão em troca de uso esporádico).

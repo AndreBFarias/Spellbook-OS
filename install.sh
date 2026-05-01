@@ -842,52 +842,37 @@ _step_hooks() {
     _ok "Hooks git e commit template prontos"
 }
 
-# --- Etapa: Ritual da Aurora (autostart + systemd) ---
+# --- Etapa: Aurora 2.x (kernelstub + units + slices + watchdogs + monitoring) ---
 _step_ritual() {
-    _step "Ritual da Aurora (GPU + servicos essenciais)"
+    _step "Aurora 2.x (GPU + servicos + slices + watchdogs)"
 
-    local scripts_dir="$ZDOTDIR_TARGET/scripts"
-    local autostart_dir="$HOME/.config/autostart"
-    local service_source="$scripts_dir/ritual-aurora-root.service"
-    local service_dest="/etc/systemd/system/ritual-aurora-root.service"
-    local user_script="$scripts_dir/ritual-da-aurora-user.sh"
-
-    # Autostart do usuario (nvidia-settings)
-    if [[ -f "$user_script" ]]; then
-        _run mkdir -p "$autostart_dir"
-        cat > "$autostart_dir/ritual_aurora.desktop" << DESK
-[Desktop Entry]
-Type=Application
-Exec=$user_script
-Name=Ritual da Aurora
-Comment=Configura GPU Nvidia no modo performance ao iniciar.
-Terminal=false
-X-GNOME-Autostart-enabled=true
-DESK
-        _run chmod +x "$user_script"
-        _ok "Autostart configurado (nvidia-settings)"
-    else
-        _warn "Script $user_script não encontrado"
+    local bootstrap="$ZDOTDIR_TARGET/aurora/aurora-bootstrap.sh"
+    if [[ ! -f "$bootstrap" ]]; then
+        _warn "aurora-bootstrap.sh não encontrado em $bootstrap — pulando"
+        return 0
     fi
-
-    # Systemd service (root) — pede sudo apenas se necessario
-    if [[ -f "$service_source" ]]; then
-        if [[ ! -f "$service_dest" ]] || ! diff -q "$service_source" "$service_dest" &>/dev/null; then
-            _info "Instalando systemd service (requer sudo)..."
-            if _run sudo cp "$service_source" "$service_dest"; then
-                _run sudo systemctl daemon-reload
-                _run sudo systemctl enable ritual-aurora-root
-                _ok "Systemd service instalado e habilitado"
-            else
-                _warn "Falha ao instalar service (sudo negado?). Instale manualmente:"
-                _info "  sudo cp $service_source $service_dest"
-                _info "  sudo systemctl daemon-reload && sudo systemctl enable ritual-aurora-root"
-            fi
-        else
-            _ok "Systemd service ja instalado e atualizado"
-        fi
+    if [[ ! -x "$bootstrap" ]]; then
+        _run chmod +x "$bootstrap"
+    fi
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "Pular execução do aurora-bootstrap (dry-run)"
+        return 0
+    fi
+    _info "Executando aurora-bootstrap.sh --post-update (idempotente, requer sudo)..."
+    if bash "$bootstrap" --post-update; then
+        _ok "Aurora 2.x aplicada (kernelstub, units, slices, watchdogs)"
     else
-        _warn "Service file não encontrado: $service_source"
+        _warn "aurora-bootstrap.sh retornou erro — verifique 'journalctl -t aurora'"
+    fi
+    # Sunset legado: se ritual antigo ainda existe, desabilita silenciosamente
+    if [[ -f /etc/systemd/system/ritual-aurora-root.service ]]; then
+        _info "Desabilitando ritual-aurora-root legado (Aurora 1.x)..."
+        _run sudo systemctl disable ritual-aurora-root.service 2>/dev/null || true
+    fi
+    # Limpa autostart legado se ainda presente
+    local legacy_autostart="$HOME/.config/autostart/ritual_aurora.desktop"
+    if [[ -f "$legacy_autostart" ]]; then
+        _run mv "$legacy_autostart" "${legacy_autostart}.disabled" 2>/dev/null || true
     fi
 }
 
@@ -911,7 +896,27 @@ _step_validate() {
         || { _warn "cca/aliases_cca.zsh não encontrado — comando cca indisponível"; ((erros++)); }
 
     command -v tmux &>/dev/null \
-        || { _warn "tmux não instalado — cca rodará sem proteção contra freeze do DE"; ((erros++)); }
+        || { _warn "tmux não instalado — cca-tmux indisponível"; ((erros++)); }
+
+    # Aurora 2.x: services do bootstrap
+    for s in aurora-root.service aurora-watchdog.timer earlyoom.service; do
+        systemctl is-active --quiet "$s" 2>/dev/null \
+            || { _warn "$s inativo após install"; ((erros++)); }
+    done
+    if systemctl --user is-active --quiet aurora-user.service 2>/dev/null; then
+        : # OK
+    else
+        _warn "aurora-user.service inativo (talvez fora de sessão gráfica)"
+        ((erros++))
+    fi
+    systemctl --user is-active --quiet claude.slice 2>/dev/null \
+        || { _warn "claude.slice inativo"; ((erros++)); }
+
+    # Aurora 2.1: ollama-vram-watchdog (só checa se ollama instalado)
+    if [[ -f /etc/systemd/system/ollama.service ]] || [[ -f /lib/systemd/system/ollama.service ]]; then
+        systemctl is-active --quiet ollama-vram-watchdog.timer 2>/dev/null \
+            || { _warn "ollama-vram-watchdog.timer inativo"; ((erros++)); }
+    fi
 
     [[ -d "$ZDOTDIR_TARGET/kca" ]] \
         || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; ((erros++)); }

@@ -103,6 +103,18 @@ copia_se_diff "$AURORA_REPO/units/aurora-root.service"     /etc/systemd/system/a
 copia_se_diff "$AURORA_REPO/units/aurora-watchdog.service" /etc/systemd/system/aurora-watchdog.service root:root 0644
 copia_se_diff "$AURORA_REPO/units/aurora-watchdog.timer"   /etc/systemd/system/aurora-watchdog.timer   root:root 0644
 
+# Aurora 2.1: Ollama protection (slice + VRAM watchdog)
+copia_se_diff "$AURORA_REPO/units/ollama.slice"                 /etc/systemd/system/ollama.slice                 root:root 0644
+copia_se_diff "$AURORA_REPO/units/ollama-vram-watchdog.service" /etc/systemd/system/ollama-vram-watchdog.service root:root 0644
+copia_se_diff "$AURORA_REPO/units/ollama-vram-watchdog.timer"   /etc/systemd/system/ollama-vram-watchdog.timer   root:root 0644
+copia_se_diff "$AURORA_REPO/aurora-vram-check"                  /usr/local/sbin/aurora-vram-check                root:root 0755
+
+# Drop-in pra ollama.service apontar pra ollama.slice (só se ollama.service existe)
+if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.service ]; then
+  sudo -n mkdir -p /etc/systemd/system/ollama.service.d
+  copia_se_diff "$AURORA_REPO/units/ollama-slice.conf" /etc/systemd/system/ollama.service.d/aurora-slice.conf root:root 0644
+fi
+
 # apt hook
 copia_se_diff "$AURORA_REPO/units/99-aurora-postinvoke" /etc/apt/apt.conf.d/99-aurora-postinvoke root:root 0644
 
@@ -141,6 +153,28 @@ for s in aurora-root.service aurora-watchdog.timer earlyoom.service; do
     log "Started: $s"
   fi
 done
+
+# Aurora 2.1: ollama-vram-watchdog.timer (só habilita se ollama.service existe)
+if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.service ]; then
+  if ! systemctl is-enabled --quiet ollama-vram-watchdog.timer 2>/dev/null; then
+    sudo -n systemctl enable ollama-vram-watchdog.timer 2>&1 | grep -v "Created symlink" || true
+    log "Enabled: ollama-vram-watchdog.timer"
+  fi
+  if ! systemctl is-active --quiet ollama-vram-watchdog.timer 2>/dev/null; then
+    sudo -n systemctl start ollama-vram-watchdog.timer || warn "Falha ao iniciar ollama-vram-watchdog.timer"
+    log "Started: ollama-vram-watchdog.timer"
+  fi
+fi
+
+# Aurora 2.1: NVIDIA suspend/resume/hibernate (preservam VRAM em transições de power)
+if [ -f /lib/systemd/system/nvidia-suspend.service ]; then
+  for s in nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service; do
+    if ! systemctl is-enabled --quiet "$s" 2>/dev/null; then
+      sudo -n systemctl enable "$s" 2>&1 | grep -v "Created symlink" || true
+      log "Enabled: $s"
+    fi
+  done
+fi
 
 # User services
 if [ $USER_BUS_OK -eq 1 ]; then

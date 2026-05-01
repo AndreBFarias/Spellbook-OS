@@ -115,6 +115,30 @@ $status_dump
   fi
 fi
 
+# --- Check 4: ollama-vram-watchdog.timer (Aurora 2.1) ---
+# Só verifica se ollama.service existe — sem ollama, watchdog não aplica
+if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.service ]; then
+  if ! systemctl is-active --quiet ollama-vram-watchdog.timer 2>/dev/null; then
+    falhas+=("ollama-vram-watchdog.timer inativo")
+    status_dump=$(systemctl status ollama-vram-watchdog.timer --no-pager 2>&1 | head -10)
+    add_contexto "### ollama-vram-watchdog.timer (proteção VRAM)
+\`\`\`
+$status_dump
+\`\`\`
+"
+  fi
+fi
+
+# --- Check 5: NVIDIA suspend/resume/hibernate enabled (Aurora 2.1) ---
+# Só checa se o driver existe; warning, não bloqueia
+if [ -f /lib/systemd/system/nvidia-suspend.service ]; then
+  for s in nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service; do
+    if ! systemctl is-enabled --quiet "$s" 2>/dev/null; then
+      falhas+=("$s não habilitado (preserva VRAM em suspend/resume)")
+    fi
+  done
+fi
+
 # --- Diagnostico final ---
 if [ ${#falhas[@]} -eq 0 ]; then
   status_atual="ok"
