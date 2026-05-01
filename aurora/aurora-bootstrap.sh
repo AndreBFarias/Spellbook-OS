@@ -115,6 +115,25 @@ if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.
   copia_se_diff "$AURORA_REPO/units/ollama-slice.conf" /etc/systemd/system/ollama.service.d/aurora-slice.conf root:root 0644
 fi
 
+# Aurora 2.1 (Round C): Health monitor (SMART + thermal + disk)
+copia_se_diff "$AURORA_REPO/units/aurora-health.service" /etc/systemd/system/aurora-health.service root:root 0644
+copia_se_diff "$AURORA_REPO/units/aurora-health.timer"   /etc/systemd/system/aurora-health.timer   root:root 0644
+copia_se_diff "$AURORA_REPO/aurora-health-check"         /usr/local/sbin/aurora-health-check        root:root 0755
+
+# Instalar lm-sensors se faltar (silencioso, idempotente)
+if ! command -v sensors >/dev/null 2>&1; then
+  log "Instalando lm-sensors (necessário pra checagem térmica)..."
+  sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y lm-sensors >/dev/null 2>&1 \
+    && log "lm-sensors instalado" \
+    || warn "Falha ao instalar lm-sensors — checagem térmica de CPU desabilitada"
+fi
+
+# Detectar sensores na primeira execução (idempotente: sensors-detect cria /etc/modules-load.d/sensors.conf)
+if command -v sensors-detect >/dev/null 2>&1 && [ ! -f /etc/modules-load.d/sensors.conf ]; then
+  log "Rodando sensors-detect --auto (uma única vez)..."
+  sudo -n sensors-detect --auto >/dev/null 2>&1 || warn "sensors-detect retornou erro (não fatal)"
+fi
+
 # apt hook
 copia_se_diff "$AURORA_REPO/units/99-aurora-postinvoke" /etc/apt/apt.conf.d/99-aurora-postinvoke root:root 0644
 
@@ -164,6 +183,16 @@ if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.
     sudo -n systemctl start ollama-vram-watchdog.timer || warn "Falha ao iniciar ollama-vram-watchdog.timer"
     log "Started: ollama-vram-watchdog.timer"
   fi
+fi
+
+# Aurora 2.1 (Round C): aurora-health.timer
+if ! systemctl is-enabled --quiet aurora-health.timer 2>/dev/null; then
+  sudo -n systemctl enable aurora-health.timer 2>&1 | grep -v "Created symlink" || true
+  log "Enabled: aurora-health.timer"
+fi
+if ! systemctl is-active --quiet aurora-health.timer 2>/dev/null; then
+  sudo -n systemctl start aurora-health.timer || warn "Falha ao iniciar aurora-health.timer"
+  log "Started: aurora-health.timer"
 fi
 
 # Aurora 2.1: NVIDIA suspend/resume/hibernate (preservam VRAM em transições de power)

@@ -139,6 +139,19 @@ if [ -f /lib/systemd/system/nvidia-suspend.service ]; then
   done
 fi
 
+# --- Check 6: aurora-health.timer (Aurora 2.1 - Round C) ---
+if [ -f /etc/systemd/system/aurora-health.timer ]; then
+  if ! systemctl is-active --quiet aurora-health.timer 2>/dev/null; then
+    falhas+=("aurora-health.timer inativo (monitor SMART/thermal/disk)")
+    status_dump=$(systemctl status aurora-health.timer --no-pager 2>&1 | head -10)
+    add_contexto "### aurora-health.timer (monitor de saúde)
+\`\`\`
+$status_dump
+\`\`\`
+"
+  fi
+fi
+
 # --- Diagnostico final ---
 if [ ${#falhas[@]} -eq 0 ]; then
   status_atual="ok"

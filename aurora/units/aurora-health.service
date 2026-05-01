@@ -1,0 +1,6 @@
+[Unit]
+Description=Aurora 2.1 - Health monitor (SMART + thermal + disk + VRAM)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/aurora-health-check

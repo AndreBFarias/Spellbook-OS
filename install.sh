@@ -918,6 +918,12 @@ _step_validate() {
             || { _warn "ollama-vram-watchdog.timer inativo"; ((erros++)); }
     fi
 
+    # Aurora 2.1 (Round C): aurora-health.timer
+    if [[ -f /etc/systemd/system/aurora-health.timer ]]; then
+        systemctl is-active --quiet aurora-health.timer 2>/dev/null \
+            || { _warn "aurora-health.timer inativo (monitor SMART/thermal/disk)"; ((erros++)); }
+    fi
+
     [[ -d "$ZDOTDIR_TARGET/kca" ]] \
         || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; ((erros++)); }
 
