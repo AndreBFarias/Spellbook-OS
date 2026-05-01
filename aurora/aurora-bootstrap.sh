@@ -151,6 +151,40 @@ copia_user() {
 copia_user "$AURORA_REPO/units/aurora-user.service" "$USER_SYSTEMD_DIR/aurora-user.service"
 copia_user "$AURORA_REPO/units/claude.slice"        "$USER_SYSTEMD_DIR/claude.slice"
 
+# Aurora 2.1 (Round D): slices pra browser e Electron apps
+copia_user "$AURORA_REPO/units/browser.slice"  "$USER_SYSTEMD_DIR/browser.slice"
+copia_user "$AURORA_REPO/units/electron.slice" "$USER_SYSTEMD_DIR/electron.slice"
+
+# Helper: cria override XDG do .desktop envelopando Exec= em systemd-run
+# Idempotente: se override já tem marker Aurora, pula.
+aplica_slice_override() {
+  local app="$1" slice="$2"
+  local src="/usr/share/applications/${app}.desktop"
+  local dst="$HOME/.local/share/applications/${app}.desktop"
+  [ -f "$src" ] || return 0
+  if [ -f "$dst" ] && grep -q "Aurora 2.1 override" "$dst" 2>/dev/null; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$dst")"
+  # Reescreve cada linha Exec= envolvendo o binário (primeira palavra) em systemd-run --user --scope
+  sed -E "s|^Exec=([^ \t]+)|Exec=systemd-run --user --slice=${slice} --scope --quiet -- \1|g" "$src" > "$dst"
+  printf '\n# Aurora 2.1 override (slice=%s)\n' "$slice" >> "$dst"
+  chmod 0644 "$dst"
+  log "Override aplicado: $dst (slice=$slice)"
+}
+
+# Aplica overrides condicionalmente pros apps presentes em /usr/share/applications
+aplica_slice_override "google-chrome"  "browser.slice"
+aplica_slice_override "firefox"        "browser.slice"
+aplica_slice_override "firefox-esr"    "browser.slice"
+aplica_slice_override "brave-browser"  "browser.slice"
+aplica_slice_override "chromium"       "browser.slice"
+aplica_slice_override "slack"          "electron.slice"
+aplica_slice_override "discord"        "electron.slice"
+aplica_slice_override "code"           "electron.slice"
+aplica_slice_override "cursor"         "electron.slice"
+aplica_slice_override "zoom"           "electron.slice"
+
 # 4. Reload systemd e enable
 sudo -n systemctl daemon-reload
 if [ $USER_BUS_OK -eq 1 ]; then
