@@ -121,7 +121,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-TOTAL_STEPS=16
+TOTAL_STEPS=17
 CURRENT_STEP=0
 _EXISTING_CONFIG=false
 
@@ -713,6 +713,40 @@ _step_zshenv() {
     fi
 }
 
+# --- Etapa: Desligar alternate-scroll do gnome-terminal ---
+# Sem isso, wheel do mouse vira setas em apps TUI (ex: cca → Claude Code interpreta
+# scroll como navegação de histórico). Idempotente, não-invasivo.
+_step_terminal_scroll() {
+    _step "Ajustando scroll do gnome-terminal"
+    if ! command -v dconf &>/dev/null; then
+        _info "dconf não disponível — pulando"
+        return 0
+    fi
+    local profiles_path="/org/gnome/terminal/legacy/profiles:/"
+    local profiles
+    profiles=$(dconf list "$profiles_path" 2>/dev/null | grep '^:' | tr -d '/')
+    if [[ -z "$profiles" ]]; then
+        _info "gnome-terminal não configurado — pulando"
+        return 0
+    fi
+    local applied=0
+    for p in $profiles; do
+        local key="${profiles_path}${p}/alternate-scroll"
+        local atual
+        atual=$(dconf read "$key" 2>/dev/null)
+        if [[ "$atual" == "false" ]]; then
+            continue
+        fi
+        _run dconf write "$key" "false"
+        ((applied++))
+    done
+    if [[ $applied -gt 0 ]]; then
+        _ok "alternate-scroll=false aplicado em $applied profile(s)"
+    else
+        _ok "alternate-scroll já está false em todos os profiles"
+    fi
+}
+
 # --- Etapa 7: Trocar shell padrão ---
 _step_chsh() {
     _step "Shell padrão"
@@ -1152,6 +1186,7 @@ main() {
     _step_hooks
     _step_ritual
     _step_zshenv
+    _step_terminal_scroll
     _step_chsh
     _step_validate
     _step_manifest
