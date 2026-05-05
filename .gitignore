@@ -41,3 +41,17 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# --- anti-IA (anonimato local) ---
+CLAUDE.md
+GEMINI.md
+COPILOT.md
+HANDOFF-PROMPT.md
+HANDOFF.md
+HOW_TO_RESUME.md
+STATE.md
+.cursorrules
+.windsurfrules
+.cursor/
+.continue/
+.github/copilot-instructions.md
