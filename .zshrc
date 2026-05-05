@@ -36,18 +36,21 @@ autoload -U bashcompinit && bashcompinit
 
 # --- STATUS MONITOR (GPU) ---
 () {
-    # 1. NVIDIA
-    if command -v nvidia-smi &> /dev/null; then
-        local info=$(nvidia-smi --query-gpu=name,temperature.gpu --format=csv,noheader)
-        local mem_data=$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits)
-        local used=$(echo $mem_data | cut -d',' -f1 | xargs)
-        local total=$(echo $mem_data | cut -d',' -f2 | xargs)
-        local percent=$(( (used * 100) / total ))
-        local color="\033[0;32m"
-        if [ $percent -ge 80 ]; then color="\033[0;31m"; elif [ $percent -ge 50 ]; then color="\033[1;33m"; fi
-        echo ""
-        echo -e "GPU: ${info} | VRAM: ${color}${used}/${total} MiB (${percent}%)\033[0m"
-    fi
+    # 1. NVIDIA — em laptops Optimus/on-demand, nvidia-smi pode retornar
+    #    [N/A] ou texto descritivo quando dGPU esta suspensa; valida numeros
+    #    antes de avaliar expressao aritmetica para nao quebrar o prompt.
+    command -v nvidia-smi >/dev/null 2>&1 || return 0
+    local info mem_data used total percent color
+    info=$(nvidia-smi --query-gpu=name,temperature.gpu --format=csv,noheader 2>/dev/null) || return 0
+    mem_data=$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null) || return 0
+    used=${${(s:,:)mem_data}[1]// /}
+    total=${${(s:,:)mem_data}[2]// /}
+    [[ "$used" =~ ^[0-9]+$ && "$total" =~ ^[0-9]+$ && $total -gt 0 ]] || return 0
+    percent=$(( (used * 100) / total ))
+    color=$'\033[0;32m'
+    if (( percent >= 80 )); then color=$'\033[0;31m'; elif (( percent >= 50 )); then color=$'\033[1;33m'; fi
+    print
+    print -P "GPU: ${info} | VRAM: ${color}${used}/${total} MiB (${percent}%)\033[0m"
 }
 
 # --- 4.6. WRAPPER AUXILIAR ---

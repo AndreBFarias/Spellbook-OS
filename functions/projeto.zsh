@@ -263,6 +263,20 @@ santuario() {
         fi
     fi
 
+    # Alinhamento anti-IA: aplica padrao em todos os repos de ~/Desenvolvimento.
+    # Idempotente; em modo quiet so reporta se houver alteracao.
+    local align_script="$HOME/.config/git/bin/align-anonymity-all-repos.sh"
+    if [ -x "$align_script" ] && [[ -z "$SANTUARIO_SKIP_ALIGN" ]]; then
+        local align_out
+        align_out=$("$align_script" -q "$HOME/Desenvolvimento" 2>/dev/null)
+        if [ -n "$align_out" ]; then
+            echo -e "  ${D_YELLOW}[ANONIMATO]${D_RESET} alinhamento aplicado:"
+            echo "$align_out" | sed 's/^/    /'
+        else
+            echo -e "  ${D_GREEN}[OK] Repos alinhados ao padrao anti-IA${D_RESET}"
+        fi
+    fi
+
     # Sistema de validação de sprints (Claude Code v2 - subagente validador-sprint)
     if [ -d ".git" ]; then
         # Doctor silencioso: avisa apenas se detectar issues
