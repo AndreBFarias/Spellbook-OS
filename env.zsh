@@ -77,7 +77,15 @@ export DBT_PROFILES_DIR=dev
 if [[ -o interactive && -z "$TMUX" ]]; then
     if command -v fastfetch >/dev/null 2>&1; then
         clear
-        fastfetch --pipe false | sed -E $'s/\\[Discrete\\]/[Dedicada]/g; s/\\[Integrated\\]/[Integrada]/g'
+        fastfetch --pipe false | sed -E $'
+            s/\\[Discrete\\]/[Dedicada]/g;
+            s/\\[Integrated\\]/[Integrada]/g;
+            s/\\[AC Connected\\]/[Conectado]/g;
+            s/\\[AC Disconnected\\]/[Desconectado]/g;
+            s/\\[External\\]/[Externo]/g;
+            s/\\[Built-in\\]/[Embutido]/g;
+            s/\\[([^]\\x1b]+)\\]/\e[38;2;255;184;108m[\\1]\e[0m/g
+        '
         echo
     fi
 fi
