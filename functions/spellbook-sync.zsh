@@ -11,6 +11,7 @@ __spellbook_status_cache_write() {
     local msg="$1"
     local cache="/tmp/spellbook_status_$(id -u)"
     print -r -- "$msg" > "$cache" 2>/dev/null
+    chmod 600 "$cache" 2>/dev/null
 }
 
 __spellbook_is_git_repo() {
