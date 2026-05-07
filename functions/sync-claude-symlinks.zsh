@@ -28,6 +28,14 @@ sync_claude_symlinks() {
 
     [ ! -d "$base_dir" ] && return 0
 
+    # Lista de repos com regras próprias (GUIDE.md ou CLAUDE.md committed
+    # com conteúdo específico do projeto). Esses NÃO recebem symlink — leitura
+    # do CC pega o próprio GUIDE.md / CLAUDE.md local.
+    local skip_list=(
+        "Protocolo-Mob-Ouroboros"
+        "protocolo-ouroboros"
+    )
+
     [ "$quiet" -eq 0 ] && __header "SYNC CLAUDE.md SYMLINKS" "$D_CYAN"
 
     local total=0 created=0 ok=0 skipped=0 ignored_added=0
@@ -45,13 +53,11 @@ sync_claude_symlinks() {
         ((total++))
 
         local target="$repo/CLAUDE.md"
-        local has_guide=0
-        [ -f "$repo/GUIDE.md" ] && [ ! -L "$repo/GUIDE.md" ] && has_guide=1
 
-        # Se tem GUIDE.md committed (projeto migrado com regras próprias), pular
-        if [ "$has_guide" -eq 1 ]; then
+        # Skipar projetos com regras próprias (lista explícita)
+        if [[ " ${skip_list[*]} " == *" ${name} "* ]]; then
             ((skipped++))
-            [ "$quiet" -eq 0 ] && printf "  ${D_COMMENT}[SKIP]${D_RESET} %-40s ${D_DIM}(GUIDE.md próprio)${D_RESET}\n" "$name"
+            [ "$quiet" -eq 0 ] && printf "  ${D_COMMENT}[SKIP]${D_RESET} %-40s ${D_DIM}(regras próprias)${D_RESET}\n" "$name"
             continue
         fi
 
