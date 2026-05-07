@@ -1192,6 +1192,7 @@ main() {
     _step_hooks
     _step_ritual
     _step_zshenv
+    _step_fastfetch_symlink
     _step_chsh
     _step_validate
     _step_manifest
