@@ -77,7 +77,7 @@ export DBT_PROFILES_DIR=dev
 if [[ -o interactive && -z "$TMUX" ]]; then
     if command -v fastfetch >/dev/null 2>&1; then
         clear
-        fastfetch | sed -E $'s/\\[Discrete\\]/[Dedicada]/g; s/\\[Integrated\\]/[Integrada]/g; s/^([^\\(]*)\\(([^)]+)\\)([^:]*):/\\1\e[38;2;255;184;108m(\\2)\e[35m\\3:\e[0m/'
+        fastfetch | sed -E $'s/\\[Discrete\\]/[Dedicada]/g; s/\\[Integrated\\]/[Integrada]/g'
     fi
 fi
 
