@@ -28,7 +28,7 @@
     "cursor",
     "terminal",
     { "type": "terminalfont",  "key": "Fonte Terminal" },
-    "cpu",
+    { "type": "cpu", "temp": true, "format": "{name} ({cores-logical}) @ {freq-max} | {temperature}" },
     "gpu",
     { "type": "memory",        "key": "Memória" },
     "swap",
