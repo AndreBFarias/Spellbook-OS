@@ -6,6 +6,13 @@ __spellbook_sync_dir() {
     echo "${ZDOTDIR:-$HOME/.config/zsh}"
 }
 
+# Status curto p/ o módulo `command` Spellbook-OS do fastfetch lê na próxima abertura.
+__spellbook_status_cache_write() {
+    local status="$1"
+    local cache="/tmp/spellbook_status_$(id -u)"
+    print -r -- "$status" > "$cache" 2>/dev/null
+}
+
 __spellbook_is_git_repo() {
     local dir="$(__spellbook_sync_dir)"
     [[ -d "$dir/.git" ]] || return 1
@@ -102,6 +109,9 @@ spellbook_sync_pull() {
     if ! timeout 2 git -C "$dir" ls-remote --exit-code origin HEAD &>/dev/null 2>&1; then
         if [[ "$had_local" == true ]]; then
             echo -e "  ${D_COMMENT}Spellbook: commit local salvo (sem rede)${D_RESET}"
+            __spellbook_status_cache_write "commit local salvo (sem rede)"
+        else
+            __spellbook_status_cache_write "offline"
         fi
         return 0
     fi
@@ -117,11 +127,13 @@ spellbook_sync_pull() {
 
     if [[ "${behind:-0}" -eq 0 && "${ahead:-0}" -eq 0 ]]; then
         echo -e "  ${D_GREEN}Spellbook sincronizado${D_RESET}"
+        __spellbook_status_cache_write "sincronizado"
         return 0
     fi
 
     if [[ "${behind:-0}" -eq 0 && "${ahead:-0}" -gt 0 ]]; then
         echo -e "  ${D_GREEN}Spellbook:${D_RESET} ${D_COMMENT}$ahead commit(s) local(is) pendente(s) de push${D_RESET}"
+        __spellbook_status_cache_write "$ahead commit(s) pendente(s) de push"
         return 0
     fi
 
@@ -129,6 +141,7 @@ spellbook_sync_pull() {
     if git -C "$dir" merge origin/main --ff-only --quiet 2>/dev/null; then
         local elapsed=$(( SECONDS - start_time ))
         echo -e "  ${D_GREEN}Spellbook atualizado:${D_RESET} ${D_FG}$behind commit(s) (${elapsed}s)${D_RESET}"
+        __spellbook_status_cache_write "atualizado: $behind commit(s)"
         return 0
     fi
 
@@ -137,11 +150,19 @@ spellbook_sync_pull() {
     if git -C "$dir" merge origin/main --no-edit --quiet 2>/dev/null; then
         local elapsed=$(( SECONDS - start_time ))
         echo -e "  ${D_GREEN}Spellbook merged:${D_RESET} ${D_FG}$behind commit(s) integrado(s) (${elapsed}s)${D_RESET}"
+        __spellbook_status_cache_write "merged: $behind commit(s)"
         return 0
     fi
 
     # Merge com conflito
     __spellbook_resolve_conflict
+    local rc=$?
+    if (( rc == 0 )); then
+        __spellbook_status_cache_write "conflitos resolvidos"
+    else
+        __spellbook_status_cache_write "conflito (resolva manualmente)"
+    fi
+    return $rc
 }
 
 # Propósito: Push em background do Spellbook-OS (auto-commit local + push não-bloqueante)

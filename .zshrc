@@ -26,41 +26,28 @@ fi
 [ -f "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_sprint.zsh" ] && source "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_sprint.zsh"
 
 # --- 5. FERRAMENTAS ESPECÍFICAS ---
-# Pyenv
+# Pyenv (lazy-load: só inicializa na 1ª invocação)
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+__load_pyenv() {
+    unset -f pyenv python python3 2>/dev/null
+    eval "$(command pyenv init -)"
+}
+pyenv()   { __load_pyenv; pyenv "$@"; }
+python()  { __load_pyenv; python "$@"; }
+python3() { __load_pyenv; python3 "$@"; }
 
 # --- 6. BASH COMPLETION ---
 autoload -U bashcompinit && bashcompinit
-
-# --- STATUS MONITOR (GPU) ---
-() {
-    # 1. NVIDIA — em laptops Optimus/on-demand, nvidia-smi pode retornar
-    #    [N/A] ou texto descritivo quando dGPU esta suspensa; valida numeros
-    #    antes de avaliar expressao aritmetica para nao quebrar o prompt.
-    command -v nvidia-smi >/dev/null 2>&1 || return 0
-    local info mem_data used total percent color
-    info=$(nvidia-smi --query-gpu=name,temperature.gpu --format=csv,noheader 2>/dev/null) || return 0
-    mem_data=$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null) || return 0
-    used=${${(s:,:)mem_data}[1]// /}
-    total=${${(s:,:)mem_data}[2]// /}
-    [[ "$used" =~ ^[0-9]+$ && "$total" =~ ^[0-9]+$ && $total -gt 0 ]] || return 0
-    percent=$(( (used * 100) / total ))
-    color=$'\033[0;32m'
-    if (( percent >= 80 )); then color=$'\033[0;31m'; elif (( percent >= 50 )); then color=$'\033[1;33m'; fi
-    print
-    print -P "GPU: ${info} | VRAM: ${color}${used}/${total} MiB (${percent}%)\033[0m"
-}
 
 # --- 4.6. WRAPPER AUXILIAR ---
 export KIMI_YOLO=1
 [ -f "$ZDOTDIR/kca/aliases_kca.zsh" ] && source "$ZDOTDIR/kca/aliases_kca.zsh"
 
-# --- 7. SPELLBOOK SYNC (ao abrir terminal) ---
+# --- 7. SPELLBOOK SYNC (background, status cacheado p/ fastfetch) ---
 if [[ -o interactive && -z "${SPELLBOOK_SYNC_DONE:-}" ]]; then
     export SPELLBOOK_SYNC_DONE=1
-    spellbook_sync_pull
+    ( spellbook_sync_pull >/dev/null 2>&1 ) &!
 fi
 
 # --- 7.1. SYNC CLAUDE.md SYMLINKS (silencioso, ao abrir terminal) ---

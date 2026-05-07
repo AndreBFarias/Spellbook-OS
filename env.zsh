@@ -118,8 +118,12 @@ if command -v gh &>/dev/null; then
     alias ghrv="gh repo view --web"
     alias ghs="gh auth status"
 
-    # Completions
-    eval "$(gh completion -s zsh)"
+    # Completion lazy: só carrega na 1ª invocação real de `gh`
+    __load_gh_completion() {
+        unfunction gh 2>/dev/null
+        eval "$(command gh completion -s zsh)"
+    }
+    gh() { __load_gh_completion; command gh "$@"; }
 fi
 
 
