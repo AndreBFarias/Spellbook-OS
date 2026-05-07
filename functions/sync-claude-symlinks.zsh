@@ -70,8 +70,7 @@ sync_claude_symlinks() {
 
         # Criar/refazer symlink
         if [ -L "$target" ]; then
-            local current
-            current=$(readlink "$target")
+            local current="$(readlink "$target" 2>/dev/null)"
             if [ "$current" = "$source_file" ]; then
                 ((ok++))
                 [ "$quiet" -eq 0 ] && printf "  ${D_GREEN}[OK]${D_RESET}   %-40s\n" "$name"
