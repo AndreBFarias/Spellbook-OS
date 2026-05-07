@@ -36,7 +36,7 @@ Configuração zsh modular e portável. 23 módulos de funções, 9 scripts Pyth
 | `functions/restaurar.zsh` | Backup e restauração de sistema via manifesto |
 | `functions/sistema.zsh` | Captura de manifesto e diagnóstico do sistema |
 | `functions/_helpers.zsh` | Paleta Dracula + utilitários base |
-| `fastfetch/config.jsonc` | Cabeçalho visual do terminal — paleta magenta-bold, GPU/VRAM dinâmico, status do Spellbook integrado, logo na linha 7, tradução `[Discrete]→[Dedicada]`/`[Integrated]→[Integrada]` |
+| `fastfetch/config.jsonc` | Cabeçalho visual do terminal — paleta magenta-bold, GPU/VRAM dinâmico, status do Spellbook integrado, logo na linha 7, labels e tags em PT-BR. Detalhes em [docs/fastfetch.md](docs/fastfetch.md) |
 | `kca/` | Wrapper CLI auxiliar |
 | `scripts/` | Scripts Python auxiliares (dbt, migração, análise) |
 
