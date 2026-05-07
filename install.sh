@@ -699,6 +699,35 @@ _step_secrets_vault() {
     fi
 }
 
+# --- Etapa fastfetch: symlink ~/.config/fastfetch -> ~/.config/zsh/fastfetch ---
+_step_fastfetch_symlink() {
+    _step "Fastfetch (cabeçalho do terminal)"
+
+    local source="$ZDOTDIR_TARGET/fastfetch"
+    local target="$HOME/.config/fastfetch"
+
+    if [[ ! -d "$source" ]]; then
+        _warn "$source não existe — pule esta etapa"
+        return 0
+    fi
+
+    if [[ -L "$target" ]] && [[ "$(readlink -f "$target")" == "$(readlink -f "$source")" ]]; then
+        _ok "Symlink ~/.config/fastfetch já aponta para o repo"
+        return 0
+    fi
+
+    if [[ -d "$target" && ! -L "$target" ]]; then
+        local backup="${target}.backup.$(date +%Y%m%d_%H%M%S)"
+        _info "~/.config/fastfetch existe (não é symlink) — backup em $backup"
+        _run mv "$target" "$backup"
+    elif [[ -L "$target" ]]; then
+        _run rm "$target"
+    fi
+
+    _run ln -sfn "$source" "$target"
+    _ok "Symlink criado: $target -> $source"
+}
+
 # --- Etapa 6: ~/.zshenv com ZDOTDIR ---
 _step_zshenv() {
     _step "Configurando ZDOTDIR"
