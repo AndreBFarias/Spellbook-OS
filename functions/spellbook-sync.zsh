@@ -8,9 +8,9 @@ __spellbook_sync_dir() {
 
 # Status curto p/ o módulo `command` Spellbook-OS do fastfetch lê na próxima abertura.
 __spellbook_status_cache_write() {
-    local status="$1"
+    local msg="$1"
     local cache="/tmp/spellbook_status_$(id -u)"
-    print -r -- "$status" > "$cache" 2>/dev/null
+    print -r -- "$msg" > "$cache" 2>/dev/null
 }
 
 __spellbook_is_git_repo() {
