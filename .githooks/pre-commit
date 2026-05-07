@@ -46,7 +46,7 @@ if [[ -f "scripts/validar-acentuacao.py" ]]; then
 fi
 
 # -------------------------------------------------------------------
-# 2. Detecção de emojis (CLAUDE.md: zero emojis)
+# 2. Detecção de emojis (GUIDE.md: zero emojis)
 # -------------------------------------------------------------------
 EMOJI_FOUND=0
 for f in $STAGED_FILES; do
@@ -67,7 +67,7 @@ if matches:
 done
 
 if (( EMOJI_FOUND > 0 )); then
-    echo "[pre-commit] Emojis detectados em arquivos staged (CLAUDE.md proíbe)."
+    echo "[pre-commit] Emojis detectados em arquivos staged (GUIDE.md proíbe)."
     echo "  Bypass: SKIP_HOOKS=1 git commit ..."
     exit 1
 fi
