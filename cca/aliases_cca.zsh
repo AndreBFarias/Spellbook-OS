@@ -180,6 +180,7 @@ cca() {
         echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
         return 1
     fi
+    typeset -f sync_claude_symlinks > /dev/null && sync_claude_symlinks --quiet 2>/dev/null
     __cca_run "$@"
 }
 

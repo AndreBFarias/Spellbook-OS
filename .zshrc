@@ -63,6 +63,12 @@ if [[ -o interactive && -z "${SPELLBOOK_SYNC_DONE:-}" ]]; then
     spellbook_sync_pull
 fi
 
+# --- 7.1. SYNC CLAUDE.md SYMLINKS (silencioso, ao abrir terminal) ---
+if [[ -o interactive && -z "${CLAUDE_SYMLINKS_SYNCED:-}" ]]; then
+    export CLAUDE_SYMLINKS_SYNCED=1
+    typeset -f sync_claude_symlinks > /dev/null && sync_claude_symlinks --quiet 2>/dev/null &!
+fi
+
 # --- 99. SPELLBOOK SYNC (ao fechar terminal) ---
 zshexit() {
     spellbook_sync_push 2>/dev/null
