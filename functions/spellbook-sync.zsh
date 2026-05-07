@@ -127,13 +127,13 @@ spellbook_sync_pull() {
 
     if [[ "${behind:-0}" -eq 0 && "${ahead:-0}" -eq 0 ]]; then
         echo -e "  ${D_GREEN}Spellbook sincronizado${D_RESET}"
-        __spellbook_status_cache_write "sincronizado"
+        __spellbook_status_cache_write "Sincronizado"
         return 0
     fi
 
     if [[ "${behind:-0}" -eq 0 && "${ahead:-0}" -gt 0 ]]; then
         echo -e "  ${D_GREEN}Spellbook:${D_RESET} ${D_COMMENT}$ahead commit(s) local(is) pendente(s) de push${D_RESET}"
-        __spellbook_status_cache_write "$ahead commit(s) pendente(s) de push"
+        __spellbook_status_cache_write "Pendente: $ahead commit(s) de push"
         return 0
     fi
 
@@ -141,7 +141,7 @@ spellbook_sync_pull() {
     if git -C "$dir" merge origin/main --ff-only --quiet 2>/dev/null; then
         local elapsed=$(( SECONDS - start_time ))
         echo -e "  ${D_GREEN}Spellbook atualizado:${D_RESET} ${D_FG}$behind commit(s) (${elapsed}s)${D_RESET}"
-        __spellbook_status_cache_write "atualizado: $behind commit(s)"
+        __spellbook_status_cache_write "Atualizado: $behind commit(s)"
         return 0
     fi
 
@@ -150,7 +150,7 @@ spellbook_sync_pull() {
     if git -C "$dir" merge origin/main --no-edit --quiet 2>/dev/null; then
         local elapsed=$(( SECONDS - start_time ))
         echo -e "  ${D_GREEN}Spellbook merged:${D_RESET} ${D_FG}$behind commit(s) integrado(s) (${elapsed}s)${D_RESET}"
-        __spellbook_status_cache_write "merged: $behind commit(s)"
+        __spellbook_status_cache_write "Merged: $behind commit(s)"
         return 0
     fi
 
@@ -158,9 +158,9 @@ spellbook_sync_pull() {
     __spellbook_resolve_conflict
     local rc=$?
     if (( rc == 0 )); then
-        __spellbook_status_cache_write "conflitos resolvidos"
+        __spellbook_status_cache_write "Conflitos resolvidos"
     else
-        __spellbook_status_cache_write "conflito (resolva manualmente)"
+        __spellbook_status_cache_write "Conflito (resolva manualmente)"
     fi
     return $rc
 }
