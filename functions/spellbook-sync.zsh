@@ -109,9 +109,9 @@ spellbook_sync_pull() {
     if ! timeout 2 git -C "$dir" ls-remote --exit-code origin HEAD &>/dev/null 2>&1; then
         if [[ "$had_local" == true ]]; then
             echo -e "  ${D_COMMENT}Spellbook: commit local salvo (sem rede)${D_RESET}"
-            __spellbook_status_cache_write "commit local salvo (sem rede)"
+            __spellbook_status_cache_write "Commit local salvo (sem rede)"
         else
-            __spellbook_status_cache_write "offline"
+            __spellbook_status_cache_write "Offline"
         fi
         return 0
     fi

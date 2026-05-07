@@ -75,7 +75,10 @@ export DBT_PROFILES_DIR=dev
 # --- 4. RITUAL DE INICIALIZAÇÃO INTERATIVO ---
 # Executado apenas em sessões interativas.
 if [[ -o interactive && -z "$TMUX" ]]; then
-    if command -v fastfetch >/dev/null 2>&1; then clear; fastfetch; fi
+    if command -v fastfetch >/dev/null 2>&1; then
+        clear
+        fastfetch | sed -E $'s/\\[Discrete\\]/[Dedicada]/g; s/\\[Integrated\\]/[Integrada]/g; s/^([^\\(]*)\\(([^)]+)\\)([^:]*):/\\1\\033[38;2;255;184;108m(\\2)\\033[35m\\3:\\033[0m/'
+    fi
 fi
 
 # --- 5. PROMPT COM CORES DE FUNDO ---
