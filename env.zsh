@@ -78,13 +78,13 @@ if [[ -o interactive && -z "$TMUX" ]]; then
     if command -v fastfetch >/dev/null 2>&1; then
         clear
         fastfetch --pipe false | sed -E $'
-            s/\\[Discrete\\]/[Dedicada]/g;
-            s/\\[Integrated\\]/[Integrada]/g;
-            s/\\[AC Connected\\]/[Conectado]/g;
-            s/\\[AC Disconnected\\]/[Desconectado]/g;
-            s/\\[External\\]/[Externo]/g;
-            s/\\[Built-in\\]/[Embutido]/g;
-            s/\\[([^][\\x1b]+)\\]/\e[38;2;255;184;108m[\\1]\e[0m/g
+            s/\\[Discrete\\]/\e[38;2;255;184;108m(Dedicada)\e[0m/g;
+            s/\\[Integrated\\]/\e[38;2;255;184;108m(Integrada)\e[0m/g;
+            s/\\[AC Connected\\]/\e[38;2;255;184;108m(Conectado)\e[0m/g;
+            s/\\[AC Disconnected\\]/\e[38;2;255;184;108m(Desconectado)\e[0m/g;
+            s/\\[External\\]/\e[38;2;255;184;108m(Externo)\e[0m/g;
+            s/\\[Built-in\\]/\e[38;2;255;184;108m(Embutido)\e[0m/g;
+            s/\\[([^][\\x1b]+)\\]/\e[38;2;255;184;108m(\\1)\e[0m/g
         '
         echo
     fi
