@@ -84,7 +84,7 @@ if [[ -o interactive && -z "$TMUX" ]]; then
             s/\\[AC Disconnected\\]/[Desconectado]/g;
             s/\\[External\\]/[Externo]/g;
             s/\\[Built-in\\]/[Embutido]/g;
-            s/\\[([^]\\x1b]+)\\]/\e[38;2;255;184;108m[\\1]\e[0m/g
+            s/\\[([^][\\x1b]+)\\]/\e[38;2;255;184;108m[\\1]\e[0m/g
         '
         echo
     fi
