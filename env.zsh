@@ -75,8 +75,11 @@ export DBT_PROFILES_DIR=dev
 # --- 4. RITUAL DE INICIALIZAÇÃO INTERATIVO ---
 # Executado apenas em sessões interativas.
 if [[ -o interactive && -z "$TMUX" ]]; then
+    if [[ -n "$DISPLAY" ]] && command -v wmctrl >/dev/null 2>&1; then
+        wmctrl -r :ACTIVE: -b add,maximized_vert,maximized_horz 2>/dev/null
+    fi
     if command -v fastfetch >/dev/null 2>&1; then
-        clear
+        printf '\033c'
         fastfetch --pipe false | sed -E $'
             s/\\[Discrete\\]/\e[38;2;255;184;108m(Dedicada)\e[0m/g;
             s/\\[Integrated\\]/\e[38;2;255;184;108m(Integrada)\e[0m/g;
