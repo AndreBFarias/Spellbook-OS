@@ -11,6 +11,7 @@ Configuração canônica em `~/.config/zsh/fastfetch/config.jsonc`. Symlinkada p
 - Values em branco normal.
 - Tags em values entre parens laranja Dracula: `(Dedicada)`, `(Integrada)`, `(Conectado)`, `(Desconectado)`, `(Externo)`, `(Embutido)`, `(GTK2/3/4)`, …
 - Percentuais com cor dinâmica via threshold nativo do fastfetch: verde < 50%, amarelo 50–80%, vermelho ≥ 80%.
+- Linha `CPU: <nome> (N cores) @ <freq> | <temp>°C` via sensor `k10temp` (AMD) / `coretemp` (Intel), com cor dinâmica na temperatura via threshold do fastfetch. Habilitada por `"temp": true` no módulo `cpu`.
 - Linha custom `GPU: NVIDIA … | VRAM …/… (N%)` via `nvidia-smi` (módulo `command`), com `(N%)` em laranja.
 - Linha `Spellbook-OS: <status>` lendo `/tmp/spellbook_status_$(id -u)` populado pelo `spellbook_sync_pull` (background).
 - Quebra de linha entre fim do bloco e o prompt (echo final em `env.zsh`).
