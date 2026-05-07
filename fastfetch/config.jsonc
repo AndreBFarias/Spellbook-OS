@@ -39,7 +39,7 @@
     {
       "type": "command",
       "key": "GPU",
-      "text": "nvidia-smi --query-gpu=name,temperature.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null | awk -F', ' 'NR==1 && $4>0 { p=int($3*100/$4); printf \"%s, %s°C | VRAM %s/%s MiB \\033[38;2;255;184;108m(%d%%)\\033[0m\\n\", $1, $2, $3, $4, p }'"
+      "text": "nvidia-smi --query-gpu=name,temperature.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null | awk -F', ' 'NR==1 && $4>0 { p=int($3*100/$4); t=$2+0; if (t<50) c=\"\\033[32m\"; else if (t<80) c=\"\\033[93m\"; else c=\"\\033[31m\"; printf \"%s, %s%s°C\\033[0m | VRAM %s/%s MiB \\033[38;2;255;184;108m(%d%%)\\033[0m\\n\", $1, c, $2, $3, $4, p }'"
     },
     {
       "type": "command",
