@@ -7,7 +7,9 @@
 # Skipa:
 #   - Spellbook-OS (symlink para o próprio zsh)
 #   - Repos cujo CLAUDE.md já é arquivo real e não-symlink (regras locais)
-#   - Repos com GUIDE.md committed (projeto migrado, tem conteúdo próprio)
+#   - Repos listados em CLAUDE_SYMLINKS_SKIP (projetos com GUIDE.md committed
+#     contendo regras próprias — o symlink CLAUDE.md → canônico sobrescreveria
+#     o GUIDE.md local na leitura semântica do CC).
 #
 # Uso:
 #   sync_claude_symlinks            # verboso, com header
