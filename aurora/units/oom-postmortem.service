@@ -1,0 +1,12 @@
+[Unit]
+Description=Aurora 2.2 - Post-mortem do boot anterior (detecta OOM/freeze)
+After=multi-user.target systemd-journald.service
+Wants=systemd-journald.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/oom-postmortem
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
