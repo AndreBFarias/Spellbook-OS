@@ -1,0 +1,10 @@
+[Unit]
+Description=mem-snapshot - Snapshot de memória para forensics de OOM
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mem-snapshot
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

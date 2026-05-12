@@ -1,0 +1,68 @@
+#!/bin/bash
+# Aurora 2.2 - Snapshot de memória para forensics de OOM
+# Roda como root via mem-snapshot.timer (cada 30s).
+# Escreve uma linha CSV em /var/log/mem-snapshot.log com:
+#   - timestamp ISO
+#   - memória global (total/avail) em MiB
+#   - swap (total/used) em MiB
+#   - PSI memory (some avg10, some avg60) - detecta thrashing antes do OOM
+#   - top 15 processos por RSS no formato pid:comm:rss_mib
+# Idempotente, single-instance via flock.
+
+set -u
+
+LOG=/var/log/mem-snapshot.log
+LOCK=/run/mem-snapshot.lock
+
+exec 9>"$LOCK"
+flock -n 9 || exit 0
+
+# Header CSV se arquivo novo
+if [ ! -s "$LOG" ]; then
+  echo "ts,mem_total_mib,mem_avail_mib,swap_total_mib,swap_used_mib,psi_some_avg10,psi_some_avg60,top15" > "$LOG"
+fi
+
+TS=$(date -Iseconds)
+
+# Memória global (MemInfo em kB -> MiB)
+read mem_total mem_avail swap_total swap_free < <(
+  awk '
+    /^MemTotal:/     {mt=$2}
+    /^MemAvailable:/ {ma=$2}
+    /^SwapTotal:/    {st=$2}
+    /^SwapFree:/     {sf=$2}
+    END {printf "%d %d %d %d\n", mt/1024, ma/1024, st/1024, sf/1024}
+  ' /proc/meminfo
+)
+swap_used=$((swap_total - swap_free))
+
+# PSI (Pressure Stall Information) - some avg10 e avg60
+# Linha "some avg10=X.XX avg60=Y.YY ..."
+psi_avg10="-"
+psi_avg60="-"
+if [ -r /proc/pressure/memory ]; then
+  read psi_avg10 psi_avg60 < <(
+    awk '/^some/ {
+      for (i=2;i<=NF;i++) {
+        split($i, kv, "=")
+        if (kv[1]=="avg10") a10=kv[2]
+        if (kv[1]=="avg60") a60=kv[2]
+      }
+      print a10, a60; exit
+    }' /proc/pressure/memory
+  )
+fi
+
+# Top 15 processos por RSS (formato pid:comm:rss_mib;...)
+top15=$(ps -eo pid,comm,rss --no-headers --sort=-rss 2>/dev/null | head -15 | awk '
+  {
+    rss_mib = int($3/1024)
+    # sanitizar comm: trocar ; e , que quebrariam CSV
+    comm = $2; gsub(/[;,]/, "_", comm)
+    printf "%s%d:%s:%d", (NR>1?";":""), $1, comm, rss_mib
+  }
+')
+
+printf '%s,%d,%d,%d,%d,%s,%s,%s\n' \
+  "$TS" "$mem_total" "$mem_avail" "$swap_total" "$swap_used" \
+  "$psi_avg10" "$psi_avg60" "$top15" >> "$LOG"
