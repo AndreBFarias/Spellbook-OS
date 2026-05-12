@@ -25,27 +25,33 @@ LOG_TAG="oom-postmortem"
 
 log() { logger -t "$LOG_TAG" "$*"; }
 
-# Sair cedo se este é o primeiro boot com journald persistente
-# (não há boot -1 com logs para analisar)
-if ! journalctl -b -1 --quiet -n 1 >/dev/null 2>&1; then
-  log "sem journal do boot anterior (primeiro boot persistente ou journal limpo) — skip"
-  exit 0
-fi
-
 TS=$(date -Iseconds)
 sinais=()
 contextos=()
 
-# --- S1: kernel OOM killer ---
-oom_lines=$(journalctl -b -1 -k --no-pager 2>/dev/null | grep -iE "out of memory|killed process|oom-kill|invoked oom-killer" | head -50)
-if [ -n "$oom_lines" ]; then
-  count=$(printf '%s\n' "$oom_lines" | wc -l)
-  sinais+=("S1: kernel OOM killer disparou (${count} mensagens)")
-  contextos+=("### S1 — Kernel OOM killer
+# Verificar se há journal do boot anterior (pode não existir no 1º boot persistente)
+journal_anterior_ok=0
+if journalctl -b -1 --quiet -n 1 >/dev/null 2>&1; then
+  journal_anterior_ok=1
+fi
+
+# --- S1: kernel OOM killer (depende de journal -1) ---
+if [ $journal_anterior_ok -eq 1 ]; then
+  oom_lines=$(journalctl -b -1 -k --no-pager 2>/dev/null | grep -iE "out of memory|killed process|oom-kill|invoked oom-killer" | head -50)
+  if [ -n "$oom_lines" ]; then
+    count=$(printf '%s\n' "$oom_lines" | wc -l)
+    sinais+=("S1: kernel OOM killer disparou (${count} mensagens)")
+    contextos+=("### S1 — Kernel OOM killer
 
 \`\`\`
 ${oom_lines}
 \`\`\`
+")
+  fi
+else
+  contextos+=("### S1 — Kernel OOM killer
+
+_N/A: sem journal do boot anterior (provavelmente primeiro boot após journald persistente). Será verificado a partir do próximo boot._
 ")
 fi
 
