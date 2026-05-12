@@ -177,6 +177,16 @@ Rode: \`sudo install -d -m 2755 -o root -g systemd-journal /var/log/journal/$mac
   fi
 fi
 
+# --- Check 9: oom-postmortem.service habilitado (Aurora 2.2) ---
+if [ -f /etc/systemd/system/oom-postmortem.service ]; then
+  if ! systemctl is-enabled --quiet oom-postmortem.service 2>/dev/null; then
+    falhas+=("oom-postmortem.service não habilitado (não dispara após crash)")
+    add_contexto "### oom-postmortem.service
+Rode: \`sudo systemctl enable oom-postmortem.service\`
+"
+  fi
+fi
+
 # --- Diagnostico final ---
 if [ ${#falhas[@]} -eq 0 ]; then
   status_atual="ok"
