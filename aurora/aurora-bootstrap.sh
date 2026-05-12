@@ -160,6 +160,10 @@ copia_se_diff "$AURORA_REPO/units/mem-snapshot.timer"   /etc/systemd/system/mem-
 copia_se_diff "$AURORA_REPO/mem-snapshot"               /usr/local/sbin/mem-snapshot              root:root 0755
 copia_se_diff "$AURORA_REPO/mem-snapshot.logrotate"     /etc/logrotate.d/mem-snapshot             root:root 0644
 
+# oom-postmortem (verifica boot anterior, gera relatório no Desktop se houve OOM)
+copia_se_diff "$AURORA_REPO/units/oom-postmortem.service" /etc/systemd/system/oom-postmortem.service root:root 0644
+copia_se_diff "$AURORA_REPO/oom-postmortem"               /usr/local/sbin/oom-postmortem              root:root 0755
+
 # apt hook
 copia_se_diff "$AURORA_REPO/units/99-aurora-postinvoke" /etc/apt/apt.conf.d/99-aurora-postinvoke root:root 0644
 
