@@ -134,6 +134,32 @@ if command -v sensors-detect >/dev/null 2>&1 && [ ! -f /etc/modules-load.d/senso
   sudo -n sensors-detect --auto >/dev/null 2>&1 || warn "sensors-detect retornou erro (não fatal)"
 fi
 
+# Aurora 2.2: Forensics de OOM (journald persistente + mem-snapshot 30s)
+# Journal persistente: drop-in + diretório /var/log/journal/<machine-id>/
+journald_changed=0
+if ! sudo -n cmp -s "$AURORA_REPO/journald-persistent.conf" /etc/systemd/journald.conf.d/00-persistent.conf 2>/dev/null; then
+  sudo -n mkdir -p /etc/systemd/journald.conf.d
+  sudo -n install -m 0644 -o root -g root "$AURORA_REPO/journald-persistent.conf" /etc/systemd/journald.conf.d/00-persistent.conf
+  journald_changed=1
+  log "Instalado: /etc/systemd/journald.conf.d/00-persistent.conf"
+fi
+MACHINE_ID=$(cat /etc/machine-id 2>/dev/null || true)
+if [ -n "$MACHINE_ID" ] && [ ! -d "/var/log/journal/$MACHINE_ID" ]; then
+  sudo -n install -d -m 2755 -o root -g systemd-journal "/var/log/journal/$MACHINE_ID"
+  journald_changed=1
+  log "Criado: /var/log/journal/$MACHINE_ID"
+fi
+if [ "$journald_changed" -eq 1 ]; then
+  sudo -n systemctl restart systemd-journald
+  log "Restarted: systemd-journald"
+fi
+
+# mem-snapshot (snapshot CSV de memória + PSI a cada 30s)
+copia_se_diff "$AURORA_REPO/units/mem-snapshot.service" /etc/systemd/system/mem-snapshot.service root:root 0644
+copia_se_diff "$AURORA_REPO/units/mem-snapshot.timer"   /etc/systemd/system/mem-snapshot.timer   root:root 0644
+copia_se_diff "$AURORA_REPO/mem-snapshot"               /usr/local/sbin/mem-snapshot              root:root 0755
+copia_se_diff "$AURORA_REPO/mem-snapshot.logrotate"     /etc/logrotate.d/mem-snapshot             root:root 0644
+
 # apt hook
 copia_se_diff "$AURORA_REPO/units/99-aurora-postinvoke" /etc/apt/apt.conf.d/99-aurora-postinvoke root:root 0644
 
@@ -227,6 +253,16 @@ fi
 if ! systemctl is-active --quiet aurora-health.timer 2>/dev/null; then
   sudo -n systemctl start aurora-health.timer || warn "Falha ao iniciar aurora-health.timer"
   log "Started: aurora-health.timer"
+fi
+
+# Aurora 2.2: mem-snapshot.timer (forensics de OOM)
+if ! systemctl is-enabled --quiet mem-snapshot.timer 2>/dev/null; then
+  sudo -n systemctl enable mem-snapshot.timer 2>&1 | grep -v "Created symlink" || true
+  log "Enabled: mem-snapshot.timer"
+fi
+if ! systemctl is-active --quiet mem-snapshot.timer 2>/dev/null; then
+  sudo -n systemctl start mem-snapshot.timer || warn "Falha ao iniciar mem-snapshot.timer"
+  log "Started: mem-snapshot.timer"
 fi
 
 # Aurora 2.1: NVIDIA suspend/resume/hibernate (preservam VRAM em transições de power)
