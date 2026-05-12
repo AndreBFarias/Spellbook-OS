@@ -1,0 +1,162 @@
+#!/bin/bash
+# Aurora 2.2 - OOM Post-mortem
+# Roda 1x por boot via oom-postmortem.service (WantedBy=multi-user.target).
+# Detecta se o boot ANTERIOR terminou em OOM/freeze e gera relatório no Desktop.
+#
+# 3 sinais de detecção:
+#   S1) journalctl -b -1 -k mostra mensagens de OOM killer ou killed process
+#   S2) mem-snapshot.log tem amostra com PSI some avg10 > 5.0 nos últimos 30min antes do reboot
+#   S3) último shutdown foi sujo (último boot anterior não tem entry "shutdown" matching em wtmp)
+#
+# Saída:
+#   Se NENHUM sinal: log silencioso "boot anterior OK", exit 0.
+#   Se ALGUM sinal: gera ~/Desktop/OOM-POSTMORTEM.md com diagnóstico.
+#
+# Idempotente: pode rodar quantas vezes quiser, sempre regenera/atualiza o relatório.
+
+set -u
+
+USUARIO="andrefarias"
+USUARIO_HOME="/home/${USUARIO}"
+DESKTOP_DIR=$(runuser -u "$USUARIO" -- xdg-user-dir DESKTOP 2>/dev/null || echo "${USUARIO_HOME}/Desktop")
+REPORT="${DESKTOP_DIR}/OOM-POSTMORTEM.md"
+MEM_LOG=/var/log/mem-snapshot.log
+LOG_TAG="oom-postmortem"
+
+log() { logger -t "$LOG_TAG" "$*"; }
+
+# Sair cedo se este é o primeiro boot com journald persistente
+# (não há boot -1 com logs para analisar)
+if ! journalctl -b -1 --quiet -n 1 >/dev/null 2>&1; then
+  log "sem journal do boot anterior (primeiro boot persistente ou journal limpo) — skip"
+  exit 0
+fi
+
+TS=$(date -Iseconds)
+sinais=()
+contextos=()
+
+# --- S1: kernel OOM killer ---
+oom_lines=$(journalctl -b -1 -k --no-pager 2>/dev/null | grep -iE "out of memory|killed process|oom-kill|invoked oom-killer" | head -50)
+if [ -n "$oom_lines" ]; then
+  count=$(printf '%s\n' "$oom_lines" | wc -l)
+  sinais+=("S1: kernel OOM killer disparou (${count} mensagens)")
+  contextos+=("### S1 — Kernel OOM killer
+
+\`\`\`
+${oom_lines}
+\`\`\`
+")
+fi
+
+# --- S2: PSI elevado no mem-snapshot ---
+# Pega samples do boot anterior (timestamps anteriores ao tail boot atual).
+# Critério: psi_some_avg10 > 5.0 indica thrashing.
+if [ -r "$MEM_LOG" ]; then
+  # boot atual começou em
+  boot_start_ts=$(journalctl --list-boots 2>/dev/null | awk '/^ 0 / {print $4"T"$5}' | head -1)
+  if [ -n "$boot_start_ts" ]; then
+    psi_alto=$(awk -F, -v cutoff="$boot_start_ts" '
+      NR>1 && $1 < cutoff && ($6+0) > 5 {print}
+    ' "$MEM_LOG" | tail -10)
+    if [ -n "$psi_alto" ]; then
+      count=$(printf '%s\n' "$psi_alto" | wc -l)
+      sinais+=("S2: pressão de memória (PSI some avg10 > 5%) em ${count}+ amostras")
+      contextos+=("### S2 — Thrashing detectado no mem-snapshot
+
+\`\`\`
+ts,mem_total,mem_avail,swap_total,swap_used,psi10,psi60,top15
+${psi_alto}
+\`\`\`
+")
+    fi
+  fi
+fi
+
+# --- S3: shutdown sujo ---
+# wtmp: dois 'reboot' sem 'shutdown' entre eles = crash
+# 'last' lista mais recente primeiro
+boot_anterior_clean=$(last -x -n 5 reboot shutdown 2>/dev/null | awk '
+  NR==1 && /^reboot/ {atual=1; next}
+  atual==1 && /^shutdown/ {print "clean"; exit}
+  atual==1 && /^reboot/ {print "crash"; exit}
+')
+if [ "$boot_anterior_clean" = "crash" ]; then
+  sinais+=("S3: shutdown sujo — boot anterior terminou sem shutdown limpo (crash/freeze/power loss)")
+  last_lines=$(last -x -n 6 reboot shutdown 2>/dev/null | head -6)
+  contextos+=("### S3 — Histórico de reboot
+
+\`\`\`
+${last_lines}
+\`\`\`
+")
+fi
+
+# --- Resultado ---
+if [ ${#sinais[@]} -eq 0 ]; then
+  log "boot anterior OK — sem sinais de OOM/freeze"
+  # Remover relatório antigo se boot anterior agora foi limpo
+  if [ -f "$REPORT" ]; then
+    rm -f "$REPORT"
+    log "removido relatório antigo (boot anterior agora OK)"
+  fi
+  exit 0
+fi
+
+log "ALERTA: ${#sinais[@]} sinal(is) — gerando $REPORT"
+
+# Captura tail do mem-snapshot do boot anterior (últimas 60 amostras = 30min)
+mem_tail=""
+if [ -r "$MEM_LOG" ] && [ -n "${boot_start_ts:-}" ]; then
+  mem_tail=$(awk -F, -v cutoff="$boot_start_ts" '
+    NR==1 {print; next}
+    $1 < cutoff {print}
+  ' "$MEM_LOG" | tail -61)
+fi
+
+# Captura últimas mensagens não-kernel do boot anterior (pode ter pistas de userspace)
+journal_tail=$(journalctl -b -1 --no-pager 2>/dev/null | tail -30)
+
+mkdir -p "$DESKTOP_DIR"
+{
+  echo "# Aurora 2.2 — Post-mortem do boot anterior"
+  echo
+  echo "**Data deste relatório:** $TS"
+  echo "**Host:** $(hostname)"
+  echo "**Kernel atual:** $(uname -r)"
+  echo "**Boot atual:** $(date -d "$(uptime -s)" -Iseconds 2>/dev/null || uptime -s)"
+  echo
+  echo "## Sinais detectados"
+  printf -- '- %s\n' "${sinais[@]}"
+  echo
+  for ctx in "${contextos[@]}"; do
+    echo "$ctx"
+    echo
+  done
+  echo "### Últimas 30 mensagens do journal do boot anterior"
+  echo
+  echo '```'
+  printf '%s\n' "$journal_tail"
+  echo '```'
+  echo
+  if [ -n "$mem_tail" ]; then
+    echo "### Últimas amostras do mem-snapshot antes do crash (~30min)"
+    echo
+    echo '```'
+    printf '%s\n' "$mem_tail"
+    echo '```'
+    echo
+  fi
+  echo "## Próximos passos"
+  echo
+  echo "- Verifique a coluna \`top15\` do mem-snapshot — quais processos cresceram nos últimos minutos?"
+  echo "- Se \`S1\` apareceu: kernel matou algo — leia as linhas \`Killed process\` para o nome."
+  echo "- Se só \`S3\` apareceu sem S1/S2: pode ter sido GPU hang ou power loss, não OOM real."
+  echo "- Apague este arquivo quando terminar — ele será regerado no próximo boot se houver novo crash."
+} > "$REPORT"
+
+chown "${USUARIO}:${USUARIO}" "$REPORT" 2>/dev/null || true
+chmod 0644 "$REPORT"
+
+log "relatório escrito: $REPORT"
+exit 0
