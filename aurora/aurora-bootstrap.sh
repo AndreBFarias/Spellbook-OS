@@ -269,6 +269,13 @@ if ! systemctl is-active --quiet mem-snapshot.timer 2>/dev/null; then
   log "Started: mem-snapshot.timer"
 fi
 
+# Aurora 2.2: oom-postmortem.service (oneshot por boot)
+# Enabled mas NÃO start aqui — só dispara automaticamente no próximo boot via WantedBy=multi-user.target
+if ! systemctl is-enabled --quiet oom-postmortem.service 2>/dev/null; then
+  sudo -n systemctl enable oom-postmortem.service 2>&1 | grep -v "Created symlink" || true
+  log "Enabled: oom-postmortem.service (roda no próximo boot)"
+fi
+
 # Aurora 2.1: NVIDIA suspend/resume/hibernate (preservam VRAM em transições de power)
 if [ -f /lib/systemd/system/nvidia-suspend.service ]; then
   for s in nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service; do
