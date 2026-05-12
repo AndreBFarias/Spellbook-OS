@@ -152,6 +152,31 @@ $status_dump
   fi
 fi
 
+# --- Check 7: mem-snapshot.timer (Aurora 2.2 - forensics de OOM) ---
+if [ -f /etc/systemd/system/mem-snapshot.timer ]; then
+  if ! systemctl is-active --quiet mem-snapshot.timer 2>/dev/null; then
+    falhas+=("mem-snapshot.timer inativo (forensics de OOM)")
+    status_dump=$(systemctl status mem-snapshot.timer --no-pager 2>&1 | head -10)
+    add_contexto "### mem-snapshot.timer (snapshot CSV de memória + PSI a cada 30s)
+\`\`\`
+$status_dump
+\`\`\`
+"
+  fi
+fi
+
+# --- Check 8: journald persistente (Aurora 2.2) ---
+if [ -f /etc/systemd/journald.conf.d/00-persistent.conf ]; then
+  machine_id=$(cat /etc/machine-id 2>/dev/null)
+  if [ -n "$machine_id" ] && [ ! -d "/var/log/journal/$machine_id" ]; then
+    falhas+=("journald persistente sem diretório /var/log/journal/$machine_id")
+    add_contexto "### journald persistente
+Diretório \`/var/log/journal/$machine_id\` ausente — journal cairá em /run (volátil).
+Rode: \`sudo install -d -m 2755 -o root -g systemd-journal /var/log/journal/$machine_id && sudo systemctl restart systemd-journald\`
+"
+  fi
+fi
+
 # --- Diagnostico final ---
 if [ ${#falhas[@]} -eq 0 ]; then
   status_atual="ok"
