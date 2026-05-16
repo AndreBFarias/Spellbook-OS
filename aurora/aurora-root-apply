@@ -76,5 +76,50 @@ else
   warn "$SYSCTL_FILE nao existe"
 fi
 
+# 6. Aurora 2.3 ULTRA - anti-suspend (mask de sleep targets)
+SLEEP_TARGETS=(sleep.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target)
+masked=0
+for t in "${SLEEP_TARGETS[@]}"; do
+  state=$(systemctl is-enabled "$t" 2>/dev/null || true)
+  if [ "$state" != "masked" ]; then
+    systemctl mask "$t" >/dev/null 2>&1 && masked=$((masked + 1))
+  fi
+done
+[ $masked -gt 0 ] && log "anti-suspend: $masked targets mascarados" || log "anti-suspend: targets ja mascarados"
+
+# 7. Aurora 2.3 ULTRA - CPU pinned no teto (scaling_min_freq = scaling_max_freq)
+pinned=0
+for cpu in /sys/devices/system/cpu/cpu*/cpufreq; do
+  [ -d "$cpu" ] || continue
+  max=$(cat "$cpu/scaling_max_freq" 2>/dev/null) || continue
+  min=$(cat "$cpu/scaling_min_freq" 2>/dev/null) || continue
+  if [ "$min" != "$max" ]; then
+    if echo "$max" > "$cpu/scaling_min_freq" 2>/dev/null; then
+      pinned=$((pinned + 1))
+    fi
+  fi
+done
+[ $pinned -gt 0 ] && log "CPU pinned: $pinned cores com scaling_min=max" || log "CPU pinned: ja em min=max"
+
+# 8. Aurora 2.3 ULTRA - boost CPU = 1 (idempotente)
+if [ -f /sys/devices/system/cpu/cpufreq/boost ]; then
+  cur=$(cat /sys/devices/system/cpu/cpufreq/boost)
+  if [ "$cur" != "1" ]; then
+    echo 1 > /sys/devices/system/cpu/cpufreq/boost 2>/dev/null && log "boost CPU -> 1" || warn "boost write falhou"
+  else
+    log "boost CPU ja em 1"
+  fi
+fi
+
+# 9. Aurora 2.3 ULTRA - NVIDIA persistence mode (idempotente)
+if command -v nvidia-smi >/dev/null 2>&1; then
+  pm=$(nvidia-smi --query-gpu=persistence_mode --format=csv,noheader 2>/dev/null | head -1 | tr '[:upper:]' '[:lower:]')
+  if [ "$pm" != "enabled" ]; then
+    nvidia-smi -pm 1 >/dev/null 2>&1 && log "NVIDIA persistence-mode -> Enabled" || warn "nvidia-smi -pm 1 falhou"
+  else
+    log "NVIDIA persistence-mode ja Enabled"
+  fi
+fi
+
 log "aurora-root-apply concluido"
 exit 0
