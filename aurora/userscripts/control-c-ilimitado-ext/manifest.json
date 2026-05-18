@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Ctrl+C Ilimitado",
+  "version": "2.0.0",
+  "description": "Desbloqueia copy/paste/selecao em qualquer site. Salva selecao como .md ou .pdf (texto, formatado, screenshot). Em claude.ai, exporta conversa inteira.",
+  "permissions": ["activeTab", "scripting", "downloads", "clipboardWrite", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ctrl+C Ilimitado",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["unlock-tier1.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/html2pdf.bundle.min.js", "main-bridge.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

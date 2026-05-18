@@ -1,0 +1,11 @@
+[Unit]
+Description=Aurora 2.2 - Slice para Luna (Python main.py + venv_tts + TTS daemon + Whisper + Vision)
+Before=slices.target
+
+[Slice]
+MemoryHigh=6G
+MemoryMax=8G
+MemorySwapMax=3G
+CPUWeight=120
+IOWeight=120
+OOMPolicy=kill

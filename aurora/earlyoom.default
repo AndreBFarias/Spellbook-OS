@@ -4,4 +4,4 @@
 # -M 1048576 (1GB): kill quando RAM+swap < 1GB
 # --avoid: protege Claude e infraestrutura
 # --prefer: prioriza matar comilões primeiro
-EARLYOOM_ARGS="-r 60 -m 5 -M 1048576 --avoid '^(systemd|systemd-.*|Xorg|gnome-shell|mutter|cca|claude|node|tmux:.*|sshd|NetworkManager)$' --prefer '^(chrome|chromium|firefox|slack|zoom|electron|discord|teams|code|cursor|VSCodeHelper|python.*(escript|main|luna)|ollama)$'"
+EARLYOOM_ARGS="-r 60 -m 5 -M 1048576 --avoid '^(systemd|systemd-.*|Xorg|gnome-shell|mutter|cca|claude|node|tmux:.*|sshd|NetworkManager|python.*main\.py|python.*luna|venv_tts.*python|ollama|product-oom-watchdog)$' --prefer '^(chrome|chromium|firefox|slack|zoom|electron|discord|teams|code|cursor|VSCodeHelper)$'"

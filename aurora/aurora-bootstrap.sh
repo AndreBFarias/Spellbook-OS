@@ -55,6 +55,9 @@ KERNELSTUB_PARAMS=(
   "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
   "transparent_hugepage=madvise"
   "mitigations=off"
+  # Aurora 2.3 ULTRA - always-plugged desktop replacement
+  "pcie_aspm=off"
+  "nvme_core.default_ps_max_latency_us=0"
 )
 
 if command -v kernelstub >/dev/null 2>&1; then
@@ -112,7 +115,9 @@ copia_se_diff "$AURORA_REPO/aurora-vram-check"                  /usr/local/sbin/
 # Drop-in pra ollama.service apontar pra ollama.slice (só se ollama.service existe)
 if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.service ]; then
   sudo -n mkdir -p /etc/systemd/system/ollama.service.d
-  copia_se_diff "$AURORA_REPO/units/ollama-slice.conf" /etc/systemd/system/ollama.service.d/aurora-slice.conf root:root 0644
+  copia_se_diff "$AURORA_REPO/units/ollama-slice.conf"     /etc/systemd/system/ollama.service.d/aurora-slice.conf root:root 0644
+  # Aurora 2.2: keep_alive 30m + max_loaded 3 (substitui memory.conf antigo com 30s/1)
+  copia_se_diff "$AURORA_REPO/units/ollama-keepalive.conf" /etc/systemd/system/ollama.service.d/memory.conf      root:root 0644
 fi
 
 # Aurora 2.1 (Round C): Health monitor (SMART + thermal + disk)
@@ -164,6 +169,40 @@ copia_se_diff "$AURORA_REPO/mem-snapshot.logrotate"     /etc/logrotate.d/mem-sna
 copia_se_diff "$AURORA_REPO/units/oom-postmortem.service" /etc/systemd/system/oom-postmortem.service root:root 0644
 copia_se_diff "$AURORA_REPO/oom-postmortem"               /usr/local/sbin/oom-postmortem              root:root 0755
 
+# Aurora 2.2 - OOM por produto (cgroup.kill watchdog generalizado)
+# Fecha PRODUTO INTEIRO atomicamente quando pressão sistêmica é crítica
+# (em vez de matar processo individual). Funciona pra qualquer slice
+# (browser, electron, claude, ollama, luna, steam, heavy-other).
+copia_se_diff "$AURORA_REPO/units/product-oom-watchdog.service" /etc/systemd/system/product-oom-watchdog.service root:root 0644
+copia_se_diff "$AURORA_REPO/product-oom-watchdog"               /usr/local/sbin/product-oom-watchdog              root:root 0755
+copia_se_diff "$AURORA_REPO/luna-launch"                        /usr/local/bin/luna-launch                        root:root 0755
+
+# Aurora 2.3 ULTRA - anti-suspend (logind drop-in + dconf system-wide)
+sudo -n install -d -m 0755 /etc/systemd/logind.conf.d
+copia_se_diff "$AURORA_REPO/99-no-suspend.conf" /etc/systemd/logind.conf.d/99-no-suspend.conf root:root 0644
+
+sudo -n install -d -m 0755 /etc/dconf/db/local.d /etc/dconf/db/local.d/locks /etc/dconf/profile
+dconf_changed=0
+copia_se_diff "$AURORA_REPO/dconf/no-suspend.db"    /etc/dconf/db/local.d/00-no-suspend       root:root 0644 && dconf_changed=1 || true
+copia_se_diff "$AURORA_REPO/dconf/no-suspend.locks" /etc/dconf/db/local.d/locks/00-no-suspend root:root 0644 && dconf_changed=1 || true
+copia_se_diff "$AURORA_REPO/dconf/profile-user"     /etc/dconf/profile/user                   root:root 0644 && dconf_changed=1 || true
+if [ "$dconf_changed" -eq 1 ] && command -v dconf >/dev/null 2>&1; then
+  sudo -n dconf update && log "dconf db atualizado"
+fi
+
+# Aurora 2.3 ULTRA - Wi-Fi powersave off (NetworkManager)
+copia_se_diff "$AURORA_REPO/99-aurora-ultra-wifi.conf" /etc/NetworkManager/conf.d/99-aurora-ultra-wifi.conf root:root 0644
+
+# Bug fix: 'default-wifi-powersave-on.conf' vem APOS '99-*' em ordem alfabetica
+# (9 < d em ASCII) e sobrescreve wifi.powersave=2 com wifi.powersave=3.
+# Se Pop!_OS reinstalar via apt, remover aqui idempotente.
+if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ]; then
+  sudo -n mv /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf \
+             /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf.bak-aurora-ultra
+  sudo -n systemctl reload NetworkManager 2>/dev/null || true
+  log "Removido (sobrescrevia powersave): default-wifi-powersave-on.conf"
+fi
+
 # apt hook
 copia_se_diff "$AURORA_REPO/units/99-aurora-postinvoke" /etc/apt/apt.conf.d/99-aurora-postinvoke root:root 0644
 
@@ -184,6 +223,11 @@ copia_user "$AURORA_REPO/units/claude.slice"        "$USER_SYSTEMD_DIR/claude.sl
 # Aurora 2.1 (Round D): slices pra browser e Electron apps
 copia_user "$AURORA_REPO/units/browser.slice"  "$USER_SYSTEMD_DIR/browser.slice"
 copia_user "$AURORA_REPO/units/electron.slice" "$USER_SYSTEMD_DIR/electron.slice"
+
+# Aurora 2.2 - slices Luna / Steam / heavy-other (todas com OOMPolicy=kill)
+copia_user "$AURORA_REPO/units/luna.slice"         "$USER_SYSTEMD_DIR/luna.slice"
+copia_user "$AURORA_REPO/units/steam.slice"        "$USER_SYSTEMD_DIR/steam.slice"
+copia_user "$AURORA_REPO/units/heavy-other.slice"  "$USER_SYSTEMD_DIR/heavy-other.slice"
 
 # Helper: cria override XDG do .desktop envelopando Exec= em systemd-run
 # Idempotente: se override já tem marker Aurora, pula.
@@ -300,7 +344,12 @@ else
   log "Pulando enable/start de aurora-user.service (sem dbus de usuário)"
 fi
 
-# 6. Sunset do ritual antigo (so se ainda ativo)
+# 6. Userscripts (deploy idempotente: ~/.config/zsh/aurora/userscripts/ -> ~/userscripts/)
+if [ -x "$AURORA_REPO/aurora-userscripts-apply.sh" ]; then
+  "$AURORA_REPO/aurora-userscripts-apply.sh" | sed 's/^/[bootstrap] /' || warn "userscripts-apply retornou erro (não bloqueia)"
+fi
+
+# 7. Sunset do ritual antigo (so se ainda ativo)
 if [ -f /etc/systemd/system/ritual-aurora-root.service ]; then
   sudo -n systemctl disable ritual-aurora-root.service 2>/dev/null || true
   log "Disabled (legacy): ritual-aurora-root.service"

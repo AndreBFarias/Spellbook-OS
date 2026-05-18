@@ -1,0 +1,11 @@
+[Unit]
+Description=Aurora 2.2 - Slice catch-all para apps pesados sem slice dedicada
+Before=slices.target
+
+[Slice]
+MemoryHigh=4G
+MemoryMax=6G
+MemorySwapMax=2G
+CPUWeight=60
+IOWeight=60
+OOMPolicy=kill

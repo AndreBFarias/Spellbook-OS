@@ -1,0 +1,20 @@
+[Unit]
+Description=Aurora 2.2 - OOM por produto (cgroup) watchdog
+Documentation=https://github.com/<spellbook>/aurora#oom-by-product
+After=graphical-session.target multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/product-oom-watchdog
+Restart=always
+RestartSec=10
+Nice=-10
+IOSchedulingClass=realtime
+# Watchdog precisa ler /sys/fs/cgroup e escrever em cgroup.kill
+# Roda como root via systemd-system para acessar todos os cgroups
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/sys/fs/cgroup
+
+[Install]
+WantedBy=multi-user.target

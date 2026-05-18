@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Aurora 2.2 — OOM por produto (cgroup) watchdog.
+
+Loop a cada 2s. Calcula pressão sistêmica e por slice.
+Quando pressão crítica: fecha cgroup INTEIRO do produto mais culpado
+(atomic via cgroup.kill). Sistema operacional fica vivo.
+
+Filosofia: bulkhead pattern aplicado ao OS — cada produto em
+compartimento estanque; se um afoga, só ele afoga.
+
+Configuração via env:
+  AURORA_OOM_PRESSURE_PCT=92        # MemAvailable usado %, threshold global
+  AURORA_OOM_SLICE_HEAVY_PCT=40     # slice considerada culpada se ocupa >= X% de RAM
+  AURORA_OOM_CYCLE_S=2              # frequência do loop
+  AURORA_OOM_GRACE_S=10              # tempo entre SIGTERM ao main pid e cgroup.kill
+  AURORA_OOM_DRY_RUN=0              # se 1: só loga, não mata
+"""
+import glob
+import os
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+# === Configuração ===
+SLICES_MONITORED = [
+    "luna.slice",
+    "steam.slice",
+    "browser.slice",
+    "electron.slice",
+    "claude.slice",
+    "ollama.slice",
+    "heavy-other.slice",
+]
+PRESSURE_PCT = int(os.getenv("AURORA_OOM_PRESSURE_PCT", "92"))
+SLICE_HEAVY_PCT = int(os.getenv("AURORA_OOM_SLICE_HEAVY_PCT", "40"))
+CYCLE_S = float(os.getenv("AURORA_OOM_CYCLE_S", "2"))
+GRACE_S = int(os.getenv("AURORA_OOM_GRACE_S", "10"))
+DRY_RUN = os.getenv("AURORA_OOM_DRY_RUN", "0") == "1"
+COOLDOWN_AFTER_KILL_S = 30  # depois de matar, espera antes de monitorar de novo
+
+
+def read_meminfo() -> dict[str, int]:
+    """Lê /proc/meminfo, valores em bytes."""
+    info = {}
+    with open("/proc/meminfo") as f:
+        for line in f:
+            key, _, value = line.partition(":")
+            info[key.strip()] = int(value.strip().split()[0]) * 1024
+    return info
+
+
+def find_slice_path(slice_name: str) -> Path | None:
+    """Encontra o caminho real do cgroup da slice no /sys/fs/cgroup."""
+    candidates = glob.glob(f"/sys/fs/cgroup/**/{slice_name}/cgroup.procs", recursive=True)
+    if not candidates:
+        return None
+    return Path(candidates[0]).parent
+
+
+def slice_memory_bytes(slice_path: Path) -> int:
+    """Lê memory.current da slice."""
+    try:
+        return int((slice_path / "memory.current").read_text().strip())
+    except (FileNotFoundError, ValueError):
+        return 0
+
+
+def slice_main_pid(slice_path: Path) -> int | None:
+    """Identifica o "main" PID da slice (primeiro processo do cgroup.procs)."""
+    try:
+        procs = (slice_path / "cgroup.procs").read_text().split()
+        return int(procs[0]) if procs else None
+    except (FileNotFoundError, ValueError, IndexError):
+        return None
+
+
+def cgroup_kill(slice_path: Path) -> bool:
+    """Mata o cgroup INTEIRO atomicamente via cgroup.kill (kernel ≥ 5.14)."""
+    if DRY_RUN:
+        log(f"[DRY-RUN] cgroup.kill skipped para {slice_path.name}")
+        return False
+    try:
+        (slice_path / "cgroup.kill").write_text("1")
+        return True
+    except (FileNotFoundError, PermissionError) as e:
+        log(f"cgroup.kill falhou para {slice_path.name}: {e}")
+        return False
+
+
+def graceful_term(pid: int) -> None:
+    """Manda SIGTERM ao main pid pra dar chance de salvar estado."""
+    if DRY_RUN:
+        log(f"[DRY-RUN] SIGTERM skipped para pid {pid}")
+        return
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+def notify(msg: str, urgency: str = "critical") -> None:
+    """Notifica o usuário via libnotify. Fire-and-forget — não bloqueia."""
+    try:
+        subprocess.Popen(
+            ["notify-send", "-u", urgency, "Aurora OOM Guard", msg],
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        pass
+
+
+def log(msg: str) -> None:
+    """Log no syslog via logger."""
+    print(f"[aurora-oom-watchdog] {msg}", flush=True)
+    try:
+        subprocess.Popen(
+            ["logger", "-t", "aurora-oom-watchdog", msg],
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        pass
+
+
+def main() -> int:
+    log(
+        f"Iniciando watchdog (pressure_pct={PRESSURE_PCT}, slice_heavy_pct={SLICE_HEAVY_PCT}, "
+        f"cycle_s={CYCLE_S}, grace_s={GRACE_S}, dry_run={DRY_RUN})"
+    )
+    consecutive_critical = 0
+    last_kill_time = 0.0
+
+    while True:
+        try:
+            now = time.monotonic()
+            if now - last_kill_time < COOLDOWN_AFTER_KILL_S:
+                time.sleep(CYCLE_S)
+                continue
+
+            mi = read_meminfo()
+            avail_pct_used = 100 - (mi["MemAvailable"] * 100 // mi["MemTotal"])
+
+            if avail_pct_used < PRESSURE_PCT:
+                consecutive_critical = 0
+                time.sleep(CYCLE_S)
+                continue
+
+            consecutive_critical += 1
+            log(
+                f"Pressão {avail_pct_used}% (avail {mi['MemAvailable']//1024**2}MB / "
+                f"total {mi['MemTotal']//1024**2}MB) — ciclo crítico {consecutive_critical}"
+            )
+
+            # Só age após 2 ciclos consecutivos críticos (evita pico transiente)
+            if consecutive_critical < 2:
+                time.sleep(CYCLE_S)
+                continue
+
+            # Identifica slice mais pesada
+            usage = {}
+            for slice_name in SLICES_MONITORED:
+                p = find_slice_path(slice_name)
+                if p is None:
+                    continue
+                usage[slice_name] = (p, slice_memory_bytes(p))
+
+            if not usage:
+                log("Nenhuma slice monitorada encontrada — sem ação")
+                time.sleep(CYCLE_S)
+                continue
+
+            heaviest_name, (heaviest_path, heaviest_bytes) = max(
+                usage.items(), key=lambda kv: kv[1][1]
+            )
+            heaviest_pct = heaviest_bytes * 100 // mi["MemTotal"]
+
+            if heaviest_pct < SLICE_HEAVY_PCT:
+                log(
+                    f"Mais pesada é {heaviest_name} com {heaviest_pct}% — abaixo do threshold "
+                    f"de {SLICE_HEAVY_PCT}%. Sem ação."
+                )
+                time.sleep(CYCLE_S)
+                continue
+
+            # Decisão: fechar slice culpada
+            slice_gb = heaviest_bytes // 1024**3
+            log(
+                f"AÇÃO: fechar {heaviest_name} ({slice_gb}GB = {heaviest_pct}% do total). "
+                f"Sistema em pressão {avail_pct_used}%."
+            )
+            notify(
+                f"Fechando {heaviest_name} ({slice_gb}GB) pra preservar sistema "
+                f"(pressão {avail_pct_used}%)"
+            )
+
+            # SIGTERM graceful ao main pid
+            pid = slice_main_pid(heaviest_path)
+            if pid:
+                log(f"SIGTERM para pid {pid} (main pid de {heaviest_name})")
+                graceful_term(pid)
+                time.sleep(GRACE_S)
+
+            # cgroup.kill atomic
+            if cgroup_kill(heaviest_path):
+                log(f"{heaviest_name} fechada via cgroup.kill")
+            consecutive_critical = 0
+            last_kill_time = now
+
+        except Exception as e:
+            log(f"Erro no loop: {e}")
+            time.sleep(CYCLE_S * 2)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        log("Encerrado por SIGINT")
+        sys.exit(0)

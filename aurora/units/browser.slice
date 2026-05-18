@@ -1,5 +1,5 @@
 [Unit]
-Description=Aurora 2.1 - Slice para browsers (Chrome, Firefox, Brave)
+Description=Aurora 2.2 - Slice para browsers (Chrome, Firefox, Brave)
 Before=slices.target
 
 [Slice]
@@ -7,3 +7,4 @@ MemoryHigh=8G
 MemoryMax=10G
 MemorySwapMax=4G
 CPUWeight=80
+OOMPolicy=kill

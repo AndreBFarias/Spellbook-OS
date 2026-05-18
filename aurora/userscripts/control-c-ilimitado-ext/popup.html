@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Ctrl+C Ilimitado</h1>
+    <span id="host" class="host" aria-live="polite"></span>
+  </header>
+
+  <div id="status" class="status" aria-live="polite"></div>
+
+  <section>
+    <h2>Neste site</h2>
+    <button data-action="unlock-tier2" title="Override agressivo: anula handlers futuros e limpa atributos inline">Desbloquear total</button>
+  </section>
+
+  <section>
+    <h2>Selecao atual</h2>
+    <button data-action="selection-copy-md">Copiar como .md</button>
+    <button data-action="selection-copy-txt">Copiar texto puro</button>
+    <button data-action="selection-save-md">Baixar .md</button>
+    <div class="pdf-group">
+      <span class="label">PDF:</span>
+      <button data-action="selection-pdf-text" title="Texto puro, leve">texto</button>
+      <button data-action="selection-pdf-md" title="Markdown renderizado">formatado</button>
+      <button data-action="selection-pdf-snap" title="Screenshot visual fiel">screenshot</button>
+    </div>
+  </section>
+
+  <section id="section-special" hidden>
+    <h2 id="special-label">Especial</h2>
+    <button class="primary" id="special-btn" data-action="conversation-export">Exportar conversa completa</button>
+  </section>
+
+  <footer>
+    <span>v2.0.0</span>
+    <a id="help" href="#">ajuda</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

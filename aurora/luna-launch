@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Aurora 2.2 - Wrapper para lançar Luna dentro da luna.slice
+#
+# Uso:
+#   luna-launch                 # roda ./run_luna.sh no diretório padrão
+#   luna-launch ./run_luna.sh --cli --query "oi"
+#   luna-launch python main.py
+#
+# Garante que TODOS os subprocessos (Python, venv_tts, TTS daemon, Whisper)
+# caem na luna.slice, permitindo que Aurora 2.2 watchdog feche o produto
+# inteiro atomicamente sob pressão crítica.
+
+set -euo pipefail
+
+LUNA_ROOT="${LUNA_ROOT:-$HOME/Desenvolvimento/Luna}"
+SLICE="luna.slice"
+
+if [ $# -eq 0 ]; then
+  # Default: run_luna.sh no diretório padrão
+  cd "$LUNA_ROOT" || { echo "ERRO: $LUNA_ROOT não encontrado" >&2; exit 1; }
+  set -- ./run_luna.sh
+fi
+
+exec systemd-run --user --scope --slice="$SLICE" --quiet -- "$@"

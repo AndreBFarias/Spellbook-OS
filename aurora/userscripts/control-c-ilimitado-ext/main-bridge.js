@@ -1,0 +1,68 @@
+// Bridge no MAIN world — escuta postMessage do content script e executa html2pdf.
+// Existe porque html2pdf (e jsPDF, html2canvas) carregam globals em window, e o
+// content script roda em isolated world (sem acesso aos globals da pagina).
+
+(function () {
+  if (window.__claudeExportBridgeLoaded) return;
+  window.__claudeExportBridgeLoaded = true;
+
+  // DOMParser nao executa scripts; e a forma segura de transformar string HTML em nodes.
+  function htmlToFragment(htmlString) {
+    const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+    const frag = document.createDocumentFragment();
+    while (doc.body.firstChild) frag.appendChild(doc.body.firstChild);
+    return frag;
+  }
+
+  window.addEventListener('message', async (e) => {
+    if (e.source !== window || !e.data || e.data.__claudeExport !== 'pdf-request') return;
+    const { reqId, kind, html, opts, snapshotSelector } = e.data;
+
+    const reply = (data) => window.postMessage(Object.assign({ __claudeExport: 'pdf-result', reqId }, data), '*');
+
+    try {
+      if (typeof window.html2pdf !== 'function') {
+        throw new Error('html2pdf nao carregou ainda');
+      }
+
+      let source;
+      let wrap = null;
+
+      if (kind === 'snapshot' && snapshotSelector) {
+        const node = document.querySelector(snapshotSelector);
+        if (!node) throw new Error('elemento para snapshot nao encontrado');
+        source = node;
+      } else {
+        wrap = document.createElement('div');
+        wrap.style.cssText = 'position:absolute;left:-99999px;top:0;width:794px;padding:24px;background:#fff;color:#000;font:14px/1.55 system-ui,sans-serif;';
+        if (kind === 'html') {
+          wrap.appendChild(htmlToFragment(html));
+        } else {
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;';
+          pre.textContent = html;
+          wrap.appendChild(pre);
+        }
+        document.body.appendChild(wrap);
+        source = wrap;
+      }
+
+      const blob = await window.html2pdf().set(opts || {
+        margin: 10,
+        filename: 'claude-export.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(source).outputPdf('blob');
+
+      if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+
+      const url = URL.createObjectURL(blob);
+      reply({ ok: true, url, size: blob.size });
+    } catch (err) {
+      reply({ ok: false, error: err.message });
+    }
+  });
+
+  window.postMessage({ __claudeExport: 'bridge-ready' }, '*');
+})();

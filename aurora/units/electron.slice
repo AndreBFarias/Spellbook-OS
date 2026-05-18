@@ -1,5 +1,5 @@
 [Unit]
-Description=Aurora 2.1 - Slice para apps Electron (Slack, Discord, VS Code, Zoom)
+Description=Aurora 2.2 - Slice para apps Electron (Slack, Discord, VS Code, Zoom)
 Before=slices.target
 
 [Slice]
@@ -7,3 +7,4 @@ MemoryHigh=4G
 MemoryMax=6G
 MemorySwapMax=2G
 CPUWeight=70
+OOMPolicy=kill

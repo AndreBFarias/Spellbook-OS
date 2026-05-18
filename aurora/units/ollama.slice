@@ -1,5 +1,5 @@
 [Unit]
-Description=Aurora 2.1 - Slice para Ollama (limites de memoria RAM)
+Description=Aurora 2.2 - Slice para Ollama (limites de memoria RAM)
 Before=slices.target
 
 [Slice]
@@ -7,3 +7,4 @@ MemoryHigh=6G
 MemoryMax=9G
 MemorySwapMax=4G
 CPUWeight=80
+OOMPolicy=kill

@@ -1,0 +1,11 @@
+[Unit]
+Description=Aurora 2.2 - Slice para Steam Client + jogos lançados
+Before=slices.target
+
+[Slice]
+MemoryHigh=8G
+MemoryMax=11G
+MemorySwapMax=4G
+CPUWeight=70
+IOWeight=80
+OOMPolicy=kill
