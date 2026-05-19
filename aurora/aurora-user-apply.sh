@@ -40,6 +40,16 @@ fi
 
 log "aurora-user-apply concluido"
 
+# Userscripts: garante deploy idempotente em cada sessão grafica
+if [ -x "$HOME/.config/zsh/aurora/aurora-userscripts-apply.sh" ]; then
+  "$HOME/.config/zsh/aurora/aurora-userscripts-apply.sh" | sed 's/^/[aurora-user] /' || warn "userscripts-apply falhou (não bloqueia)"
+fi
+
+# Chrome extensions unpacked: injeta --load-extension no .desktop a cada sessão
+if [ -x "$HOME/.config/zsh/aurora/aurora-chrome-extensions-apply.sh" ]; then
+  "$HOME/.config/zsh/aurora/aurora-chrome-extensions-apply.sh" | sed 's/^/[aurora-user] /' || warn "chrome-extensions-apply falhou (não bloqueia)"
+fi
+
 # Post-boot validation: gera AURORA-OK.md ou AURORA-ERRO.md no Desktop quando relevante
 if [ -x "$HOME/.config/zsh/aurora/aurora-postboot-validate.sh" ]; then
   "$HOME/.config/zsh/aurora/aurora-postboot-validate.sh" || warn "postboot-validate falhou (não bloqueia)"
