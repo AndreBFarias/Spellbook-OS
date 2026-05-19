@@ -10,14 +10,18 @@ Isso roda o deploy idempotente + abre `chrome://extensions/` com a pasta no clip
 
 ## Por que precisa de setup manual no Chrome
 
-O Chrome **bloqueia** instalação programatica de extensions fora da Chrome Web
-Store por design de seguranca. Vale pra qualquer extension unpacked.
+O Chrome **bloqueia** instalação programática de extensions fora da Chrome Web
+Store por design de segurança. Vale pra qualquer extension unpacked. **Chrome
+128+ (mar/2024) removeu o suporte à flag `--load-extension` de linha de
+comando** — antes funcionava via `.desktop` ou wrapper, hoje retorna warning
+"`--load-extension is not allowed in Google Chrome, ignoring`" e ignora.
+O único caminho oficial é UI.
 
 A parte automatizada do `control_c_ilimitado`:
-- Garante que os arquivos estao em `~/userscripts/control-c-ilimitado-ext/`
-- Copia o caminho da pasta pro clipboard
-- Abre o Chrome ja na pagina de extensions
-- Mostra notificacao visual com instrucoes
+- Valida que os arquivos estão no source `~/.config/zsh/aurora/userscripts/control-c-ilimitado-ext/`
+- Copia o caminho da pasta pro clipboard (xclip)
+- Abre o Chrome em `chrome://extensions/`
+- Mostra notificação visual com instruções
 
 A parte manual (one-time, ~3 cliques):
 1. No Chrome em `chrome://extensions/`, ative **"Modo do desenvolvedor"**
@@ -27,17 +31,16 @@ A parte manual (one-time, ~3 cliques):
 
 Apos isso, a extension fica registrada e roda em **todos os sites**.
 
-## Atualizacoes
+## Atualizações
 
 ```bash
-control_c_ilimitado sync       # re-deploya
-control_c_ilimitado status     # verifica integridade
+control_c_ilimitado status     # verifica integridade do source
 control_c_ilimitado update     # baixa html2pdf mais recente
 ```
 
-Apos qualquer mudanca nos arquivos source, o Chrome precisa recarregar a extension:
-- `chrome://extensions/` -> botao **"Recarregar"** sob a extension
-- (Auto-reload sem clique manual e impossivel em extensions unpacked.)
+Após qualquer mudança nos arquivos source, o Chrome precisa recarregar a extension:
+- `chrome://extensions/` → botão **"Recarregar"** sob a extension
+- (Auto-reload sem clique manual é impossível em extensions unpacked.)
 
 ## O que ela faz
 
