@@ -1,0 +1,14 @@
+[Unit]
+Description=Aurora - Roteia Downloads (Fireshot/PrintFriendly) para ~/Imagens/
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/zsh/aurora/imagens-router.sh
+Restart=always
+RestartSec=10
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=default.target

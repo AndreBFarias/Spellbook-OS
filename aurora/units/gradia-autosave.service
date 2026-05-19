@@ -1,0 +1,15 @@
+[Unit]
+Description=Gradia autosave watcher (cache -> ~/Imagens/printscreens-gradia/)
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/zsh/aurora/gradia-autosave.sh
+Restart=always
+RestartSec=10
+# Roda silencioso; usa logger para enviar pro journal
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=default.target
