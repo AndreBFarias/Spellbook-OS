@@ -52,6 +52,12 @@ if [[ -o interactive && -z "${CLAUDE_SYMLINKS_SYNCED:-}" ]]; then
     typeset -f sync_claude_symlinks > /dev/null && sync_claude_symlinks --quiet 2>/dev/null &!
 fi
 
+# --- 7.2. AURORA SELF-HEAL (detecta drift das configs persistentes, cache 1h) ---
+if [[ -o interactive && -z "${AURORA_SELF_HEAL_DONE:-}" ]]; then
+    export AURORA_SELF_HEAL_DONE=1
+    typeset -f aurora-self-heal-cached > /dev/null && aurora-self-heal-cached
+fi
+
 # --- 99. SPELLBOOK SYNC (ao fechar terminal) ---
 zshexit() {
     spellbook_sync_push 2>/dev/null
