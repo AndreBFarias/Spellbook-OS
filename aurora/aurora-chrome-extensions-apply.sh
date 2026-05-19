@@ -17,10 +17,18 @@ set -u
 DESKTOP_FILE="$HOME/.local/share/applications/google-chrome.desktop"
 WRAPPER_SRC="$HOME/.config/zsh/aurora/google-chrome-wrapper.sh"
 USER_BIN="$HOME/.local/bin"
+SPELLBOOK_ROOT="$HOME/.config/zsh"
 
 # Lista de extensions unpacked a carregar (paths absolutos)
 EXTENSION_PATHS=(
   "$HOME/.config/zsh/aurora/userscripts/control-c-ilimitado-ext"
+)
+
+# Atalhos na raiz do spellbook ~/.config/zsh/<nome>
+# (Symlinks para o source em aurora/userscripts/ — facilita "Carregar sem
+# compactação" no Chrome apontando diretamente para ~/.config/zsh/<nome>)
+EXTENSION_ROOT_SYMLINKS=(
+  "control-c-ilimitado-ext:aurora/userscripts/control-c-ilimitado-ext"
 )
 
 log()  { printf '[chrome-ext] %s\n' "$*"; }
@@ -94,6 +102,23 @@ done
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database -q "$HOME/.local/share/applications" 2>/dev/null || true
 fi
+
+# Symlinks na raiz do spellbook (atalho para "Carregar sem compactação")
+for entry in "${EXTENSION_ROOT_SYMLINKS[@]}"; do
+  name="${entry%%:*}"
+  target="${entry#*:}"
+  link="$SPELLBOOK_ROOT/$name"
+  full_target="$SPELLBOOK_ROOT/$target"
+  if [ ! -d "$full_target" ]; then
+    warn "target ausente: $full_target"
+    continue
+  fi
+  if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then
+    continue
+  fi
+  ln -sfn "$target" "$link"
+  log "symlink raiz $link -> $target"
+done
 
 # Wrapper bash: garante que `google-chrome` invocado via PATH (terminal,
 # xdg-open, etc.) sempre injete --load-extension. Cobre o caso em que o launcher
