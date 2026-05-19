@@ -69,6 +69,39 @@ EMOJI_RE = re.compile(
     flags=re.UNICODE,
 )
 
+# Glyphs canônicos protegidos contra remoção do EMOJI_RE.
+# Faixa Geometric Shapes (U+25AA-25FE) também contém símbolos de UI legítimos
+# usados por projetos como Nyx-Code (invariante #14: o circle states + box
+# drawing). Estes são preservados mesmo quando o EMOJI_RE casa.
+ALLOWED_GLYPHS = frozenset({
+    "○",  # circle empty (cold/empty state)
+    "◐",  # circle half left (warming/in progress)
+    "●",  # circle filled (warm/ok)
+    "◆",  # diamond filled (header agente, multi-tool)
+    "◇",  # diamond empty (glob)
+    "▶",  # right triangle (collapsed)
+    "▼",  # down triangle (expanded)
+    "▸",  # small right triangle (bash/execute)
+    "◼",  # small black square (todo done)
+    "◻",  # small white square (todo pending)
+    "↗",  # arrow upper right (web/network)
+})
+
+
+def _strip_emojis_preserving_allowed(text: str) -> tuple[str, int]:
+    """Remove emojis exceto ALLOWED_GLYPHS. Retorna (texto novo, n removidos)."""
+    removed = 0
+
+    def _repl(m: re.Match) -> str:
+        nonlocal removed
+        chars = m.group(0)
+        kept = "".join(c for c in chars if c in ALLOWED_GLYPHS)
+        removed += len(chars) - len(kept)
+        return kept
+
+    new = EMOJI_RE.sub(_repl, text)
+    return new, removed
+
 SECRET_PATTERNS = [
     re.compile(r"sk-[a-zA-Z0-9]{20,}"),
     re.compile(r"sk-ant-[a-zA-Z0-9]{20,}"),
@@ -82,6 +115,7 @@ SECRET_PATTERNS = [
 ]
 
 COAUTHOR_RE = re.compile(
+    r"^\s*Co[- ]Authored[- ]By:.*$\n?",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -150,7 +184,7 @@ def sanitize_file(filepath: str, identity_terms: list[str]) -> dict[str, int]:
 
     original = content
 
-    content, n = EMOJI_RE.subn("", content)
+    content, n = _strip_emojis_preserving_allowed(content)
     report["emojis"] = n
 
     for pattern in SECRET_PATTERNS:

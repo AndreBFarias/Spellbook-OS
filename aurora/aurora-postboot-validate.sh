@@ -47,7 +47,7 @@ add_contexto() {
 
 # --- Check 1: kernel cmdline (kernelstub args ativos apos reboot) ---
 cmdline=$(cat /proc/cmdline 2>/dev/null || echo "")
-PARAMS_OBRIGATORIOS=(amd_pstate=active processor.max_cstate=1 mitigations=off transparent_hugepage=madvise nvidia.NVreg_PreserveVideoMemoryAllocations=1)
+PARAMS_OBRIGATORIOS=(amd_pstate=active processor.max_cstate=1 mitigations=off transparent_hugepage=madvise nvidia.NVreg_PreserveVideoMemoryAllocations=1 pcie_aspm=off nvme_core.default_ps_max_latency_us=0)
 faltando_kernel=()
 for p in "${PARAMS_OBRIGATORIOS[@]}"; do
   echo "$cmdline" | grep -qF -- "$p" || faltando_kernel+=("$p")
@@ -183,6 +183,103 @@ if [ -f /etc/systemd/system/oom-postmortem.service ]; then
     falhas+=("oom-postmortem.service não habilitado (não dispara após crash)")
     add_contexto "### oom-postmortem.service
 Rode: \`sudo systemctl enable oom-postmortem.service\`
+"
+  fi
+fi
+
+# --- Check 10: Aurora 2.3 ULTRA — anti-suspend (logind drop-in + targets mascarados) ---
+if [ ! -f /etc/systemd/logind.conf.d/99-no-suspend.conf ]; then
+  falhas+=("logind drop-in 99-no-suspend.conf ausente (USB não carrega em suspend)")
+  add_contexto "### Anti-suspend (Aurora 2.3 ULTRA)
+\`/etc/systemd/logind.conf.d/99-no-suspend.conf\` ausente.
+Rode: \`bash ~/.config/zsh/aurora/aurora-bootstrap.sh --post-update\`
+"
+fi
+
+SLEEP_TARGETS_CHECK=(sleep.target suspend.target hibernate.target hybrid-sleep.target)
+sleep_nao_mascarados=()
+for t in "${SLEEP_TARGETS_CHECK[@]}"; do
+  if [ "$(systemctl is-enabled "$t" 2>/dev/null)" != "masked" ]; then
+    sleep_nao_mascarados+=("$t")
+  fi
+done
+if [ ${#sleep_nao_mascarados[@]} -gt 0 ]; then
+  falhas+=("sleep targets não mascarados: ${sleep_nao_mascarados[*]}")
+  add_contexto "### Sleep targets não mascarados
+Rode: \`sudo systemctl mask ${sleep_nao_mascarados[*]}\`
+"
+fi
+
+# --- Check 11: Aurora 2.3 ULTRA — CPU pinned + boost + NVIDIA pm ---
+if [ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]; then
+  cmax=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq)
+  cmin=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq)
+  if [ "$cmin" != "$cmax" ]; then
+    falhas+=("CPU não pinned: scaling_min($cmin) != scaling_max($cmax)")
+  fi
+fi
+
+if [ -f /sys/devices/system/cpu/cpufreq/boost ]; then
+  bst=$(cat /sys/devices/system/cpu/cpufreq/boost)
+  if [ "$bst" != "1" ]; then
+    falhas+=("cpufreq/boost=$bst (esperado 1)")
+  fi
+fi
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+  nv_pm=$(nvidia-smi --query-gpu=persistence_mode --format=csv,noheader 2>/dev/null | head -1 | tr '[:upper:]' '[:lower:]')
+  if [ -n "$nv_pm" ] && [ "$nv_pm" != "enabled" ]; then
+    falhas+=("NVIDIA persistence-mode=$nv_pm (esperado Enabled)")
+  fi
+fi
+
+# --- Check 12: Userscripts e extensions deployados (Aurora userscripts) ---
+USERSCRIPTS_SRC="$HOME/.config/zsh/aurora/userscripts"
+USERSCRIPTS_DST="$HOME/userscripts"
+if [ -d "$USERSCRIPTS_SRC" ]; then
+  faltando_us=()
+  divergente_us=()
+  # hash agregado da arvore de um diretório
+  _tree_hash() {
+    ( cd "$1" 2>/dev/null && find . -type f ! -name '.*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}' )
+  }
+
+  # arquivos .user.js
+  for src in "$USERSCRIPTS_SRC"/*.user.js; do
+    [ -f "$src" ] || continue
+    name=$(basename "$src")
+    dst="$USERSCRIPTS_DST/$name"
+    if [ ! -f "$dst" ]; then faltando_us+=("$name"); continue; fi
+    s_sum=$(sha256sum "$src" | awk '{print $1}')
+    d_sum=$(sha256sum "$dst" | awk '{print $1}')
+    [ "$s_sum" != "$d_sum" ] && divergente_us+=("$name")
+  done
+
+  # diretórios de extension (*-ext/)
+  for srcd in "$USERSCRIPTS_SRC"/*-ext; do
+    [ -d "$srcd" ] || continue
+    name=$(basename "$srcd")
+    dstd="$USERSCRIPTS_DST/$name"
+    if [ ! -d "$dstd" ]; then faltando_us+=("$name/"); continue; fi
+    s_th=$(_tree_hash "$srcd")
+    d_th=$(_tree_hash "$dstd")
+    [ "$s_th" != "$d_th" ] && divergente_us+=("$name/")
+  done
+
+  if [ ${#faltando_us[@]} -gt 0 ] || [ ${#divergente_us[@]} -gt 0 ]; then
+    msg=""
+    [ ${#faltando_us[@]} -gt 0 ] && msg="faltando: ${faltando_us[*]}"
+    [ ${#divergente_us[@]} -gt 0 ] && msg="$msg divergente: ${divergente_us[*]}"
+    falhas+=("userscripts $msg")
+    add_contexto "### Userscripts/extensions (Aurora deploy)
+Fonte: \`$USERSCRIPTS_SRC\`
+Destino: \`$USERSCRIPTS_DST\`
+${msg}
+
+**Correcao:**
+\`\`\`bash
+bash ~/.config/zsh/aurora/aurora-userscripts-apply.sh
+\`\`\`
 "
   fi
 fi

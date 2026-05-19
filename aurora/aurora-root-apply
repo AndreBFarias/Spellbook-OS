@@ -121,5 +121,14 @@ if command -v nvidia-smi >/dev/null 2>&1; then
   fi
 fi
 
+# 10. Aurora 2.3 ULTRA - garante que default-wifi-powersave-on.conf nao volte
+# (sobrescreve nosso 99-aurora-ultra-wifi.conf por ordem alfabetica: 9 < d em ASCII)
+if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ]; then
+  mv /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf \
+     /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf.bak-aurora-ultra
+  systemctl reload NetworkManager 2>/dev/null || true
+  log "default-wifi-powersave-on.conf removido (sobrescrevia powersave=2)"
+fi
+
 log "aurora-root-apply concluido"
 exit 0
