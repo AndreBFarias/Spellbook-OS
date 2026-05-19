@@ -6,12 +6,36 @@
   if (window.__claudeExportBridgeLoaded) return;
   window.__claudeExportBridgeLoaded = true;
 
+  // Trusted Types policy: Chrome 95+ em sites com strict CSP (Teams, GMail,
+  // claude.ai mais novo) bloqueia DOMParser.parseFromString sem TrustedHTML.
+  // Cria uma policy unica desta extensao (silencia "Refused to create policy"
+  // em sites que ja tem CSP trusted-types definido).
+  let __ttPolicy = null;
+  try {
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+      __ttPolicy = window.trustedTypes.createPolicy('ctrl-c-ilimitado-bridge', {
+        createHTML: (s) => s,
+      });
+    }
+  } catch (_) { /* outra policy ja existe ou site bloqueia; vamos no fallback */ }
+
   // DOMParser nao executa scripts; e a forma segura de transformar string HTML em nodes.
   function htmlToFragment(htmlString) {
-    const doc = new DOMParser().parseFromString(htmlString, 'text/html');
-    const frag = document.createDocumentFragment();
-    while (doc.body.firstChild) frag.appendChild(doc.body.firstChild);
-    return frag;
+    const input = __ttPolicy ? __ttPolicy.createHTML(htmlString) : htmlString;
+    try {
+      const doc = new DOMParser().parseFromString(input, 'text/html');
+      const frag = document.createDocumentFragment();
+      while (doc.body.firstChild) frag.appendChild(doc.body.firstChild);
+      return frag;
+    } catch (e) {
+      // Fallback ultimo recurso: texto cru
+      const frag = document.createDocumentFragment();
+      const pre = document.createElement('pre');
+      pre.style.cssText = 'white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;';
+      pre.textContent = String(htmlString);
+      frag.appendChild(pre);
+      return frag;
+    }
   }
 
   window.addEventListener('message', async (e) => {

@@ -3,7 +3,7 @@
   "name": "Ctrl+C Ilimitado",
   "version": "2.0.0",
   "description": "Desbloqueia copy/paste/selecao em qualquer site. Salva selecao como .md ou .pdf (texto, formatado, screenshot). Em claude.ai, exporta conversa inteira.",
-  "permissions": ["activeTab", "scripting", "downloads", "clipboardWrite", "storage", "tabs"],
+  "permissions": ["activeTab", "scripting", "downloads", "clipboardWrite", "storage", "tabs", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
