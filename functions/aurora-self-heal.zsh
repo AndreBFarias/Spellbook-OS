@@ -50,6 +50,13 @@ aurora-self-heal() {
     fixes_user+=("systemctl --user start gradia-autosave.service")
   fi
 
+  # Ctrl+C Ilimitado carregada no Chrome (precisa load manual em Chrome 128+)
+  local pref_file="$HOME/.config/google-chrome/Default/Preferences"
+  if [ -f "$pref_file" ] && ! grep -q "control-c-ilimitado-ext" "$pref_file" 2>/dev/null; then
+    issues+=("Ctrl+C Ilimitado não carregada no Chrome (Chrome 128+ ignora --load-extension)")
+    fixes_user+=("INFO: rode 'control_c_ilimitado' para abrir chrome://extensions e importar manualmente")
+  fi
+
   if [ ${#issues[@]} -eq 0 ]; then
     return 0
   fi

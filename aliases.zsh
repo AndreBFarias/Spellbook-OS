@@ -395,3 +395,72 @@ spellbook_import() {
     local spellbook_dir="${SPELLBOOK_DIR:-$HOME/Desenvolvimento/Spellbook-OS}"
     bash "$spellbook_dir/scripts/spellbook-secrets.sh" import "$@"
 }
+
+# -- Ctrl+C Ilimitado ----------------------------------------------------------
+
+# Propósito: Tudo-em-um da extensão/userscript "Ctrl+C Ilimitado" (universal,
+#            desbloqueia copy/paste/seleção em qualquer site + exporta seleção
+#            como md/pdf + exporta conversa em claude.ai).
+# Uso:
+#   control_c_ilimitado            -> instala + abre chrome://extensions (default)
+#   control_c_ilimitado install    -> mesmo que acima
+#   control_c_ilimitado sync       -> re-deploya arquivos do source-of-truth
+#   control_c_ilimitado status     -> mostra estado do deploy + integridade
+#   control_c_ilimitado update     -> baixa html2pdf mais recente do CDN
+#   control_c_ilimitado --help     -> esta ajuda
+control_c_ilimitado() {
+    local src="$HOME/.config/zsh/aurora/userscripts/control-c-ilimitado-ext"
+    local userjs="$HOME/.config/zsh/aurora/userscripts/control-c-ilimitado.user.js"
+
+    local cmd="${1:-install}"
+    case "$cmd" in
+        install|"")
+            if [ ! -d "$src" ]; then
+                echo "ERRO: source não existe — $src" >&2
+                return 1
+            fi
+            bash "$src/install-helper.sh"
+            ;;
+        status)
+            echo "== Source-of-truth =="
+            [ -d "$src" ] && echo "OK $src" || echo "MISSING $src"
+            if [ -d "$src" ]; then
+                local s_th=$(cd "$src" && find . -type f ! -name '.*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | awk '{print $1}')
+                echo "Tree hash: ${s_th:0:12}..."
+                echo "Manifest: $(grep -m1 version "$src/manifest.json" 2>/dev/null | tr -d ' ,"')"
+            fi
+            echo "== Userscript =="
+            [ -f "$userjs" ] && echo "OK $userjs ($(du -h "$userjs" | awk '{print $1}'))" || echo "MISSING $userjs"
+            ;;
+        update)
+            local lib="$src/lib/html2pdf.bundle.min.js"
+            echo "Baixando html2pdf bundle mais recente..."
+            curl -fsSL -o "$lib" https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js && \
+                echo "OK ($(du -h "$lib" | awk '{print $1}'))"
+            ;;
+        -h|--help|help)
+            cat <<'HLP'
+Ctrl+C Ilimitado — extensao + userscript universais
+
+Uso:
+  control_c_ilimitado [install]   abre chrome://extensions + copia path pro clipboard
+  control_c_ilimitado status      mostra estado/integridade do source
+  control_c_ilimitado update      baixa html2pdf mais recente
+  control_c_ilimitado --help      esta ajuda
+
+Source-of-truth (versionado em ~/.config/zsh):
+  ~/.config/zsh/aurora/userscripts/
+    control-c-ilimitado.user.js    -> userscript pro Violentmonkey
+    control-c-ilimitado-ext/       -> Chrome extension MV3
+
+Chrome 128+ removeu --load-extension; a extension precisa ser importada via UI:
+  chrome://extensions -> Modo do desenvolvedor -> Carregar sem compactacao
+  Apontar para: ~/.config/zsh/aurora/userscripts/control-c-ilimitado-ext/
+HLP
+            ;;
+        *)
+            echo "Comando desconhecido: $cmd. Tente: control_c_ilimitado --help" >&2
+            return 1
+            ;;
+    esac
+}

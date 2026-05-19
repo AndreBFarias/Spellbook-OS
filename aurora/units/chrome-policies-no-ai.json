@@ -1,4 +1,3 @@
-10203040
 {
   "GenAiDefaultSettings": 2,
   "HelpMeWriteSettings": 2,
@@ -16,5 +15,6 @@
   "ExtensionInstallBlocklist": [
     "eeijfnjmjelapkebgockoeaadonbchdd"
   ],
-  "ExtensionInstallAllowlist": []
+  "ExtensionInstallAllowlist": [],
+  "ExtensionDeveloperModeSettings": 0
 }

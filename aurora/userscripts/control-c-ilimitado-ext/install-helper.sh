@@ -1,14 +1,18 @@
 #!/bin/bash
 # Helper de instalação da Chrome extension Ctrl+C Ilimitado.
 # Abre chrome://extensions e copia o caminho da pasta pro clipboard.
+#
+# Source-of-truth: ~/.config/zsh/aurora/userscripts/control-c-ilimitado-ext/
+# (não há mais destino runtime — Chrome 128+ não respeita --load-extension,
+# o caminho oficial é "Carregar sem compactação" via chrome://extensions
+# apontando direto para o source no spellbook.)
 
 set -u
 
-EXT_PATH="$HOME/userscripts/control-c-ilimitado-ext"
+EXT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ ! -d "$EXT_PATH" ]; then
-  echo "Pasta não encontrada: $EXT_PATH" >&2
-  echo "Rode antes: control_c_ilimitado sync" >&2
+if [ ! -d "$EXT_PATH" ] || [ ! -f "$EXT_PATH/manifest.json" ]; then
+  echo "Pasta da extension inválida: $EXT_PATH" >&2
   exit 1
 fi
 
