@@ -50,6 +50,12 @@ aurora-self-heal() {
     fixes_user+=("systemctl --user start gradia-autosave.service")
   fi
 
+  # Daemon imagens-router (FireShot/PrintFriendly -> ~/Imagens/<pasta>)
+  if ! systemctl --user is-active --quiet imagens-router.service 2>/dev/null; then
+    issues+=("daemon imagens-router inativo")
+    fixes_user+=("$aurora/aurora-user-services-apply.sh")
+  fi
+
   # Ctrl+C Ilimitado carregada no Chrome (precisa load manual em Chrome 128+)
   local pref_file="$HOME/.config/google-chrome/Default/Preferences"
   if [ -f "$pref_file" ] && ! grep -q "control-c-ilimitado-ext" "$pref_file" 2>/dev/null; then

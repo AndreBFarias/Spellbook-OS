@@ -359,6 +359,12 @@ if [ -x "$AURORA_REPO/aurora-chrome-divert-apply.sh" ]; then
   "$AURORA_REPO/aurora-chrome-divert-apply.sh" | sed 's/^/[bootstrap] /' || warn "chrome-divert-apply retornou erro (não bloqueia)"
 fi
 
+# 6d. User services (gradia-autosave, imagens-router) — instala em
+# ~/.config/systemd/user/ a partir dos templates em aurora/units/
+if [ -x "$AURORA_REPO/aurora-user-services-apply.sh" ]; then
+  "$AURORA_REPO/aurora-user-services-apply.sh" | sed 's/^/[bootstrap] /' || warn "user-services-apply retornou erro (não bloqueia)"
+fi
+
 # 7. Sunset do ritual antigo (so se ainda ativo)
 if [ -f /etc/systemd/system/ritual-aurora-root.service ]; then
   sudo -n systemctl disable ritual-aurora-root.service 2>/dev/null || true
