@@ -1,0 +1,20 @@
+10203040
+{
+  "GenAiDefaultSettings": 2,
+  "HelpMeWriteSettings": 2,
+  "TabOrganizerSettings": 2,
+  "TabCompareSettings": 2,
+  "HistorySearchSettings": 2,
+  "CreateThemesSettings": 2,
+  "ComposeSettings": 2,
+  "AutofillPredictionSettings": 2,
+  "DevToolsGenAiSettings": 2,
+  "PasswordManagerPasskeysSettings": 2,
+  "OptimizationGuideOnDeviceModelExecutionEnabled": false,
+  "GenAILocalFoundationalModelSettings": 1,
+  "BuiltInAIAPIsEnabled": false,
+  "ExtensionInstallBlocklist": [
+    "eeijfnjmjelapkebgockoeaadonbchdd"
+  ],
+  "ExtensionInstallAllowlist": []
+}

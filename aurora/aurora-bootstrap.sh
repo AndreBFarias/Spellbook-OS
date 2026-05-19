@@ -354,6 +354,11 @@ if [ -x "$AURORA_REPO/aurora-chrome-extensions-apply.sh" ]; then
   "$AURORA_REPO/aurora-chrome-extensions-apply.sh" | sed 's/^/[bootstrap] /' || warn "chrome-extensions-apply retornou erro (não bloqueia)"
 fi
 
+# 6c. Chrome dpkg-divert + policy de IA (requer sudo; idempotente)
+if [ -x "$AURORA_REPO/aurora-chrome-divert-apply.sh" ]; then
+  "$AURORA_REPO/aurora-chrome-divert-apply.sh" | sed 's/^/[bootstrap] /' || warn "chrome-divert-apply retornou erro (não bloqueia)"
+fi
+
 # 7. Sunset do ritual antigo (so se ainda ativo)
 if [ -f /etc/systemd/system/ritual-aurora-root.service ]; then
   sudo -n systemctl disable ritual-aurora-root.service 2>/dev/null || true
