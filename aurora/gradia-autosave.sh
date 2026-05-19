@@ -1,56 +1,57 @@
 #!/bin/bash
 # Aurora - Gradia autosave watcher
-# ----------------------------------
-# Monitora o cache do Gradia (~/.var/app/be.alexandervanhee.gradia/cache/gradia/)
-# e copia toda nova versão de `last_image.png` para ~/Imagens/printscreens-gradia/
-# com timestamp único. Resolve a falta de auto-save nativo do Gradia (que só
-# expõe `custom-export-command` via botão manual ou save dialog).
+# ----------------------------------------------------------------------------
+# O Gradia, quando invocado via `--screenshot=INTERACTIVE` (atalho
+# Shift+Super+S configurado em chrome-keybindings), salva o resultado DIRETO em
+# ~/Imagens/Screenshot-NN.png — NÃO no cache last_image.png.
 #
-# Disparado por inotify CLOSE_WRITE/MOVED_TO no diretório de cache.
-# Gradia regrava last_image.png a cada take screenshot / open / export.
+# (O cache last_image.png só é tocado em fluxos internos: abrir arquivo,
+# editar e Overwrite on Close. Para o uso real do atalho de teclado, o cache
+# fica intocado e o screenshot vai direto pra ~/Imagens.)
+#
+# Este daemon monitora ~/Imagens/ via inotify; toda vez que um arquivo
+# `Screenshot-*.png` é criado/movido, move-o para
+# ~/Imagens/printscreens-gradia/gradia-TIMESTAMP.png — preservando o conteúdo
+# e tirando a poluição da raiz de ~/Imagens.
 
 set -euo pipefail
 
-CACHE_DIR="$HOME/.var/app/be.alexandervanhee.gradia/cache/gradia"
+WATCH_DIR="$HOME/Imagens"
 DEST_DIR="$HOME/Imagens/printscreens-gradia"
-SOURCE_FILE="last_image.png"
 
 mkdir -p "$DEST_DIR"
 
-# Espera o cache existir (Gradia pode não ter rodado ainda)
-while [ ! -d "$CACHE_DIR" ]; do
+# Espera o diretório existir (sempre deve, mas defensive)
+while [ ! -d "$WATCH_DIR" ]; do
     sleep 30
 done
 
-last_hash=""
-
-# Captura snapshot inicial para evitar duplicar a primeira detecção
-if [ -f "$CACHE_DIR/$SOURCE_FILE" ]; then
-    last_hash=$(sha256sum "$CACHE_DIR/$SOURCE_FILE" | awk '{print $1}')
-fi
-
-inotifywait -m -e close_write,moved_to --format '%f' "$CACHE_DIR" 2>/dev/null \
+# inotifywait dispara em close_write (arquivo terminou de ser escrito) e
+# moved_to (renomeação atomic do tipo `.tmp` -> `Screenshot-22.png`)
+inotifywait -m -e close_write,moved_to --format '%f' "$WATCH_DIR" 2>/dev/null \
 | while read -r filename; do
-    [ "$filename" = "$SOURCE_FILE" ] || continue
+    # Só interessam Screenshot-NN.png do Gradia (XDG portal interativo)
+    case "$filename" in
+        Screenshot-*.png) ;;
+        *) continue ;;
+    esac
 
-    src="$CACHE_DIR/$SOURCE_FILE"
+    src="$WATCH_DIR/$filename"
     [ -f "$src" ] || continue
-
-    # Hash check para evitar copiar arquivo idêntico (Gradia pode rewritar mesmo conteúdo)
-    new_hash=$(sha256sum "$src" | awk '{print $1}')
-    [ "$new_hash" = "$last_hash" ] && continue
-    last_hash="$new_hash"
 
     ts=$(date +%Y%m%d-%H%M%S)
     dst="$DEST_DIR/gradia-$ts.png"
 
-    # Lida com colisão de timestamp (improvável, mas possível em scripts batch)
+    # Colisão de timestamp (improvável, possível em batch)
     n=1
     while [ -e "$dst" ]; do
         dst="$DEST_DIR/gradia-$ts-$n.png"
         n=$((n+1))
     done
 
-    cp -- "$src" "$dst"
-    logger -t gradia-autosave "salvou $dst"
+    if mv -- "$src" "$dst" 2>/dev/null; then
+        logger -t gradia-autosave "moveu $src -> $dst"
+    else
+        logger -t gradia-autosave "FALHOU mover $src"
+    fi
 done

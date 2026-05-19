@@ -15,6 +15,8 @@
 set -u
 
 DESKTOP_FILE="$HOME/.local/share/applications/google-chrome.desktop"
+WRAPPER_SRC="$HOME/.config/zsh/aurora/google-chrome-wrapper.sh"
+USER_BIN="$HOME/.local/bin"
 
 # Lista de extensions unpacked a carregar (paths absolutos)
 EXTENSION_PATHS=(
@@ -91,4 +93,22 @@ done
 # Refresca cache de desktop entries para o launcher pegar a mudança
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database -q "$HOME/.local/share/applications" 2>/dev/null || true
+fi
+
+# Wrapper bash: garante que `google-chrome` invocado via PATH (terminal,
+# xdg-open, etc.) sempre injete --load-extension. Cobre o caso em que o launcher
+# pulou o .desktop (restauração de sessão, chamada por outro app).
+if [ -f "$WRAPPER_SRC" ]; then
+  mkdir -p "$USER_BIN"
+  for name in google-chrome google-chrome-stable; do
+    target="$USER_BIN/$name"
+    expected="$WRAPPER_SRC"
+    if [ -L "$target" ] && [ "$(readlink -f "$target")" = "$(readlink -f "$expected")" ]; then
+      continue  # já apontando certo
+    fi
+    ln -sfn "$expected" "$target"
+    log "symlink $target -> $expected"
+  done
+else
+  warn "wrapper source ausente: $WRAPPER_SRC"
 fi
