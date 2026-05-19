@@ -40,10 +40,6 @@ python3() { __load_pyenv; python3 "$@"; }
 # --- 6. BASH COMPLETION ---
 autoload -U bashcompinit && bashcompinit
 
-# --- 4.6. WRAPPER AUXILIAR ---
-export KIMI_YOLO=1
-[ -f "$ZDOTDIR/kca/aliases_kca.zsh" ] && source "$ZDOTDIR/kca/aliases_kca.zsh"
-
 # --- 7. SPELLBOOK SYNC (background, status cacheado p/ fastfetch) ---
 if [[ -o interactive && -z "${SPELLBOOK_SYNC_DONE:-}" ]]; then
     export SPELLBOOK_SYNC_DONE=1
