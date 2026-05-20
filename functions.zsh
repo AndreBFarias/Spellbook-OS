@@ -1,14 +1,13 @@
 #!/bin/zsh
+# Carregador de functions/*.zsh — robusto contra arquivos com syntax error.
 
-local FUNC_DIR="$ZDOTDIR/functions"
+FUNC_DIR="${ZDOTDIR:-$HOME/.config/zsh}/functions"
+[[ -d "$FUNC_DIR" ]] || return 0
 
-if [ ! -d "$FUNC_DIR" ]; then
-    return 0
-fi
-
-[ -f "$FUNC_DIR/_helpers.zsh" ] && source "$FUNC_DIR/_helpers.zsh"
+[[ -f "$FUNC_DIR/_helpers.zsh" ]] && source "$FUNC_DIR/_helpers.zsh"
 
 for f in "$FUNC_DIR"/*.zsh; do
     [[ "$(basename "$f")" == "_helpers.zsh" ]] && continue
-    source "$f"
+    source "$f" 2>/dev/null || print -u2 "[functions.zsh] WARN: falha em $f"
 done
+unset f FUNC_DIR

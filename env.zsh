@@ -52,9 +52,9 @@ export NVM_DIR="$HOME/.nvm"
 
 # Binarios do nvm default no PATH (garante node moderno para processos filhos como MCP servers)
 if [ -d "$NVM_DIR/versions/node" ]; then
-    local _nvm_default
     _nvm_default="$(ls -1 "$NVM_DIR/versions/node/" | sort -V | tail -1)"
     [ -n "$_nvm_default" ] && export PATH="$NVM_DIR/versions/node/$_nvm_default/bin:$PATH"
+    unset _nvm_default
 fi
 
 __load_nvm() {

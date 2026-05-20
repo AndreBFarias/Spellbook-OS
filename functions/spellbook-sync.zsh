@@ -9,7 +9,8 @@ __spellbook_sync_dir() {
 # Status curto p/ o módulo `command` Spellbook-OS do fastfetch lê na próxima abertura.
 __spellbook_status_cache_write() {
     local msg="$1"
-    local cache="/tmp/spellbook_status_$(id -u)"
+    local cache_dir="${XDG_RUNTIME_DIR:-/tmp}"
+    local cache="$cache_dir/spellbook_status_$(id -u)"
     print -r -- "$msg" > "$cache" 2>/dev/null
     chmod 600 "$cache" 2>/dev/null
 }
@@ -82,9 +83,15 @@ __spellbook_resolve_conflict() {
         echo ""
 
         local reply=""
-        echo -e "  ${D_FG}(L)ocal  (R)emoto  (M)erge manual  (A)diar${D_RESET}"
-        read -k 1 "reply?  > "
-        echo ""
+        if [[ -t 0 ]]; then
+            echo -e "  ${D_FG}(L)ocal  (R)emoto  (M)erge manual  (A)diar${D_RESET}"
+            read -k 1 "reply?  > "
+            echo ""
+        else
+            # Non-interactive (cron/systemd): adia conflito, não bloqueia
+            reply="A"
+            __warn "Conflito em $arquivo — non-interactive, sync adiado"
+        fi
 
         case "$reply" in
             [Ll])
@@ -200,8 +207,14 @@ spellbook_sync_push() {
 
     __spellbook_auto_commit
 
-    # Push em background (nunca bloqueia fechamento do terminal)
-    git -C "$dir" push origin main --quiet 2>/dev/null &
+    # Push em background com log de erro (nunca bloqueia fechamento do terminal)
+    local log="${XDG_STATE_HOME:-$HOME/.local/state}/spellbook-sync.log"
+    mkdir -p "${log:h}" 2>/dev/null
+    {
+        if ! git -C "$dir" push origin main --quiet 2>>"$log"; then
+            print -r -- "[$(date '+%F %T')] push failed (rc=$?)" >>"$log"
+        fi
+    } &!
 }
 
 # Propósito: Exibir status do sync do Spellbook-OS (branch, ahead/behind, pendentes)

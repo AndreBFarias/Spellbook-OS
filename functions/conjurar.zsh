@@ -225,8 +225,11 @@ conjurar() {
         fi
         full_cmd="$comando $args_input"
         echo -e "\n  ${D_PURPLE}>>>${D_RESET} ${D_FG}${full_cmd}${D_RESET}\n"
-        eval "${(q)comando} $args_input"
+        # Sem eval: split args via zsh parser (respeita aspas do usuário, bloqueia injection).
+        local -a __conj_args=(${(z)args_input})
+        "$comando" "${__conj_args[@]}"
         rc=$?
+        unset __conj_args
     fi
 
     __conjurar_log "$full_cmd" "$rc"

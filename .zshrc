@@ -60,5 +60,6 @@ fi
 
 # --- 99. SPELLBOOK SYNC (ao fechar terminal) ---
 zshexit() {
+    fc -A 2>/dev/null  # flush history pendente do shell pro $HISTFILE antes do push
     spellbook_sync_push 2>/dev/null
 }
