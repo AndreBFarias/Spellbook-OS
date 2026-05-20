@@ -125,6 +125,40 @@ for file in $FILES; do
 done
 [ $AI_COUNT -gt 0 ] && { FIXES=$((FIXES + AI_COUNT)); FIX_DETAILS="$FIX_DETAILS ia-artifact($AI_COUNT)"; }
 
+# [3.5/6] Anti-blacklist filenames: bloqueia ADICAO ao tracking de
+# arquivos de instrucao para IA (CLAUDE.md, HANDOFF, .cursorrules, etc).
+# Lista canonica em ~/.config/git/anonymity-blacklist.txt.
+BLACKLIST="$HOME/.config/git/anonymity-blacklist.txt"
+if [ -f "$BLACKLIST" ]; then
+    ADDED=$(git diff --cached --name-only --diff-filter=A 2>/dev/null)
+    if [ -n "$ADDED" ]; then
+        BLOCKED_FILES=""
+        while IFS= read -r pattern; do
+            [ -z "$pattern" ] && continue
+            [[ "$pattern" =~ ^# ]] && continue
+            clean="${pattern%/}"
+            for f in $ADDED; do
+                case "$f" in
+                    $clean|$clean/*) BLOCKED_FILES="$BLOCKED_FILES $f" ;;
+                esac
+            done
+        done < "$BLACKLIST"
+        if [ -n "$BLOCKED_FILES" ]; then
+            echo "  [BLOQUEIO] Arquivos da blacklist anonimato no diff:"
+            for f in $BLOCKED_FILES; do echo "    $f"; done
+            echo ""
+            echo "    Estes arquivos sao instrucao para IA e nao devem"
+            echo "    ser versionados (Regra -1, anonimato absoluto)."
+            echo ""
+            echo "    Para remover do staging mantendo no filesystem:"
+            echo "      git rm --cached$BLOCKED_FILES"
+            echo "      printf '%s\n'$BLOCKED_FILES >> .gitignore"
+            _hook_log "pre-commit" "BLOQUEADO: blacklist filename ($BLOCKED_FILES)" 2>/dev/null
+            exit 1
+        fi
+    fi
+fi
+
 # === VERIFICACOES ADICIONAIS (puladas se framework pre-commit existe) ===
 
 if [[ "$HAS_FRAMEWORK" == false ]]; then
