@@ -8,22 +8,16 @@
 # Cobre o cenário em que apt upgrade google-chrome-stable potencialmente
 # afetaria nosso wrapper (na prática dpkg-divert sobrevive, mas garantimos).
 
-# Reaplica todos os scripts idempotentes do aurora em ordem segura
+# Reaplica todos os scripts idempotentes do aurora em ordem segura.
+# Delega para aurora-reapply-all.sh (standalone, também invocado pelo APT post-invoke).
 aurora-reapply-all() {
-  local aurora="$HOME/.config/zsh/aurora"
-  local scripts=(
-    aurora-userscripts-apply.sh
-    aurora-chrome-extensions-apply.sh
-    aurora-chrome-divert-apply.sh
-    aurora-user-apply.sh
-  )
-
-  for s in "${scripts[@]}"; do
-    if [ -x "$aurora/$s" ]; then
-      printf '\033[36m[aurora-reapply]\033[0m %s\n' "$s"
-      "$aurora/$s" 2>&1 | sed 's/^/  /' || true
-    fi
-  done
+  local script="$HOME/.config/zsh/aurora/aurora-reapply-all.sh"
+  if [ -x "$script" ]; then
+    bash "$script"
+  else
+    printf '\033[31m[aurora-reapply]\033[0m script não encontrado: %s\n' "$script" >&2
+    return 1
+  fi
 }
 
 sysupgrade() {

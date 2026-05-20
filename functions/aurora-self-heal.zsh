@@ -63,6 +63,42 @@ aurora-self-heal() {
     fixes_user+=("INFO: rode 'control_c_ilimitado' para abrir chrome://extensions e importar manualmente")
   fi
 
+  # /etc/sysctl.d/99-aurora.conf (kernel tuning persistido)
+  if [ ! -f /etc/sysctl.d/99-aurora.conf ] || ! cmp -s "$aurora/99-aurora.conf" /etc/sysctl.d/99-aurora.conf 2>/dev/null; then
+    issues+=("/etc/sysctl.d/99-aurora.conf ausente ou divergente")
+    fixes_root+=("$aurora/aurora-reapply-all.sh")
+  fi
+
+  # /etc/default/earlyoom (pode ser sobrescrito por apt update do pacote earlyoom)
+  if [ -f "$aurora/earlyoom.default" ]; then
+    if [ ! -f /etc/default/earlyoom ] || ! cmp -s "$aurora/earlyoom.default" /etc/default/earlyoom 2>/dev/null; then
+      issues+=("/etc/default/earlyoom ausente ou divergente (apt pode ter sobrescrito)")
+      fixes_root+=("$aurora/aurora-reapply-all.sh")
+    fi
+  fi
+
+  # /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf — Aurora remove esse para preservar powersave=2
+  if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ] && \
+     [ ! -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf.bak-aurora-ultra ]; then
+    # Apt reinstalou o pacote network-manager e voltou o arquivo
+    issues+=("NetworkManager wifi-powersave-on reativado (apt sobrescreveu)")
+    fixes_root+=("$aurora/aurora-reapply-all.sh")
+  fi
+
+  # units systemd root (aurora-root.service, aurora-watchdog.{service,timer})
+  for unit in aurora-root.service aurora-watchdog.service aurora-watchdog.timer; do
+    if ! systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+      issues+=("unit systemd '$unit' não habilitada (apt pode ter removido)")
+      fixes_root+=("$aurora/aurora-reapply-all.sh")
+    fi
+  done
+
+  # APT post-invoke hook (defesa contra removal acidental)
+  if [ ! -f /etc/apt/apt.conf.d/99-aurora-postinvoke ]; then
+    issues+=("APT post-invoke hook ausente (auto-reapply não vai disparar em próximo upgrade)")
+    fixes_root+=("$aurora/aurora-reapply-all.sh")
+  fi
+
   if [ ${#issues[@]} -eq 0 ]; then
     return 0
   fi
