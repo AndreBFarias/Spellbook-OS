@@ -99,6 +99,16 @@ aurora-self-heal() {
     fixes_root+=("$aurora/aurora-reapply-all.sh")
   fi
 
+  # ~/.oh-my-zsh drift (executabilidade removida em massa por causa desconhecida — incidente 2025-08-11)
+  if [ -d "$HOME/.oh-my-zsh/.git" ]; then
+    local omz_dirty
+    omz_dirty=$(git -C "$HOME/.oh-my-zsh" status --porcelain 2>/dev/null | wc -l)
+    if [ "$omz_dirty" -gt 0 ]; then
+      issues+=("oh-my-zsh com $omz_dirty arquivos em drift (provável regressão de permissões)")
+      fixes_user+=("git -C $HOME/.oh-my-zsh restore --staged --worktree -- .")
+    fi
+  fi
+
   if [ ${#issues[@]} -eq 0 ]; then
     return 0
   fi
@@ -111,6 +121,7 @@ aurora-self-heal() {
   for fix in "${fixes_user[@]}"; do
     case "$fix" in
       *systemctl*) eval "$fix" 2>/dev/null && applied=$((applied+1)) ;;
+      git\ *) eval "$fix" 2>/dev/null && applied=$((applied+1)) ;;
       *) [ -x "$fix" ] && "$fix" >/dev/null 2>&1 && applied=$((applied+1)) ;;
     esac
   done
