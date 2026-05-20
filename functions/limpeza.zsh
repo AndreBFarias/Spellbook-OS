@@ -8,7 +8,10 @@ _limpar_caches_dev() {
         "$HOME/.cargo/registry/cache"
     )
     for d in "${dirs[@]}"; do
-        [ -d "$d" ] && rm -rf "$d" 2>/dev/null
+        # Triplo guard: $d não-vazio, é diretório, não é caminho perigoso.
+        # Protege contra bug que torne $d="" / "/" / "$HOME".
+        [[ -n "$d" && -d "$d" && "$d" != "/" && "$d" != "$HOME" && "$d" != "$HOME/" ]] \
+            && rm -rf "$d" 2>/dev/null
     done
 }
 _limpar_caches_dev

@@ -240,6 +240,10 @@ def main() -> int:
 
     out_path = pathlib.Path(args.saida).expanduser()
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    # Backup .bak antes de sobrescrever BRIEF existente (recuperável se algo der errado)
+    if out_path.exists():
+        backup = out_path.with_suffix(out_path.suffix + ".bak")
+        backup.write_text(out_path.read_text(encoding="utf-8"), encoding="utf-8")
     out_path.write_text(brief, encoding="utf-8")
     linhas = brief.count("\n")
     print(f"[ok] BRIEF gravado: {out_path} ({linhas} linhas, {len(memorias)} memórias incorporadas)")

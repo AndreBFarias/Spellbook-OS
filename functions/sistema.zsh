@@ -121,17 +121,23 @@ rebuild_dracula_theme() {
         echo -e "  ${D_COMMENT}Regenerando mapping.json...${D_RESET}"
         python3 scripts/extrair_mapeamento.py >/dev/null || return 1
 
+        local _build_log _install_log
+        _build_log=$(mktemp -t dracula-build-XXXXXX.log)
+        _install_log=$(mktemp -t dracula-install-XXXXXX.log)
+
         echo -e "  ${D_COMMENT}Rodando build.sh...${D_RESET}"
-        ./build.sh > /tmp/dracula-build.log 2>&1 || {
-            echo -e "  ${D_RED}[X]${D_RESET} build.sh falhou (veja /tmp/dracula-build.log)"
+        ./build.sh > "$_build_log" 2>&1 || {
+            echo -e "  ${D_RED}[X]${D_RESET} build.sh falhou (veja $_build_log)"
             return 1
         }
 
         echo -e "  ${D_COMMENT}Instalando em ~/.local/share/...${D_RESET}"
-        ./install.sh --user "$@" > /tmp/dracula-install.log 2>&1 || {
-            echo -e "  ${D_RED}[X]${D_RESET} install.sh falhou (veja /tmp/dracula-install.log)"
+        ./install.sh --user "$@" > "$_install_log" 2>&1 || {
+            echo -e "  ${D_RED}[X]${D_RESET} install.sh falhou (veja $_install_log)"
             return 1
         }
+        # Sucesso: limpa logs efêmeros
+        rm -f "$_build_log" "$_install_log"
     ) || return 1
 
     __ok "Dracula_OS-Theme reconstruído e instalado"

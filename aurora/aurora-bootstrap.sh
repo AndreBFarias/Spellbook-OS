@@ -82,13 +82,21 @@ else
   warn "kernelstub não instalado - pulando args persistidos"
 fi
 
-# 2. Copiar arquivos para locais oficiais (idempotente via cmp)
+# 2. Copiar arquivos para locais oficiais (idempotente via cmp + validação pós-cópia)
 copia_se_diff() {
   local src=$1 dst=$2 owner=${3:-root:root} mode=${4:-0644}
   if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
     return 0
   fi
-  sudo -n install -o "${owner%:*}" -g "${owner#*:}" -m "$mode" "$src" "$dst"
+  if ! sudo -n install -o "${owner%:*}" -g "${owner#*:}" -m "$mode" "$src" "$dst" 2>/dev/null; then
+    warn "Falha em install $dst — sudo -n sem cache. Rode 'sudo -v' primeiro."
+    return 1
+  fi
+  # Validação pós-cópia: arquivo de destino bate com fonte
+  if ! cmp -s "$src" "$dst"; then
+    warn "Cópia inconsistente: $dst (cmp falhou após install)"
+    return 1
+  fi
   log "Instalado: $dst"
 }
 
@@ -196,12 +204,19 @@ copia_se_diff "$AURORA_REPO/99-aurora-ultra-wifi.conf" /etc/NetworkManager/conf.
 # Bug fix: 'default-wifi-powersave-on.conf' vem APOS '99-*' em ordem alfabetica
 # (9 < d em ASCII) e sobrescreve wifi.powersave=2 com wifi.powersave=3.
 # Se Pop!_OS reinstalar via apt, remover aqui idempotente.
-if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ]; then
-  sudo -n mv /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf \
-             /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf.bak-aurora-ultra
+_pop_wifi_on="/etc/NetworkManager/conf.d/default-wifi-powersave-on.conf"
+_pop_wifi_bak="${_pop_wifi_on}.bak-aurora-ultra"
+if [ -f "$_pop_wifi_on" ] && [ ! -f "$_pop_wifi_bak" ]; then
+  sudo -n mv "$_pop_wifi_on" "$_pop_wifi_bak"
   sudo -n systemctl reload NetworkManager 2>/dev/null || true
   log "Removido (sobrescrevia powersave): default-wifi-powersave-on.conf"
+elif [ -f "$_pop_wifi_on" ] && [ -f "$_pop_wifi_bak" ]; then
+  # Re-aplicação: bak já existe; apenas remover o arquivo reinstalado pelo apt
+  sudo -n rm -f "$_pop_wifi_on"
+  sudo -n systemctl reload NetworkManager 2>/dev/null || true
+  log "Removido (re-aplicação): default-wifi-powersave-on.conf (bak preservado)"
 fi
+unset _pop_wifi_on _pop_wifi_bak
 
 # apt hook
 copia_se_diff "$AURORA_REPO/units/99-aurora-postinvoke" /etc/apt/apt.conf.d/99-aurora-postinvoke root:root 0644

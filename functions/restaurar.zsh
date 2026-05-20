@@ -399,12 +399,14 @@ sistema_capturar() {
 
     json+="}"
 
-    echo "$json" | jq '.' > "$caminho_completo" 2>/dev/null
-
-    if [[ $? -ne 0 ]]; then
-        echo "$json" > "$caminho_completo"
-        __warn "JSON salvo sem formatação (jq falhou na validação)"
+    # Validar JSON via jq antes de gravar. Se inválido, aborta — não salva lixo.
+    if ! echo "$json" | jq '.' > "$caminho_completo".tmp 2>/dev/null; then
+        rm -f "$caminho_completo".tmp
+        __err "JSON gerado é inválido (jq rejeitou). Manifesto NÃO foi salvo em $caminho_completo"
+        __err "  Use 'sistema_capturar --debug' para ver o JSON cru"
+        return 1
     fi
+    mv "$caminho_completo".tmp "$caminho_completo"
 
     echo ""
 
