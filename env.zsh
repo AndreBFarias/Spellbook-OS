@@ -22,6 +22,10 @@ __add_to_path_once "$HOME/.local/bin"
 __add_to_path_once "$HOME/.cargo/bin"
 __add_to_path_once "$HOME/.spicetify"
 
+# pnpm (instalado via nvm/corepack; binários globais em PNPM_HOME/bin).
+export PNPM_HOME="$HOME/.local/share/pnpm"
+__add_to_path_once "$PNPM_HOME/bin"
+
 export ZSH="${ZDOTDIR:-$HOME/.config/zsh}/.oh-my-zsh"
 
 # Completions customizadas (geradas por scripts/gerar-completions.py + manuais)
