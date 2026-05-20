@@ -22,7 +22,8 @@ KIMI_ULTRA.md
 config.local.zsh
 
 # Segredos — NUNCA commitar
-.zsh_secrets
+.zsh_secrets*
+!.zsh_secrets.template
 segape-andre.json
 novo_login_de_acesso.json
 meua-ambiente.json
@@ -30,6 +31,7 @@ profiles.yml
 .claude_quota
 .cca_quota
 .cca_guard_config
+vault/secrets.gpg.bak-*
 
 # Backups gerados pelo Oh My Zsh
 *.pre-oh-my-zsh
