@@ -728,6 +728,35 @@ _step_fastfetch_symlink() {
     _ok "Symlink criado: $target -> $source"
 }
 
+# --- Etapa topgrade: symlink ~/.config/topgrade.toml -> ~/.config/zsh/aurora/topgrade.toml ---
+_step_topgrade_symlink() {
+    _step "Topgrade (config versionada com pre-command Aurora)"
+
+    local source="$ZDOTDIR_TARGET/aurora/topgrade.toml"
+    local target="$HOME/.config/topgrade.toml"
+
+    if [[ ! -f "$source" ]]; then
+        _warn "$source não existe — pule esta etapa"
+        return 0
+    fi
+
+    if [[ -L "$target" ]] && [[ "$(readlink -f "$target")" == "$(readlink -f "$source")" ]]; then
+        _ok "Symlink ~/.config/topgrade.toml já aponta para o repo"
+        return 0
+    fi
+
+    if [[ -f "$target" && ! -L "$target" ]]; then
+        local backup="${target}.backup.$(date +%Y%m%d_%H%M%S)"
+        _info "~/.config/topgrade.toml existe (não é symlink) — backup em $backup"
+        _run mv "$target" "$backup"
+    elif [[ -L "$target" ]]; then
+        _run rm "$target"
+    fi
+
+    _run ln -sfn "$source" "$target"
+    _ok "Symlink criado: $target -> $source"
+}
+
 # --- Etapa 6: ~/.zshenv com ZDOTDIR ---
 _step_zshenv() {
     _step "Configurando ZDOTDIR"
@@ -1193,6 +1222,7 @@ main() {
     _step_ritual
     _step_zshenv
     _step_fastfetch_symlink
+    _step_topgrade_symlink
     _step_chsh
     _step_validate
     _step_manifest
