@@ -21,12 +21,37 @@ __spellbook_is_git_repo() {
     return 0
 }
 
+# Guard de secrets: nunca permitir autocommit se arquivos sensíveis estiverem versionados.
+# Defense-in-depth contra .gitignore quebrado/editado por engano.
+__spellbook_secrets_leaked() {
+    local dir="$1"
+    local -a sensitive=(.zsh_secrets segape-andre.json profiles.yml meua-ambiente.json novo_login_de_acesso.json)
+    local -a leaked=()
+    local p
+    for p in "${sensitive[@]}"; do
+        git -C "$dir" ls-files --error-unmatch "$p" >/dev/null 2>&1 && leaked+=("$p")
+    done
+    if (( ${#leaked[@]} > 0 )); then
+        __err "[autosync] BLOQUEADO: secrets detectados no index:"
+        local f
+        for f in "${leaked[@]}"; do __err "    - $f"; done
+        __err "  Corrija manualmente:"
+        __err "    git rm --cached ${leaked[*]}"
+        __err "    git commit -m 'fix: remove tracked secrets'"
+        return 0
+    fi
+    return 1
+}
+
 __spellbook_auto_commit() {
     local dir="$(__spellbook_sync_dir)"
     local changes
     changes=$(git -C "$dir" status --porcelain 2>/dev/null)
 
     [[ -z "$changes" ]] && return 1
+
+    # Defense-in-depth: bloqueia autocommit se gitignore foi furado
+    __spellbook_secrets_leaked "$dir" && return 1
 
     git -C "$dir" add -A 2>/dev/null
     git -C "$dir" commit -m "auto: sync $(hostname) $(date '+%Y-%m-%d %H:%M')" --quiet 2>/dev/null
