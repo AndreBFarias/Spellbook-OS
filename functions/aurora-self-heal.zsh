@@ -99,13 +99,16 @@ aurora-self-heal() {
     fixes_root+=("$aurora/aurora-reapply-all.sh")
   fi
 
-  # ~/.oh-my-zsh drift (executabilidade removida em massa por causa desconhecida — incidente 2025-08-11)
-  if [ -d "$HOME/.oh-my-zsh/.git" ]; then
+  # oh-my-zsh drift (executabilidade removida em massa por causa desconhecida — incidente 2025-08-11).
+  # Usa ${ZSH:-...} porque o host pode ter o OMZ ativo em ~/.config/zsh/.oh-my-zsh (modo ZDOTDIR)
+  # em vez de ~/.oh-my-zsh — checar a variável canônica do OMZ, com fallback.
+  local omz_dir="${ZSH:-$HOME/.oh-my-zsh}"
+  if [ -d "$omz_dir/.git" ]; then
     local omz_dirty
-    omz_dirty=$(git -C "$HOME/.oh-my-zsh" status --porcelain 2>/dev/null | wc -l)
+    omz_dirty=$(git -C "$omz_dir" status --porcelain 2>/dev/null | wc -l)
     if [ "$omz_dirty" -gt 0 ]; then
       issues+=("oh-my-zsh com $omz_dirty arquivos em drift (provável regressão de permissões)")
-      fixes_user+=("git -C $HOME/.oh-my-zsh restore --staged --worktree -- .")
+      fixes_user+=("git -C $omz_dir restore --staged --worktree -- .")
     fi
   fi
 
