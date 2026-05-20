@@ -10,13 +10,6 @@ import os
 from pathlib import Path
 
 
-def safe_open(filepath, mode="r", **kwargs):
-    """open() com encoding utf-8 por padrao (evita cp1252 no Windows)."""
-    if "b" not in mode and "encoding" not in kwargs:
-        kwargs["encoding"] = "utf-8"
-    return open(filepath, mode, **kwargs)
-
-
 def ensure_utf8_stdio():
     """Reconfigura stdout/stderr para UTF-8 (necessario no Windows)."""
     if hasattr(sys.stdout, "reconfigure"):

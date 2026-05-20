@@ -14,7 +14,7 @@
 
 ---
 
-Configuração zsh modular e portável. 23 módulos de funções, 9 scripts Python, menu FZF interativo para projetos dbt/BigQuery, controle automático de identidade git e integração com Oh My Zsh. Instalável em qualquer máquina Linux com um único comando.
+Configuração zsh modular e portável. 31 módulos de funções, 13 scripts Python + 7 scripts Bash, menu FZF interativo para projetos dbt/BigQuery, controle automático de identidade git, autosync via git, subsistema Aurora (anti-suspend + auto-reapply pós apt) e integração com Oh My Zsh. Instalável em qualquer máquina Linux com um único comando.
 
 ---
 
@@ -37,8 +37,10 @@ Configuração zsh modular e portável. 23 módulos de funções, 9 scripts Pyth
 | `functions/sistema.zsh` | Captura de manifesto e diagnóstico do sistema |
 | `functions/_helpers.zsh` | Paleta Dracula + utilitários base |
 | `fastfetch/config.jsonc` | Cabeçalho visual do terminal — paleta magenta-bold, GPU/VRAM dinâmico, status do Spellbook integrado, logo na linha 7, labels e tags em PT-BR. Detalhes em [docs/fastfetch.md](docs/fastfetch.md) |
-| `kca/` | Wrapper CLI auxiliar |
-| `scripts/` | Scripts Python auxiliares (dbt, migração, análise) |
+| `cca/` | Wrapper Claude Code com quota guard + auto-unlock do vault |
+| `vault/` | Secrets cifrados (AES256). Shim `.zsh_secrets` decifra via gpg-agent (TTL 30 dias) ou `--passphrase-file ~/.local/state/zsh-vault-passphrase` (fora do repo). Setup: ver `.zsh_secrets.template` |
+| `aurora/` | Subsistema anti-suspend + auto-reapply pós `apt full-upgrade`. Reaplicador: `aurora-reapply-all.sh`. Detector de drift: `aurora-self-heal` (12 checks). Reversão parcial: `aurora-ROLLBACK.sh`. Mapa completo: `aurora/CHANGELOG.md` |
+| `scripts/` | Scripts Python auxiliares (dbt, migração, análise, validar acentuação/completions) |
 
 ---
 

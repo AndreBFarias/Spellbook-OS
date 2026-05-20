@@ -118,6 +118,9 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
                         return orig
                     if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=")):
                         return orig
+                    # Preservar capitalização do exemplo  # noqa-acento
+                    if orig.isupper():
+                        return correta.upper()
                     if orig[0].isupper():
                         return correta[0].upper() + correta[1:]
                     return correta
@@ -143,7 +146,7 @@ def iter_target_files(paths: list[Path]) -> list[Path]:
         elif root.is_dir():
             for ext in EXTENSIONS:
                 files.extend(root.rglob(f"*{ext}"))
-    excluded = ("/.git/", "/venv/", "/.venv/", "/.oh-my-zsh/", "/node_modules/", "/__pycache__/")
+    excluded = ("/.git/", "/venv/", "/.venv/", "/.oh-my-zsh/", "/node_modules/", "/__pycache__/", "/docs/archive/")
     return [f for f in files if not any(e in str(f) for e in excluded)]
 
 

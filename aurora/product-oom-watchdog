@@ -43,12 +43,16 @@ COOLDOWN_AFTER_KILL_S = 30  # depois de matar, espera antes de monitorar de novo
 
 
 def read_meminfo() -> dict[str, int]:
-    """Lê /proc/meminfo, valores em bytes."""
+    """Lê /proc/meminfo, valores em bytes. Resiliente a linhas malformadas."""
     info = {}
     with open("/proc/meminfo") as f:
         for line in f:
             key, _, value = line.partition(":")
-            info[key.strip()] = int(value.strip().split()[0]) * 1024
+            try:
+                info[key.strip()] = int(value.strip().split()[0]) * 1024
+            except (ValueError, IndexError):
+                # Linha sem valor numérico (ex: linha esquisita do kernel) — pula
+                continue
     return info
 
 
@@ -126,7 +130,15 @@ def log(msg: str) -> None:
         pass
 
 
+def _shutdown_handler(signum, frame):
+    """SIGTERM/SIGINT handler — exit limpo em vez de aguardar systemd kill timeout (90s)."""
+    log(f"Sinal {signum} recebido — encerrando")
+    sys.exit(0)
+
+
 def main() -> int:
+    signal.signal(signal.SIGTERM, _shutdown_handler)
+    signal.signal(signal.SIGINT, _shutdown_handler)
     log(
         f"Iniciando watchdog (pressure_pct={PRESSURE_PCT}, slice_heavy_pct={SLICE_HEAVY_PCT}, "
         f"cycle_s={CYCLE_S}, grace_s={GRACE_S}, dry_run={DRY_RUN})"

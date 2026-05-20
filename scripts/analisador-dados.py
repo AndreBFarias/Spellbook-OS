@@ -85,9 +85,14 @@ def summarize_pdf(file_path, passwords=None, max_lines=300):
     if doc.is_encrypted:
         opened = False
         for pwd in (passwords or []):
-            if doc.authenticate(pwd):
-                opened = True
-                break
+            try:
+                if doc.authenticate(pwd):
+                    opened = True
+                    break
+            except Exception:
+                # PDF com authenticate quebrado (header corrompido, cipher exótico, etc).
+                # Continua tentando próximas senhas em vez de derrubar o script.
+                continue
         if not opened:
             doc.close()
             sys.exit(125)

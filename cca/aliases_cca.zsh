@@ -34,9 +34,19 @@ __cca_unset_contexto() {
           CLAUDE_VISUAL_TOOLS_EXPECTED CLAUDE_SPRINT_CICLO_MAX_RETRIES
 }
 
+# Proposito: Garante que GIT_TOKEN_* estejam na sessão antes de invocar claude.
+# Re-source do shim .zsh_secrets é idempotente: usa passphrase-file se houver
+# (~/.local/state/zsh-vault-passphrase), gpg-agent cache, ou pinentry como último recurso.
+__cca_unlock_secrets() {
+    [ -f "$HOME/.config/zsh/vault/secrets.gpg" ] || return 0
+    [ -n "${GIT_TOKEN_PESSOAL:-}" ] && return 0  # já populado nesta sessão
+    source "$HOME/.config/zsh/.zsh_secrets"
+}
+
 # Proposito: Wrapper seguro para Claude Code com quota guard
 # Uso: claude <args>
 claude-safe() {
+    __cca_unlock_secrets  # falha-soft: continua mesmo se vault não destravou
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
     __cca_export_contexto
 

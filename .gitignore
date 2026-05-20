@@ -9,11 +9,9 @@ docs/claude/
 .claude/
 VALIDATOR_BRIEF.md
 MAP_*.md
-PROTOCOLO.md
-FUNCOES.md
-mec-guide.md
 AGENTS.md
 KIMI_ULTRA.md
+# Documentos arquivados em docs/archive/ — versionados (referência histórica)
 
 # Framework (instalado pelo install.sh)
 .oh-my-zsh/
@@ -24,14 +22,19 @@ config.local.zsh
 # Segredos — NUNCA commitar
 .zsh_secrets*
 !.zsh_secrets.template
+# Shim de decifragem do vault — código de infra, sem secrets dentro.
+# Se for editado para conter exports plaintext, REMOVER esta exceção antes de commitar.
+!.zsh_secrets
 segape-andre.json
 novo_login_de_acesso.json
-meua-ambiente.json
 profiles.yml
 .claude_quota
 .cca_quota
 .cca_guard_config
 vault/secrets.gpg.bak-*
+# Passphrase do vault: mora em ~/.local/state/zsh-vault-passphrase (fora do repo).
+# Mas se algum dia copiá-la para dentro do working tree por engano, gitignored.
+zsh-vault-passphrase
 
 # Backups gerados pelo Oh My Zsh
 *.pre-oh-my-zsh

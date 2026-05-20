@@ -296,7 +296,7 @@ __sprint_doctor() {
 
     echo ""
     __item "Skill validação-visual" "" "$D_COMMENT" "$D_FG"
-    if [ -e "$HOME/.claude/skills/validacao-visual/SKILL.md" ]; then
+    if [ -e "$HOME/.claude/skills/validacao-visual/SKILL.md" ]; then  # noqa-acento (path real)
         echo -e "    ${D_GREEN}[OK]${D_RESET} skill registrada"
     else
         echo -e "    ${D_ORANGE}[FALTA]${D_RESET} skill validação-visual"
@@ -355,7 +355,7 @@ __sprint_subcomandos() {
         'brief-edit:Abre BRIEF no editor'
         'bootstrap:Copia template bootstrap pro clipboard'
         'bootstrap --rich:Gera BRIEF rico via script (projetos conhecidos)'
-        'doctor:Health check completo (14 licoes + setup)'
+        'doctor:Health check completo (14 lições + setup)'
         'doctor-quick:Health check silencioso (chamado por santuario)'
         'help:Mostra ajuda'
     )

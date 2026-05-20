@@ -133,6 +133,8 @@ def sync_sql_files(mec_root: Path, quiet: bool = False) -> dict:
         ["git", "-C", root_str, "diff", "--name-only", "HEAD..origin/main", "--", MODELS_REL],
         capture_output=True, text=True,
     )
+    if diff.returncode != 0:
+        return {"error": diff.stderr.strip(), "updated": []}
     changed = [ln for ln in diff.stdout.splitlines() if ln.strip()]
 
     checkout = subprocess.run(
@@ -181,14 +183,29 @@ def _run_query(client, sql: str) -> list:
     return list(client.query(sql).result())
 
 
+_BQ_IDENT_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
 def _get_type_from_schema(client, dataset: str, table: str, col: str) -> str:
+    # Validar identificadores BigQuery (não parametrizáveis em backticks).
+    # Parâmetros @table_name e @column_name são literais — vão parametrizados.
+    if not _BQ_IDENT_RE.match(dataset):
+        raise ValueError(f"dataset BigQuery inválido: {dataset!r}")
+    from google.cloud import bigquery
+
     sql = f"""
         SELECT data_type
         FROM `{client.project}.{dataset}.INFORMATION_SCHEMA.COLUMNS`
-        WHERE table_name = '{table}'
-          AND column_name = '{col}'
+        WHERE table_name = @table_name
+          AND column_name = @column_name
     """
-    rows = _run_query(client, sql)
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("table_name", "STRING", table),
+            bigquery.ScalarQueryParameter("column_name", "STRING", col),
+        ]
+    )
+    rows = list(client.query(sql, job_config=job_config).result())
     return rows[0][0] if rows else "UNKNOWN"
 
 
