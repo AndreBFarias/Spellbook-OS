@@ -10,6 +10,11 @@ import sys
 from pathlib import Path
 
 
+# Path canônico (realpath) deste próprio sanitizer. Usado em is_excluded()
+# para impedir auto-modificação mesmo se chamado via symlink, path relativo
+# ou caminho absoluto distinto do __file__ literal.
+SANITIZER_REALPATH = os.path.realpath(__file__)
+
 EXCLUDED_DIRS = {
     ".git", "venv", ".venv", "node_modules", "__pycache__",
     ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox",
@@ -25,11 +30,34 @@ EXCLUDED_EXTENSIONS = {
     ".woff", ".woff2", ".ttf", ".eot", ".otf",
     ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".pptx",
     ".lock", ".bin", ".dat", ".db", ".sqlite", ".sqlite3",
-    ".min.js", ".min.css", ".map",
+    ".map",
     ".key", ".pem", ".cert", ".crt", ".p12",
     ".pt", ".onnx", ".safetensors", ".gguf",
-    ".html", ".htm", ".xml", ".metainfo.xml",
+    ".html", ".htm", ".xml",
 }
+
+# Suffixes compostos (multi-ponto). Path.suffix só retorna o ÚLTIMO ponto,
+# então entradas como ".min.js" NUNCA casavam em EXCLUDED_EXTENSIONS — eram
+# código morto. Aqui a checagem é por endswith() no nome completo, em lower.
+EXCLUDED_NAME_SUFFIXES = (
+    ".min.js",
+    ".min.css",
+    ".bundle.js",
+    ".bundle.css",
+    ".metainfo.xml",
+)
+
+# Substrings de path que indicam código vendored ou de terceiros. Defesa em
+# camadas junto com EXCLUDED_DIRS e EXCLUDED_NAME_SUFFIXES — cobre bundles
+# minificados de userscripts e libs externas dentro de subdirs lib/, vendor/,
+# third_party/.
+EXCLUDED_PATH_SUBSTRINGS = (
+    "/userscripts/",
+    "/lib/",
+    "/vendor/",
+    "/third_party/",
+    "/node_modules/",
+)
 
 EXCLUDED_NAMES = {
     ".env", ".env.local", ".env.production", ".env.development",
@@ -129,9 +157,24 @@ def is_excluded(filepath: str) -> bool:
     path = Path(filepath)
     parts = set(path.parts)
 
+    # Auto-exclusão: o sanitizer NUNCA modifica seu próprio source-code,
+    # independente de como tenha sido invocado (path relativo, absoluto,
+    # ou via symlink). Usa realpath para canonicalizar inode.
+    try:
+        if os.path.realpath(filepath) == SANITIZER_REALPATH:
+            return True
+    except OSError:
+        pass
+
     if parts & EXCLUDED_DIRS:
         return True
     if path.suffix.lower() in EXCLUDED_EXTENSIONS:
+        return True
+    name_lower = path.name.lower()
+    if any(name_lower.endswith(s) for s in EXCLUDED_NAME_SUFFIXES):
+        return True
+    path_str = str(path)
+    if any(s in path_str for s in EXCLUDED_PATH_SUBSTRINGS):
         return True
     if path.name in EXCLUDED_NAMES:
         return True
