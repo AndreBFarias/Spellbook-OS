@@ -50,6 +50,17 @@ __err()  { echo -e "  ${D_RED}[ERRO]${D_RESET} $1" >&2; }
 
 __cd() { cd "$1" || { __err "Diretório não encontrado: $1"; return 1; } }
 
+# -- Idempotente: adiciona dir ao PATH só se ainda não estiver presente --
+# Evita PATH inchar em reloads do shell (`exec zsh`, `source ~/.zshrc`).
+__add_to_path_once() {
+    local dir="$1"
+    [[ -z "$dir" ]] && return 1
+    case ":$PATH:" in
+        *":$dir:"*) return 0 ;;
+    esac
+    export PATH="$dir:$PATH"
+}
+
 # -- Verificação de dependências --
 __verificar_dependencias() {
     local ferramentas_faltantes=()

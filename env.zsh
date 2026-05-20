@@ -5,10 +5,22 @@
 # Bridge: config.local.zsh exporta CONTROLE_BORDO_DIR, funções usam BORDO_DIR
 export BORDO_DIR="${CONTROLE_BORDO_DIR:-$HOME/Controle de Bordo}"
 
+# Helper local (functions/_helpers.zsh redefine depois com a versão pública).
+# Necessário aqui porque _helpers.zsh só carrega após env.zsh no boot.
+__add_to_path_once() {
+    local dir="$1"
+    [[ -z "$dir" ]] && return 1
+    case ":$PATH:" in *":$dir:"*) return 0 ;; esac
+    export PATH="$dir:$PATH"
+}
+
 # --- 1. TEMA E OH MY ZSH ---
 ZSH_THEME="agnoster"
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME/.config/zsh}/.zcompdump"
-export PATH="$HOME/.spicetify:$HOME/.cargo/bin:$HOME/.local/bin:/snap/bin:$PATH"
+__add_to_path_once "/snap/bin"
+__add_to_path_once "$HOME/.local/bin"
+__add_to_path_once "$HOME/.cargo/bin"
+__add_to_path_once "$HOME/.spicetify"
 
 export ZSH="${ZDOTDIR:-$HOME/.config/zsh}/.oh-my-zsh"
 
@@ -53,7 +65,7 @@ export NVM_DIR="$HOME/.nvm"
 # Binarios do nvm default no PATH (garante node moderno para processos filhos como MCP servers)
 if [ -d "$NVM_DIR/versions/node" ]; then
     _nvm_default="$(ls -1 "$NVM_DIR/versions/node/" | sort -V | tail -1)"
-    [ -n "$_nvm_default" ] && export PATH="$NVM_DIR/versions/node/$_nvm_default/bin:$PATH"
+    [ -n "$_nvm_default" ] && __add_to_path_once "$NVM_DIR/versions/node/$_nvm_default/bin"
     unset _nvm_default
 fi
 
@@ -143,7 +155,9 @@ fi
 
 
 export ANDROID_HOME="$HOME/Android/sdk"
-export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+__add_to_path_once "$ANDROID_HOME/emulator"
+__add_to_path_once "$ANDROID_HOME/platform-tools"
+__add_to_path_once "$ANDROID_HOME/cmdline-tools/latest/bin"
 
 
 

@@ -28,7 +28,7 @@ fi
 # --- 5. FERRAMENTAS ESPECÍFICAS ---
 # Pyenv (lazy-load: só inicializa na 1ª invocação)
 export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+[[ -d $PYENV_ROOT/bin ]] && __add_to_path_once "$PYENV_ROOT/bin"
 __load_pyenv() {
     unset -f pyenv python python3 2>/dev/null
     eval "$(command pyenv init -)"
