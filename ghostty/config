@@ -1,0 +1,96 @@
+# =============================================================================
+# Ghostty config — replicação da estética do GNOME Terminal "Dracula"
+# =============================================================================
+# Origem: perfil GNOME Terminal default (UUID b1dcc9dd-5262-4d8d-a863-c897e6d979b9,
+# visible-name "Dracula"), extraído via dconf em 2026-05-21.
+#
+# Versionado em ~/.config/zsh/ghostty/config (repo Spellbook-OS).
+# Symlinkado em ~/.config/ghostty/config (lido pelo Ghostty).
+# Validar mudanças: ghostty +validate-config
+# Listar opções: ghostty +show-config --default --docs
+# =============================================================================
+
+
+# --- Tipografia ---------------------------------------------------------------
+font-family = Fira Mono
+font-size = 12
+
+
+# --- Cores principais --------------------------------------------------------
+background = 2a2c39
+foreground = 92b59c
+
+
+# --- Cursor ------------------------------------------------------------------
+cursor-color = 5c8f6e
+
+
+# --- Seleção (highlight) -----------------------------------------------------
+selection-background = 73c48f
+selection-foreground = 893c3c
+
+
+# --- Paleta 16 cores (replicada do perfil GNOME Terminal) --------------------
+# Cores normais (0-7)
+palette = 0=#39766b
+palette = 1=#d34141
+palette = 2=#b1a4af
+palette = 3=#c4a000
+palette = 4=#ded5e5
+palette = 5=#75507b
+palette = 6=#c8acf7
+palette = 7=#2c8048
+# Cores bright (8-15)
+palette = 8=#ffae85
+palette = 9=#f15d22
+palette = 10=#dbe6df
+palette = 11=#ffce51
+palette = 12=#48b9c7
+palette = 13=#ad7fa8
+palette = 14=#34e2e2
+palette = 15=#d8efd5
+
+
+# --- Janela ------------------------------------------------------------------
+# Mesma dimensão default do GNOME Terminal (84 colunas × 20 linhas).
+window-width = 84
+window-height = 20
+window-padding-x = 4
+window-padding-y = 4
+
+# Titlebar dark com botões close/min/max (igual GNOME Terminal do usuário).
+# window-theme=ghostty faz a titlebar usar cores do config em vez de seguir
+# o tema GTK do sistema (que ficaria branco com decoração default).
+window-decoration = auto
+window-theme = ghostty
+window-titlebar-background = #2a2c39
+window-titlebar-foreground = #92b59c
+
+
+# --- Tabs --------------------------------------------------------------------
+# Default já é `top` mas declarado explícito pra ficar legível. Abas abrem
+# com ctrl+shift+t e aparecem em barra horizontal acima do conteúdo.
+gtk-tabs-location = top
+
+
+# --- Transparência leve do background ----------------------------------------
+# 0.92 = 8% transparente, suave. Sobe pra 1.0 pra opacidade total.
+background-opacity = 0.92
+
+
+# --- Comportamento -----------------------------------------------------------
+mouse-scroll-multiplier = 3
+copy-on-select = false
+confirm-close-surface = false
+shell-integration = zsh
+shell-integration-features = no-cursor
+
+
+# --- Bell (GNOME Terminal tinha audible-bell=true) ---------------------------
+bell-features = system
+
+
+# --- Notas históricas --------------------------------------------------------
+# GNOME tinha bold-color='rgb(230,255,238)', bold-color-same-as-fg=false,
+# bold-is-bright=false. O campo bold-is-bright foi deprecated no Ghostty 1.x;
+# bold por padrão herda a cor da paleta. Sem ação necessária.

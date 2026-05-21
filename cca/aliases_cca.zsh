@@ -183,14 +183,114 @@ __cca_run() {
     return $exit_code
 }
 
-# Propósito: Claude Code com permissões completas (modo direto, scroll do mouse nativo)
+# Propósito: detecta se terminal atual entende OSC 9 / OSC 9;4 (Ghostty/iTerm/Kitty/WezTerm).
+# Retorna 0 (compatível) ou 1 (incompatível, ex: gnome-terminal, xterm).
+__cca_terminal_compativel() {
+    case "${TERM_PROGRAM:-}" in
+        Ghostty|ghostty|kitty|iTerm.app|WezTerm) return 0 ;;
+    esac
+    [ -n "${GHOSTTY_RESOURCES_DIR:-}" ] && return 0
+    [ -n "${GHOSTTY_BIN_DIR:-}" ] && return 0
+    [ -n "${KITTY_PID:-}" ] && return 0
+    [ -n "${KITTY_WINDOW_ID:-}" ] && return 0
+    [ -n "${WEZTERM_PANE:-}" ] && return 0
+    [ -n "${ITERM_SESSION_ID:-}" ] && return 0
+    return 1
+}
+
+# Propósito: retorna comando de lançamento Ghostty (nativo ou flatpak), ou string vazia.
+__cca_ghostty_exec() {
+    if command -v ghostty &>/dev/null; then
+        echo "ghostty"
+        return 0
+    fi
+    if command -v flatpak &>/dev/null && flatpak list 2>/dev/null | grep -q "com.mitchellh.ghostty"; then
+        echo "flatpak run com.mitchellh.ghostty"
+        return 0
+    fi
+    echo ""
+    return 1
+}
+
+# Propósito: dispara Ghostty em background com cca rodando dentro (worker comum
+# de cca/cca-ghostty). PWD e argv passados via quoting zsh seguro.
+__cca_spawn_ghostty() {
+    local launch_cmd="$1"; shift
+    local quoted_pwd="${(q)PWD}"
+    local quoted_args=""
+    if [ $# -gt 0 ]; then
+        quoted_args=" ${(@q)@}"
+    fi
+    setsid sh -c "cd $quoted_pwd && $launch_cmd -e zsh -ic 'cca-here$quoted_args'" </dev/null >/dev/null 2>&1 &
+    disown
+}
+
+# Propósito: Claude Code in-place (não relança terminal). Use quando já está em
+# terminal compatível OU quando quer escape hatch num terminal incompatível.
+# Uso: cca-here [args]
+cca-here() {
+    if ! command -v claude &> /dev/null; then
+        echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
+        return 1
+    fi
+    typeset -f sync_claude_symlinks > /dev/null && sync_claude_symlinks --quiet 2>/dev/null
+    __cca_run "$@"
+}
+
+# Propósito: força relançamento em Ghostty (janela nova) mesmo que terminal
+# atual já seja compatível. Útil pra debug ou pra ter sessão isolada.
+# Uso: cca-ghostty [args]
+cca-ghostty() {
+    if ! command -v claude &> /dev/null; then
+        echo "[ERRO] Claude Code não instalado."
+        return 1
+    fi
+    local launch_cmd
+    launch_cmd=$(__cca_ghostty_exec)
+    if [ -z "$launch_cmd" ]; then
+        echo "[ERRO] Ghostty não instalado. Rode: bash ~/.config/zsh/install.sh --update"
+        return 1
+    fi
+    echo "[cca-ghostty] Abrindo janela nova do Ghostty (PWD: $PWD)..."
+    __cca_spawn_ghostty "$launch_cmd" "$@"
+    return 0
+}
+
+# Propósito: Claude Code com permissões completas. Detecta terminal e relança em
+# Ghostty automaticamente se terminal atual não suportar OSC 9 (push notif).
 # Uso: cca [args]
+# Variantes: cca-here (força in-place), cca-ghostty (força relançamento), cca-tmux (tmux).
 cca() {
     if ! command -v claude &> /dev/null; then
         echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
         return 1
     fi
     typeset -f sync_claude_symlinks > /dev/null && sync_claude_symlinks --quiet 2>/dev/null
+
+    # Terminal já suporta OSC 9? Roda in-place.
+    if __cca_terminal_compativel; then
+        __cca_run "$@"
+        return $?
+    fi
+
+    # Terminal incompatível: tenta relançar em Ghostty (instalado por install.sh).
+    local launch_cmd
+    launch_cmd=$(__cca_ghostty_exec)
+    if [ -n "$launch_cmd" ]; then
+        echo "[cca] Terminal atual (${TERM_PROGRAM:-${TERM:-?}}) não suporta OSC 9 — relançando em Ghostty..."
+        __cca_spawn_ghostty "$launch_cmd" "$@"
+        return 0
+    fi
+
+    # Nem Ghostty instalado: roda in-place com aviso forte.
+    cat >&2 <<'EOF'
+[cca][AVISO] Terminal atual não suporta OSC 9 e Ghostty/Kitty não estão instalados.
+Se push notificações vazarem caracteres tipo ]9; ou ^[]777; no TTY, edite
+~/.claude/settings.json setando:
+  "preferredNotifChannel": "system"
+  "agentPushNotifEnabled": false
+Ou instale Ghostty: bash ~/.config/zsh/install.sh --update
+EOF
     __cca_run "$@"
 }
 

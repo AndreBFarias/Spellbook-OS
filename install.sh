@@ -121,7 +121,7 @@ _ok()    { echo -e "  ${_C_GREEN}OK${_C_RESET}  $*"; }
 _warn()  { echo -e "  ${_C_YELLOW}!!${_C_RESET} $*" >&2; }
 _err()   { echo -e "  ${_C_RED}ERRO${_C_RESET} $*" >&2; exit 1; }
 
-TOTAL_STEPS=16
+TOTAL_STEPS=18
 CURRENT_STEP=0
 _EXISTING_CONFIG=false
 
@@ -330,12 +330,20 @@ _step_deps() {
         _info "Instalando dependências Python..."
         local pip_flags="--quiet"
         [[ -z "${VIRTUAL_ENV:-}" ]] && pip_flags="--user $pip_flags"
+        # Tolerante a falha: pacotes Python opcionais não devem abortar a
+        # instalação inteira. Ex: pandas>=3.0 exige Python 3.11+; Pop!_OS
+        # 22.04 vem com 3.10. Avisa mas segue para próximos steps (Ghostty etc.)
+        local pip_ok=true
         if [[ -f "$SCRIPT_DIR/requirements.txt" ]]; then
-            _run pip3 install $pip_flags -r "$SCRIPT_DIR/requirements.txt"
+            _run pip3 install $pip_flags -r "$SCRIPT_DIR/requirements.txt" || pip_ok=false
         else
-            _run pip3 install $pip_flags pandas openpyxl
+            _run pip3 install $pip_flags pandas openpyxl || pip_ok=false
         fi
-        _ok "Python deps instaladas"
+        if [[ "$pip_ok" == true ]]; then
+            _ok "Python deps instaladas"
+        else
+            _warn "Algumas deps Python falharam (ex: pandas>=3.0 exige Python 3.11+). Continuando."
+        fi
     fi
 }
 
@@ -757,6 +765,40 @@ _step_topgrade_symlink() {
     _ok "Symlink criado: $target -> $source"
 }
 
+# --- Etapa ghostty config: symlink ~/.config/ghostty/config -> ~/.config/zsh/ghostty/config ---
+# Mantém o config Ghostty (estética Dracula traduzida do GNOME Terminal +
+# titlebar dark + tabs inline + background-opacity 0.92) versionado no
+# Spellbook-OS. Útil pra portabilidade entre máquinas.
+_step_ghostty_config_symlink() {
+    _step "Ghostty config (estética versionada)"
+
+    local source="$ZDOTDIR_TARGET/ghostty/config"
+    local target="$HOME/.config/ghostty/config"
+
+    if [[ ! -f "$source" ]]; then
+        _warn "$source não existe — pule esta etapa"
+        return 0
+    fi
+
+    if [[ -L "$target" ]] && [[ "$(readlink -f "$target")" == "$(readlink -f "$source")" ]]; then
+        _ok "Symlink ~/.config/ghostty/config já aponta para o repo"
+        return 0
+    fi
+
+    _run mkdir -p "$(dirname "$target")"
+
+    if [[ -f "$target" && ! -L "$target" ]]; then
+        local backup="${target}.backup.$(date +%Y%m%d_%H%M%S)"
+        _info "~/.config/ghostty/config existe (não é symlink) — backup em $backup"
+        _run mv "$target" "$backup"
+    elif [[ -L "$target" ]]; then
+        _run rm "$target"
+    fi
+
+    _run ln -sfn "$source" "$target"
+    _ok "Symlink criado: $target -> $source"
+}
+
 # --- Etapa 6: ~/.zshenv com ZDOTDIR ---
 _step_zshenv() {
     _step "Configurando ZDOTDIR"
@@ -934,6 +976,97 @@ _step_ritual() {
     fi
 }
 
+# --- Etapa: Ghostty (terminal recomendado para Claude Code) ---
+# Motivação: Claude Code v2.1.143+ emite OSC 9 e OSC 9;4 (push notif +
+# progress bar) usando dialeto iTerm/Ghostty quando preferredNotifChannel=ghostty.
+# Terminais sem suporte (gnome-terminal/VTE) vazam ]9; e ^[]777; para o TTY
+# e quebram raw-mode. Instalar Ghostty resolve definitivamente.
+# Estratégia: Snap classic (oficial-verificado Canonical, v1.3.1+).
+# Flathub: descartado — Ghostty não publica lá (verificado 2026-05-21,
+# nenhum dos namespaces com.mitchellh.ghostty / com.ghostty.Ghostty /
+# org.ghostty.Ghostty existe no remote flathub).
+_step_ghostty() {
+    _step "Ghostty (terminal recomendado para Claude Code)"
+
+    if command -v ghostty &>/dev/null; then
+        _ok "ghostty já instalado nativamente"
+        _post_ghostty_settings_revert
+        return 0
+    fi
+
+    if command -v snap &>/dev/null && snap list 2>/dev/null | awk '{print $1}' | grep -qx "ghostty"; then
+        _ok "ghostty já instalado via Snap"
+        _post_ghostty_settings_revert
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] sudo snap install ghostty --classic"
+        return 0
+    fi
+
+    if command -v snap &>/dev/null && snap info ghostty &>/dev/null; then
+        _info "Instalando Ghostty via Snap classic (v1.3.1+, publisher Canonical-verificado)..."
+        if _run sudo snap install ghostty --classic; then
+            _ok "Ghostty instalado via Snap"
+            _post_ghostty_settings_revert
+            return 0
+        fi
+        _warn "Snap install ghostty falhou."
+    else
+        _warn "Snap indisponível ou pacote 'ghostty' não encontrado no Snap store."
+    fi
+
+    _warn "Ghostty não foi instalado automaticamente."
+    _warn "Instale manualmente via build-from-source:"
+    _warn "  sudo snap install --classic zig"
+    _warn "  git clone https://github.com/ghostty-org/ghostty.git \"\${DEV_DIR:-\$HOME/Desenvolvimento}/ghostty\""
+    _warn "  cd \"\${DEV_DIR:-\$HOME/Desenvolvimento}/ghostty\" && zig build -Doptimize=ReleaseFast"
+    _warn "  sudo zig build -Doptimize=ReleaseFast install --prefix /usr/local"
+    return 0
+}
+
+# Re-ativa preferredNotifChannel=ghostty e agentPushNotifEnabled=true no
+# ~/.claude/settings.json (revertendo o fix da Frente 1). Idempotente.
+# Só faz sentido após Ghostty estar instalado e funcional.
+_post_ghostty_settings_revert() {
+    local settings="$HOME/.claude/settings.json"
+    if [[ ! -f "$settings" ]]; then
+        return 0
+    fi
+    if ! command -v jq &>/dev/null; then
+        _warn "jq ausente — settings.json não revertido. Edite manualmente:"
+        _warn "  preferredNotifChannel: ghostty, agentPushNotifEnabled: true"
+        return 0
+    fi
+    local current_channel current_push
+    current_channel=$(jq -r '.preferredNotifChannel // empty' "$settings" 2>/dev/null)
+    current_push=$(jq -r '.agentPushNotifEnabled // empty' "$settings" 2>/dev/null)
+    if [[ "$current_channel" == "ghostty" && "$current_push" == "true" ]]; then
+        _ok "settings.json: preferredNotifChannel=ghostty, agentPushNotifEnabled=true (já)"
+        return 0
+    fi
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] jq settings.json: preferredNotifChannel=ghostty, agentPushNotifEnabled=true"
+        return 0
+    fi
+    local tmp
+    tmp=$(mktemp)
+    if jq '.preferredNotifChannel="ghostty" | .agentPushNotifEnabled=true' "$settings" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$settings"
+        _ok "settings.json revertido: preferredNotifChannel=ghostty, agentPushNotifEnabled=true"
+    else
+        rm -f "$tmp"
+        _warn "Falha ao reverter settings.json via jq"
+    fi
+}
+
+# Nota: Kitty NÃO está no Snap store (verificado 2026-05-21). O apt do
+# Pop!_OS 22.04 entrega Kitty 0.21.2 (jun/2021) que JÁ suporta OSC 9 —
+# basta pra evitar o vazamento. Quem quiser versão recente: build manual
+# (kitty.conf usa Python build), ou usar AppImage não-oficial. Não vale
+# automatizar no install.sh — Kitty antigo já resolve o problema.
+
 # --- Etapa 11: Validação pós-instalação ---
 _step_validate() {
     _step "Validação pós-instalação"
@@ -955,6 +1088,22 @@ _step_validate() {
 
     command -v tmux &>/dev/null \
         || { _warn "tmux não instalado — cca-tmux indisponível"; ((erros++)); }
+
+    # Ghostty: snap nativo ou via flatpak (legado, snap é o caminho oficial)
+    if command -v ghostty &>/dev/null; then
+        : # OK
+    else
+        _warn "ghostty não instalado — terminal recomendado para Claude Code (evita vazamento OSC 9)"
+        ((erros++))
+    fi
+
+    # Ghostty config symlink
+    if [[ -L "$HOME/.config/ghostty/config" ]] && [[ "$(readlink -f "$HOME/.config/ghostty/config")" == "$(readlink -f "$ZDOTDIR_TARGET/ghostty/config")" ]]; then
+        : # OK
+    elif [[ -f "$ZDOTDIR_TARGET/ghostty/config" ]]; then
+        _warn "~/.config/ghostty/config não está symlinkado ao repo — rode install.sh --update"
+        ((erros++))
+    fi
 
     # Aurora 2.x: services do bootstrap
     for s in aurora-root.service aurora-watchdog.timer earlyoom.service; do
@@ -1051,13 +1200,20 @@ Comandos disponíveis:
   sistema_capturar   -- manifesto JSON do sistema
   sistema_restaurar  -- restaurar de manifesto
   diagnostico_pop    -- diagnóstico completo
-  cca                -- claude code (--dangerously-skip-permissions)
+  cca                -- claude code (relança em Ghostty se terminal atual não suportar OSC 9)
+  cca-here           -- claude code in-place (não relança)
+  cca-ghostty        -- força relançamento em Ghostty
   claude-safe        -- claude code com quota guard
   claude-quota       -- verificar quota de uso
   spellbook_export       -- criptografar credentials no vault
   spellbook_import       -- restaurar credentials do vault
   spellbook_sync_status  -- estado do sync bidirecional
   spellbook_sync_force   -- forcar direção do sync
+
+Terminais recomendados para Claude Code:
+  ghostty            -- preferido (instalado via Snap em _step_ghostty)
+  kitty              -- alternativa (0.21.2 do apt ja suporta OSC 9)
+  gnome-terminal     -- compativel mas sem suporte a OSC 9 (push notif vazam)
 
 Sync automatico:
   Ao abrir terminal: commit local + pull remoto
@@ -1212,6 +1368,7 @@ main() {
     _step_deploy
     _step_deps
     _step_fonts
+    _step_ghostty
     _step_encoding_tools
     _step_omz
     _step_tui
@@ -1223,6 +1380,7 @@ main() {
     _step_zshenv
     _step_fastfetch_symlink
     _step_topgrade_symlink
+    _step_ghostty_config_symlink
     _step_chsh
     _step_validate
     _step_manifest

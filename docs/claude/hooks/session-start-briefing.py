@@ -202,6 +202,60 @@ def _block_acao_automatica(brief_status: str, kind: str, has_mem: bool, brief_pa
     return ""
 
 
+# -- Guarda anti-vazamento OSC 9 (preferredNotifChannel x terminal real) ----
+
+
+def _block_aviso_terminal_osc() -> str:
+    """Detecta mismatch entre preferredNotifChannel=ghostty (ou agentPushNotif
+    ativo) e terminal atual sem suporte a OSC 9.
+
+    Causa-raiz documentada em ~/.claude/plans/ultimamente-fomos-rodar-as-cozy-cosmos.md
+    e VALIDATOR_BRIEF.md §armadilhas: gnome-terminal/VTE não consome OSC 9 nem
+    OSC 777 — sequências vazam como `]9;` / `^[]777;` e quebram raw-mode do TTY.
+
+    Retorna bloco de aviso ou string vazia (sem ruído quando ok).
+    """
+    settings_path = pathlib.Path.home() / ".claude/settings.json"
+    try:
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+
+    pref_channel = settings.get("preferredNotifChannel")
+    push_enabled = settings.get("agentPushNotifEnabled")
+
+    # Sem risco se canal não é ghostty E push notif desativado
+    if pref_channel != "ghostty" and not push_enabled:
+        return ""
+
+    # Terminal compatível? (Ghostty/Kitty/iTerm/WezTerm via $TERM_PROGRAM ou envs específicas)
+    term_prog = _env("TERM_PROGRAM").lower()
+    if term_prog in {"ghostty", "kitty", "iterm.app", "wezterm"}:
+        return ""
+    for env_name in ("GHOSTTY_RESOURCES_DIR", "GHOSTTY_BIN_DIR",
+                     "KITTY_PID", "KITTY_WINDOW_ID",
+                     "WEZTERM_PANE", "ITERM_SESSION_ID"):
+        if _env(env_name):
+            return ""
+
+    # Mismatch confirmado
+    lines = [
+        "[AVISO TERMINAL]",
+        "preferredNotifChannel=ghostty (ou agentPushNotifEnabled=true) ativo,",
+        "mas terminal atual não é Ghostty/Kitty/iTerm/WezTerm.",
+        f"  TERM_PROGRAM={_env('TERM_PROGRAM') or '<vazio>'} TERM={_env('TERM') or '<vazio>'}",
+        "Risco: OSC 9 / OSC 9;4 vazam como `]9;` ou `^[]777;` no TTY ao despachar agente,",
+        "quebrando raw-mode (teclas viram continuação de escape, sessão fecha).",
+        "",
+        "Ação recomendada:",
+        "  - Rode 'cca' (relança em Ghostty se instalado) OU 'cca-here' (força in-place).",
+        "  - Se Ghostty não instalado: bash ~/.config/zsh/install.sh --update",
+        "  - Quick-fix: editar ~/.claude/settings.json setando",
+        '      "preferredNotifChannel": "system", "agentPushNotifEnabled": false',
+    ]
+    return "\n".join(lines)
+
+
 # -- Main -------------------------------------------------------------------
 
 
@@ -220,6 +274,7 @@ def main() -> int:
     blocks = [
         _block_santuario_ready(root, name, kind_canonical, brief_path, brief_status),
         _block_projeto_especial(kind_canonical, spec, has_mem),
+        _block_aviso_terminal_osc(),
         _block_capacidades_visuais(),
         _block_sprint_ciclo(retries_max),
         _block_acao_automatica(brief_status, kind_canonical, has_mem, brief_path, kind_canonical),
