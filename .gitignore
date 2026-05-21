@@ -4,8 +4,10 @@
 *.zwc
 .zsh_history
 
-# Toolchain e docs internos (não sobem pro repo público)
-docs/claude/
+# Toolchain e docs internos
+# docs/claude/ — versionado a partir de 2026-05-20 (decisão: agentes Claude
+# devem ser reproduzíveis em reinstall; risco de exposição é baixo, o repo
+# já é público sob o usuário).
 .claude/
 VALIDATOR_BRIEF.md
 MAP_*.md
