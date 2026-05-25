@@ -98,22 +98,14 @@ EMOJI_RE = re.compile(
 )
 
 # Glyphs canônicos protegidos contra remoção do EMOJI_RE.
-# Faixa Geometric Shapes (U+25AA-25FE) também contém símbolos de UI legítimos
-# usados por projetos como Nyx-Code (invariante #14: o circle states + box
-# drawing). Estes são preservados mesmo quando o EMOJI_RE casa.
-ALLOWED_GLYPHS = frozenset({
-    "○",  # circle empty (cold/empty state)
-    "◐",  # circle half left (warming/in progress)
-    "●",  # circle filled (warm/ok)
-    "◆",  # diamond filled (header agente, multi-tool)
-    "◇",  # diamond empty (glob)
-    "▶",  # right triangle (collapsed)
-    "▼",  # down triangle (expanded)
-    "▸",  # small right triangle (bash/execute)
-    "◼",  # small black square (todo done)
-    "◻",  # small white square (todo pending)
-    "↗",  # arrow upper right (web/network)
-})
+# ALLOWED_GLYPHS centralizado em glyphs_canonicos.py (FONTE UNICA): antes cada
+# sanitizer tinha copia propria e divergiram (emoji_guardian sem allowlist
+# enquanto este tinha) -- causa da recidiva de estripamento (SPRINT 232).
+import os as _os  # noqa: E402
+import sys as _sys  # noqa: E402
+
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from glyphs_canonicos import ALLOWED_GLYPHS  # noqa: E402
 
 
 def _strip_emojis_preserving_allowed(text: str) -> tuple[str, int]:
