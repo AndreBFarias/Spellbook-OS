@@ -417,6 +417,11 @@ if [ -x "$AURORA_REPO/aurora-gpu-shortcut-apply.sh" ]; then
   "$AURORA_REPO/aurora-gpu-shortcut-apply.sh" | sed 's/^/[bootstrap] /' || warn "gpu-shortcut-apply retornou erro (não bloqueia)"
 fi
 
+# 6f. Editor de texto estilo Notepad (gnome-text-editor padrão + restore-session)
+if [ -x "$AURORA_REPO/aurora-editor-apply.sh" ]; then
+  "$AURORA_REPO/aurora-editor-apply.sh" | sed 's/^/[bootstrap] /' || warn "editor-apply retornou erro (não bloqueia)"
+fi
+
 # 7. Sunset do ritual antigo (so se ainda ativo)
 if [ -f /etc/systemd/system/ritual-aurora-root.service ]; then
   sudo -n systemctl disable ritual-aurora-root.service 2>/dev/null || true

@@ -116,6 +116,13 @@ aurora-self-heal() {
     fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
   fi
 
+  # Aurora 2.3: editor padrão de texto (gnome-text-editor estilo Notepad)
+  if [ ! -f /usr/share/applications/org.gnome.TextEditor.desktop ] \
+     || [ "$(xdg-mime query default text/plain 2>/dev/null)" != "org.gnome.TextEditor.desktop" ]; then
+    issues+=("gnome-text-editor não é o padrão de text/plain (editor estilo Notepad)")
+    fixes_user+=("$aurora/aurora-editor-apply.sh")
+  fi
+
   # oh-my-zsh drift (executabilidade removida em massa por causa desconhecida — incidente 2025-08-11).
   # Usa ${ZSH:-...} porque o host pode ter o OMZ ativo em ~/.config/zsh/.oh-my-zsh (modo ZDOTDIR)
   # em vez de ~/.oh-my-zsh — checar a variável canônica do OMZ, com fallback.
