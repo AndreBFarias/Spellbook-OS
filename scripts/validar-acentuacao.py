@@ -79,6 +79,24 @@ EXTENSIONS = (".py", ".zsh", ".sh", ".md")
 # NUNCA identificadores (function names, variáveis).
 IDENT_PREFIX = re.compile(r"(?:def |function |alias |class |local )\s*$")
 
+# Marker preciso de noqa (igual ao hook local do Nyx-Code desde sprint 201):
+# <!-- noqa-acento -->, # noqa-acento, // noqa-acento.  # noqa-acento
+_NOQA_PRECISE_RE = re.compile(r"(<!--|#|//)\s*noqa-acento(\s|-->|$)")
+
+
+def has_noqa_marker(line: str) -> bool:
+    """Backward-compat: aceita marker preciso (regex) OU substring antiga.
+
+    Marker preciso: <!-- noqa-acento -->, # noqa-acento, // noqa-acento.
+    Substring antiga: qualquer ocorrencia de 'noqa-acento' ou '# noqa-acento'  # noqa-acento
+    na linha (forma legada anterior a sprint 201 do Nyx-Code).
+    """
+    if _NOQA_PRECISE_RE.search(line):
+        return True
+    if "# noqa-acento" in line or "noqa-acento" in line:  # noqa-acento
+        return True
+    return False
+
 
 def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]:
     results = []
@@ -91,7 +109,7 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
     fixed_lines = []
 
     for i, line in enumerate(lines, start=1):
-        if "# noqa-acento" in line or "noqa-acento" in line:
+        if has_noqa_marker(line):
             fixed_lines.append(line)
             continue
 
@@ -102,6 +120,8 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
                 re.IGNORECASE,
             )
             for m in pattern.finditer(line):
+                if has_noqa_marker(line):
+                    continue  # marker presente — silencia esta linha (defesa em profundidade)
                 prefix = line[: m.start()]
                 # Skip se precedido por palavra-chave de declaração
                 if IDENT_PREFIX.search(prefix):
