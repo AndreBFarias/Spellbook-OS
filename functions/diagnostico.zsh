@@ -201,7 +201,7 @@ __dossie_arquivos_avancado() {
     echo "---"
 
     # Verificar e limpar emojis no projeto
-    local emoji_guardian="${BORDO_DIR:-$HOME/Controle de Bordo}/.sistema/scripts/emoji_guardian.py"
+    local emoji_guardian="$HOME/.config/zsh/scripts/emoji_guardian.py"
     if [[ -f "$emoji_guardian" ]]; then
         echo ""
         echo "## Verificação de Emojis"

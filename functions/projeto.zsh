@@ -246,7 +246,7 @@ santuario() {
 
     # Verificação e limpeza automática de emojis
     echo ""
-    local emoji_guardian="${BORDO_DIR:-$HOME/Controle de Bordo}/.sistema/scripts/emoji_guardian.py"
+    local emoji_guardian="$HOME/.config/zsh/scripts/emoji_guardian.py"
     if [ -f "$emoji_guardian" ]; then
         echo -e "  ${D_COMMENT}Verificando emojis...${D_RESET}"
         local check_output=$(python3 "$emoji_guardian" check . 2>&1)
@@ -263,7 +263,7 @@ santuario() {
         fi
     fi
 
-    # Alinhamento anti-IA: aplica padrao em todos os repos de ~/Desenvolvimento.
+    # Alinhamento anti-IA: aplica padrão em todos os repos de ~/Desenvolvimento.
     # Idempotente; em modo quiet so reporta se houver alteracao.
     local align_script="$HOME/.config/git/bin/align-anonymity-all-repos.sh"
     if [ -x "$align_script" ] && [[ -z "$SANTUARIO_SKIP_ALIGN" ]]; then
@@ -273,7 +273,7 @@ santuario() {
             echo -e "  ${D_YELLOW}[ANONIMATO]${D_RESET} alinhamento aplicado:"
             echo "$align_out" | sed 's/^/    /'
         else
-            echo -e "  ${D_GREEN}[OK] Repos alinhados ao padrao anti-IA${D_RESET}"
+            echo -e "  ${D_GREEN}[OK] Repos alinhados ao padrão anti-IA${D_RESET}"
         fi
     fi
 
@@ -306,7 +306,7 @@ santuario() {
     fi
 
     # Nota v2: prompt de abrir Claude Code removido - rodar `cca` diretamente já carrega
-    # VALIDATOR_BRIEF.md, capacidades visuais e ciclo automatico via hook SessionStart.
+    # VALIDATOR_BRIEF.md, capacidades visuais e ciclo automático via hook SessionStart.
     # Para validar sprint: `cca "/validar-sprint"` ou `sval`.
     # Para ciclo completo: `cca "/sprint-ciclo <ideia>"` ou `sciclo <ideia>`.
 

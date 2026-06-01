@@ -240,7 +240,7 @@ __sprint_doctor() {
         ((issues++))
     fi
 
-    local emoji_path="$HOME/Controle de Bordo/.sistema/scripts/emoji_guardian.py"
+    local emoji_path="$HOME/.config/zsh/scripts/emoji_guardian.py"
     if [ -f "$emoji_path" ]; then
         echo -e "    ${D_GREEN}[OK]${D_RESET} emoji_guardian.py ativo"
     else
@@ -349,7 +349,7 @@ __sprint_subcomandos() {
         'plan:Planeja sprint (gera spec)'
         'exec:Executa sprint (implementa spec aprovado)'
         'val:Valida sprint (proof-of-work)'
-        'ciclo:Ciclo completo plan->exec->val (automatico)'
+        'ciclo:Ciclo completo plan->exec->val (automático)'
         'ciclo-manual:Ciclo com checkpoints entre fases (opt-in)'
         'brief:Status do VALIDATOR_BRIEF.md'
         'brief-edit:Abre BRIEF no editor'
