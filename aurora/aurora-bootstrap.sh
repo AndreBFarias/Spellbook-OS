@@ -120,6 +120,12 @@ copia_se_diff "$AURORA_REPO/units/ollama-vram-watchdog.service" /etc/systemd/sys
 copia_se_diff "$AURORA_REPO/units/ollama-vram-watchdog.timer"   /etc/systemd/system/ollama-vram-watchdog.timer   root:root 0644
 copia_se_diff "$AURORA_REPO/aurora-vram-check"                  /usr/local/sbin/aurora-vram-check                root:root 0755
 
+# Aurora 2.3: amdgpu DMCUB display watchdog (recupera display AMD travado sem reboot;
+# descoberto 2026-06-01 -- freeze por DMCUB hang no Nitro-5 hibrido). Script vive no
+# repo (~/.config/zsh/aurora/amdgpu-dmcub-watchdog), so as units vao pro systemd.
+copia_se_diff "$AURORA_REPO/units/amdgpu-dmcub-watchdog.service" /etc/systemd/system/amdgpu-dmcub-watchdog.service root:root 0644
+copia_se_diff "$AURORA_REPO/units/amdgpu-dmcub-watchdog.timer"   /etc/systemd/system/amdgpu-dmcub-watchdog.timer   root:root 0644
+
 # Drop-in pra ollama.service apontar pra ollama.slice (só se ollama.service existe)
 if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.service ]; then
   sudo -n mkdir -p /etc/systemd/system/ollama.service.d
@@ -305,6 +311,18 @@ if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.
   if ! systemctl is-active --quiet ollama-vram-watchdog.timer 2>/dev/null; then
     sudo -n systemctl start ollama-vram-watchdog.timer || warn "Falha ao iniciar ollama-vram-watchdog.timer"
     log "Started: ollama-vram-watchdog.timer"
+  fi
+fi
+
+# Aurora 2.3: amdgpu-dmcub-watchdog.timer (só habilita se houver GPU amdgpu)
+if [ -d /sys/module/amdgpu ] || ls /sys/kernel/debug/dri/*/amdgpu_gpu_recover >/dev/null 2>&1; then
+  if ! systemctl is-enabled --quiet amdgpu-dmcub-watchdog.timer 2>/dev/null; then
+    sudo -n systemctl enable amdgpu-dmcub-watchdog.timer 2>&1 | grep -v "Created symlink" || true
+    log "Enabled: amdgpu-dmcub-watchdog.timer"
+  fi
+  if ! systemctl is-active --quiet amdgpu-dmcub-watchdog.timer 2>/dev/null; then
+    sudo -n systemctl start amdgpu-dmcub-watchdog.timer || warn "Falha ao iniciar amdgpu-dmcub-watchdog.timer"
+    log "Started: amdgpu-dmcub-watchdog.timer"
   fi
 fi
 

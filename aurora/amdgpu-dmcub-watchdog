@@ -1,0 +1,140 @@
+#!/bin/bash
+# Aurora 2.3 - amdgpu DMCUB/DMUB display watchdog
+# ---------------------------------------------------------------------------
+# Detecta hang do display AMD integrado (DMCUB/DMUB para de aceitar comandos ->
+# a tela CONGELA; o cursor do mouse ate pode mexer, mas o resto fica estatico)
+# e recupera SEM reboot. Descoberto em 2026-06-01 (freeze do Nitro-5 hibrido:
+# amdgpu dirige o display, NVIDIA faz compute). dmesg em loop:
+#   amdgpu ... [drm] *ERROR* Error queueing DMUB command: status=2
+#   amdgpu ... [drm] *ERROR* dc_dmub_srv_log_diagnostic_data: DMCUB error
+#
+# Recuperacao em DOIS passos (lecao empirica -- o passo 2 e a falha nao-obvia):
+#   1. amdgpu_gpu_recover  -> MODE2 reset, recarrega o firmware do DMUB.
+#   2. reiniciar o compositor (gnome-shell --replace) -> o GPU reset INVALIDA os
+#      contextos GL/EGL de todos os clientes X11; o device volta mas a tela segue
+#      estatica ate o compositor recriar seu contexto. gpu_recover sozinho NAO
+#      destrava a tela (provado na sessao 2026-06-01).
+#
+# Robustez: no-op sem AMD; deteccao por JANELA recente (nao erros antigos do
+# dmesg); cooldown anti-loop; teto por hora com alerta no Desktop (recidiva =
+# hardware/driver, nao adianta resetar em loop); descoberta dinamica do /dri e da
+# sessao grafica (usuario/DISPLAY/XAUTHORITY); confirma o reset no kernel.
+#
+# Roda como ROOT (debugfs + journalctl -k). O restart do compositor usa runuser
+# para o dono da sessao grafica. Tag de log: aurora-amdgpu-watchdog.
+set -u
+
+LOG_TAG="aurora-amdgpu-watchdog"
+WINDOW_S=60          # janela de deteccao: so erros dos ultimos 60s contam
+MIN_ERRORS=5         # >= N erros DMCUB na janela = hang ativo (loop ~5/s)
+COOLDOWN_S=120       # nao recupera de novo dentro de 120s (deixa estabilizar)
+MAX_PER_HOUR=4       # acima disso, alerta de hardware e para de auto-recuperar
+STATE_DIR="/run/aurora-amdgpu-wd"
+STAMP="$STATE_DIR/last_recover"
+HIST="$STATE_DIR/recover_history"
+DESKTOP_ALERT="/home/andrefarias/Desktop/AURORA-GPU-AVISO.md"
+DRY_RUN="${AURORA_WD_DRY_RUN:-0}"   # =1: so detecta e loga, sem recuperar (teste seguro)
+
+log() { logger -t "$LOG_TAG" "$*"; }
+mkdir -p "$STATE_DIR" 2>/dev/null
+
+# --- 1. AMD presente? (no-op gracioso em maquina sem amdgpu) ---------------
+amd_recover=""
+for d in /sys/kernel/debug/dri/*/; do
+  [ -f "${d}name" ] || continue
+  if grep -q "amdgpu" "${d}name" 2>/dev/null && [ -f "${d}amdgpu_gpu_recover" ]; then
+    amd_recover="${d}amdgpu_gpu_recover"
+    break
+  fi
+done
+[ -z "$amd_recover" ] && exit 0
+
+# --- 2. Ha hang RECENTE e sustentado? (janela + threshold) -----------------
+# journalctl -k (journald persistente, Aurora 2.2) cobre a janela com precisao;
+# fallback para dmesg se journalctl falhar.
+errs=$(journalctl -k --since "-${WINDOW_S}sec" --no-pager 2>/dev/null \
+        | grep -ciE "Error queueing DMUB command|DMCUB error|amdgpu.*ring.*timeout|amdgpu.*GPU hang")
+if [ -z "$errs" ] || ! [ "$errs" -ge 0 ] 2>/dev/null; then
+  # fallback: dmesg cru (sem janela -- so dispara se MUITOS erros, evita falso+)
+  errs=$(dmesg 2>/dev/null | tail -200 | grep -ciE "Error queueing DMUB command|DMCUB error")
+fi
+[ "${errs:-0}" -lt "$MIN_ERRORS" ] && exit 0
+
+if [ "$DRY_RUN" = "1" ]; then
+  log "[DRY] hang detectado: ${errs} erros DMCUB em ${WINDOW_S}s -- recuperaria (gpu_recover + restart do compositor)"
+  echo "[DRY] DETECTOU hang: ${errs} erros/${WINDOW_S}s (limiar ${MIN_ERRORS}); amdgpu=${amd_recover}"
+  exit 0
+fi
+
+now=$(date +%s)
+
+# --- 3. Cooldown (nao reseta em rajada) ------------------------------------
+if [ -f "$STAMP" ]; then
+  last=$(cat "$STAMP" 2>/dev/null || echo 0)
+  if [ $(( now - last )) -lt "$COOLDOWN_S" ]; then
+    log "hang detectado (${errs} erros/${WINDOW_S}s) mas em cooldown ($(( now - last ))s < ${COOLDOWN_S}s)"
+    exit 0
+  fi
+fi
+
+# --- 4. Teto por hora (recidiva = problema de hardware/driver) -------------
+touch "$HIST"
+hour_ago=$(( now - 3600 ))
+recovers_h=$(awk -v t="$hour_ago" '$1+0 >= t' "$HIST" 2>/dev/null | wc -l)
+if [ "$recovers_h" -ge "$MAX_PER_HOUR" ]; then
+  log "ALERTA: ${recovers_h} recoveries na ultima hora -- provavel hardware/driver. Auto-recover PAUSADO."
+  cat > "$DESKTOP_ALERT" 2>/dev/null <<EOF
+# Aurora - aviso de GPU (display AMD)
+
+O display AMD (amdgpu/DMCUB) travou e foi auto-recuperado **${recovers_h} vezes na ultima hora**.
+Recorrencia assim aponta hardware ou driver, nao um pico isolado. Sugestoes:
+
+- Atualizar firmware/kernel: \`sudo apt update && sudo apt install --reinstall linux-firmware\` + reboot.
+- Conferir temperatura/carga grafica (browsers pesados, video acelerado).
+- Logs do watchdog: \`journalctl -t ${LOG_TAG} -n 100\`
+- Erros do driver: \`sudo dmesg | grep -iE 'amdgpu.*ERROR|DMUB'\`
+
+Auto-recover fica pausado por 1h para nao mascarar o problema. Remova este arquivo apos resolver.
+EOF
+  chown andrefarias:andrefarias "$DESKTOP_ALERT" 2>/dev/null
+  exit 0
+fi
+
+log "hang DMCUB confirmado (${errs} erros em ${WINDOW_S}s) -- iniciando recuperacao"
+
+# --- 5. Passo 1: GPU reset (recarrega o DMUB) ------------------------------
+cat "$amd_recover" >/dev/null 2>&1
+sleep 3
+if dmesg 2>/dev/null | tail -40 | grep -qiE "recovered through reset|GPU reset.*succeeded"; then
+  log "passo 1 OK: amdgpu_gpu_recover -- device recuperado (DMUB reinit)"
+else
+  log "passo 1: gpu_recover disparado, sem confirmacao explicita -- seguindo"
+fi
+
+# --- 6. Passo 2: reiniciar o compositor (recria contexto GL apos o reset) ---
+shell_pid=$(pgrep -x gnome-shell 2>/dev/null | head -1)
+if [ -n "$shell_pid" ] && [ -r "/proc/$shell_pid/environ" ]; then
+  s_user=$(stat -c '%U' "/proc/$shell_pid" 2>/dev/null)
+  s_disp=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^DISPLAY=//p' | head -1)
+  s_xauth=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^XAUTHORITY=//p' | head -1)
+  s_xrt=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^XDG_RUNTIME_DIR=//p' | head -1)
+  s_dbus=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p' | head -1)
+  if [ -n "$s_disp" ] && [ -n "$s_user" ]; then
+    log "passo 2: reiniciando compositor (user=$s_user DISPLAY=$s_disp)"
+    runuser -u "$s_user" -- env \
+      DISPLAY="$s_disp" XAUTHORITY="$s_xauth" \
+      XDG_RUNTIME_DIR="$s_xrt" DBUS_SESSION_BUS_ADDRESS="$s_dbus" \
+      nohup gnome-shell --replace >/tmp/aurora-gnome-replace.log 2>&1 </dev/null &
+  else
+    log "passo 2 SKIP: sem DISPLAY/usuario (sessao Wayland ou headless) -- gpu_recover deve bastar"
+  fi
+else
+  log "passo 2 SKIP: gnome-shell nao encontrado"
+fi
+
+# --- 7. Registrar (cooldown + historico podado) ----------------------------
+echo "$now" > "$STAMP"
+echo "$now" >> "$HIST"
+awk -v t="$hour_ago" '$1+0 >= t' "$HIST" > "${HIST}.tmp" 2>/dev/null && mv "${HIST}.tmp" "$HIST"
+log "recuperacao completa (reset + restart compositor)"
+exit 0

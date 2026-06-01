@@ -1,0 +1,8 @@
+[Unit]
+Description=Aurora 2.3 - amdgpu DMCUB display watchdog (recupera display AMD travado sem reboot)
+
+[Service]
+Type=oneshot
+ExecStart=/home/andrefarias/.config/zsh/aurora/amdgpu-dmcub-watchdog
+StandardOutput=journal
+StandardError=journal
