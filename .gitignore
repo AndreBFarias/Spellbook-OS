@@ -20,6 +20,7 @@ KIMI_ULTRA.md
 
 # Configuração local por máquina (gerada pelo install.sh)
 config.local.zsh
+config.local.zsh.bak*
 
 # Segredos — NUNCA commitar
 .zsh_secrets*
@@ -41,6 +42,11 @@ zsh-vault-passphrase
 # Backups gerados pelo Oh My Zsh
 *.pre-oh-my-zsh
 .shell.pre-oh-my-zsh
+
+# Backups locais (.bak*) -- nunca versionar: podem conter config local / PII
+*.bak
+*.bak-*
+*.bak.*
 
 # Python
 __pycache__/
