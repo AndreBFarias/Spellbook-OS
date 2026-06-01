@@ -6,7 +6,9 @@ aplicar_hooks_globais() {
     __verificar_dependencias "git" || return 1
 
     local base_dir="${1:-$DEV_DIR}"
-    local hooks_source="$HOME/.config/git/hooks"
+    # Fonte canônica versionada (.githooks/ do repo); fallback ao mirror legado local
+    local hooks_source="${ZDOTDIR:-$HOME/.config/zsh}/.githooks"
+    [ -d "$hooks_source" ] || hooks_source="$HOME/.config/git/hooks"
 
     if [ ! -d "$hooks_source" ]; then
         __err "Diretório de hooks não encontrado em $hooks_source"

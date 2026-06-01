@@ -131,7 +131,7 @@ def sync_sql_files(mec_root: Path, quiet: bool = False) -> dict:
 
     diff = subprocess.run(
         ["git", "-C", root_str, "diff", "--name-only", "HEAD..origin/main", "--", MODELS_REL],
-        capture_output=True, text=True,
+        capture_output=True, text=True, timeout=30,
     )
     if diff.returncode != 0:
         return {"error": diff.stderr.strip(), "updated": []}
@@ -139,7 +139,7 @@ def sync_sql_files(mec_root: Path, quiet: bool = False) -> dict:
 
     checkout = subprocess.run(
         ["git", "-C", root_str, "checkout", "origin/main", "--", MODELS_REL],
-        capture_output=True, text=True,
+        capture_output=True, text=True, timeout=30,
     )
     if checkout.returncode != 0:
         return {"error": checkout.stderr.strip(), "updated": []}

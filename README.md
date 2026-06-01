@@ -128,7 +128,7 @@ spellbook-OS/
 ├── profiles.yml.template       # Template: dbt BigQuery
 ├── assets/
 │   └── spellbook_os.png
-├── functions/                  # 23 módulos zsh
+├── functions/                  # 31 módulos zsh
 │   ├── _helpers.zsh
 │   ├── mec.zsh
 │   ├── git-contexto.zsh
