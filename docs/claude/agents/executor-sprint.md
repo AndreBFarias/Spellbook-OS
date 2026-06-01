@@ -67,8 +67,56 @@ NÃO implemento esta task.
 - Acceptance criteria são testáveis?
 - Plano de implementação é granular?
 - Seção "Proof-of-work esperado" cita comando runtime-real (não apenas pytest)?
+- **Existe seção "Hipótese / Validação ANTES" com comandos executáveis?** (obrigatório pelo padrão `(k)` BLOCKING desde 2026-05-22).
 
 Se qualquer item está ambíguo, **pare e peça clarificação**. Ambiguidade é blocker.
+
+### Passo 1.5 — Validação ANTES BLOCKING (padrão `(k)`)
+
+Esta etapa é **bloqueante**: sem ela, executor não pode implementar. Endurecida em 2026-05-22 (sprint `META-EXECUTOR-VAL-ANTES-BLOCKING`) após 2 sprints terem hipóteses refutadas (`ATAQUE-OUTROS-PIX-SEM-CONTRAPARTE` e `LINK-EVIDENCIA-TIPO-DOC-INCORRETA`) — em ambas, só o grep impediu código que perseguisse o bug errado.
+
+Procedimento:
+
+1. **Localize a seção "Hipótese / Validação ANTES"** na spec (variações aceitas: `## Hipótese`, `## Validação ANTES`, `## Validation BEFORE`).
+
+   - **Se a seção NÃO EXISTE**: trate a spec como mal-formada. PARE. Reporte ao supervisor:
+     ```
+     Spec sem seção "Hipótese / Validação ANTES" obrigatória (padrão (k)).
+     Refinar a spec antes do executor implementar.
+     Sugestão de seção minimal:
+       ## Hipótese / Validação ANTES (padrão (k))
+       Esta sprint assume que: <descreva>
+       Validar antes de codar:
+       ```bash
+       <comando>
+       # Esperado: <resultado>
+       ```
+     ```
+
+2. **Execute LITERALMENTE cada comando** da seção. Capture **OUTPUT LITERAL** (últimas 20 linhas + exit code).
+
+3. **Compare com "Esperado"** declarado na spec.
+
+   - **Se OUTPUT bate com Esperado**: hipótese confirmada. Prossiga para Passo 2.
+   - **Se OUTPUT diverge do Esperado**: hipótese REFUTADA. PARE. Abra achado-bloqueio:
+     ```
+     Hipótese da spec REFUTADA empíricamente (padrão (k)).
+
+     Comando executado: <comando literal>
+     Esperado (spec): <texto literal>
+     Obtido (real):  <output literal>
+
+     Recomendação:
+       - Revisar a spec à luz do output real.
+       - Considerar abrir sprint-irmã com hipótese ajustada OU
+         marcar spec atual como REFUTADA + redirecionar para nova spec.
+
+     NÃO implemento esta task até o supervisor decidir.
+     ```
+
+4. **Inclua no proof-of-work final** (Passo 7) os outputs literais com sua avaliação (BATE / DIVERGE) por comando.
+
+Esta etapa é separada do Passo 0.3 (que valida identificadores no codebase). Passo 1.5 valida a hipótese SEMÂNTICA da spec, não só a existência de símbolos.
 
 ### Passo 2 — Estabelecer baseline
 
@@ -132,6 +180,27 @@ Se durante implementação você notar bug/pegadinha **fora do escopo desta spri
 - **NUNCA** diga "pré-existente, fora escopo" e continue sem registrar.
 
 Limite: máx 3 dispatches de planejador-sprint por ciclo de execução. Excesso vai para "Para revisão manual".
+
+**Sub-passo 3.2 — Sprint de graduação de tipo documental (protocolo-ouroboros)**:
+
+Se o brief menciona `dossie_tipo.py`, `prova_artesanal`, `data/output/dossies/`, ou "graduar tipo":
+
+1. **NÃO MODIFIQUE** `data/output/dossies/<tipo>/provas_artesanais/*.json` — são gabarito do supervisor (Read multimodal). Modificá-las inválida o ritual canônico (padrão `(jj)`).
+2. **NÃO MODIFIQUE** `data/output/opus_ocr_cache/*.json` — caches promovidos pelo supervisor são fonte de verdade visual; sobrescrever vira "cache sintético que vira mentira" (padrão `(gg)`).
+3. Sua entrega válida termina em: extrator implementado/refinado + testes regressivos + classe registrada em `EXTRATORES_CANONICOS` (`src/pipeline.py`) + entry em `mappings/tipos_documento.yaml`.
+4. **NUNCA execute** `python scripts/dossie_tipo.py comparar` nem `graduar-se-pronto` nem `confirmar-humano` — estas fases são exclusivas do supervisor Opus principal (padrão `(p)` e `(jj)`).
+5. Pode executar `python scripts/dossie_tipo.py abrir <tipo>` e `listar-candidatos <tipo>` (read-only) para situação.
+6. Reporte ao final do diff:
+   - SHAs das amostras tocadas (se houver)
+   - Tipo documental afetado
+   - Comando exato que o supervisor deve rodar para fechar:
+     ```
+     python scripts/dossie_tipo.py prova-artesanal <tipo> <sha>   # supervisor preenche
+     python scripts/dossie_tipo.py comparar <tipo> <sha>          # supervisor verifica
+     python scripts/dossie_tipo.py graduar-se-pronto <tipo>       # se OK em mais de 2 amostras
+     ```
+
+Ritual canônico completo em `docs/CICLO_GRADUACAO_OPERACIONAL.md`. Sua entrega libera o supervisor a executar Fases 3 e 5, não as substitui.
 
 ### Passo 4 — Verificar incrementalmente
 

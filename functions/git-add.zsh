@@ -18,6 +18,13 @@ ga() {
             python3 "$sanitizer" "${all_staged[@]}"
         fi
 
+        # Acentuação PT-BR: aplica --fix e informa (corrigidos + revisão manual)
+        local validador="${ZDOTDIR:-$HOME/.config/zsh}/scripts/validar-acentuacao.py"
+        local ptbr_files=(${(M)all_staged[@]:#*.(py|zsh|sh|md)})
+        if [ -f "$validador" ] && [[ ${#ptbr_files[@]} -gt 0 ]]; then
+            python3 "$validador" --fix --paths "${ptbr_files[@]}"
+        fi
+
         local python_files=(${(M)all_staged[@]:#*.py})
 
         if [[ ${#python_files[@]} -gt 0 ]] && command -v ruff &> /dev/null; then

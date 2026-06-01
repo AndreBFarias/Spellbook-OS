@@ -14,6 +14,7 @@ Flags:
 
 Para silenciar falsos positivos, inclua "# noqa-acento" na mesma linha.
 """
+
 import argparse
 import logging
 import re
@@ -67,6 +68,33 @@ _PARES = [
     ("peri" + "odo", "per" + "\u00edodo"),
     ("hist" + "orico", "hist" + "\u00f3rico"),
     ("un" + "ico", "" + "\u00fanico"),
+    # Estende o dicionario fechando o gap do VALIDATOR_BRIEF (canonicos, exclusao,  # noqa-acento
+    # proprio) e palavras comuns vistas no projeto:  # noqa-acento
+    ("canon" + "ico", "can" + "\u00f4nico"),
+    ("canon" + "icos", "can" + "\u00f4nicos"),
+    ("exclus" + "ao", "exclus" + "\u00e3o"),
+    ("exclus" + "oes", "exclus" + "\u00f5es"),
+    ("propr" + "io", "pr" + "\u00f3prio"),
+    ("propr" + "ia", "pr" + "\u00f3pria"),
+    ("propr" + "ios", "pr" + "\u00f3prios"),
+    ("propr" + "ias", "pr" + "\u00f3prias"),
+    ("padr" + "ao", "padr" + "\u00e3o"),
+    ("padr" + "oes", "padr" + "\u00f5es"),
+    ("sec" + "ao", "se" + "\u00e7\u00e3o"),
+    ("sec" + "oes", "se" + "\u00e7\u00f5es"),
+    ("bot" + "ao", "bot" + "\u00e3o"),
+    ("bot" + "oes", "bot" + "\u00f5es"),
+    ("p" + "anico", "p" + "\u00e2nico"),
+    ("usuar" + "io", "usu" + "\u00e1rio"),
+    ("usuar" + "ios", "usu" + "\u00e1rios"),
+    ("detecc" + "ao", "dete" + "\u00e7\u00e3o"),
+    ("recuperac" + "ao", "recupera" + "\u00e7\u00e3o"),
+    ("automat" + "ico", "autom" + "\u00e1tico"),
+    ("automat" + "ica", "autom" + "\u00e1tica"),
+    ("pag" + "ina", "p" + "\u00e1gina"),
+    ("pag" + "inas", "p" + "\u00e1ginas"),
+    ("inval" + "ido", "inv" + "\u00e1lido"),
+    ("inval" + "ida", "inv" + "\u00e1lida"),
 ]
 # noqa-acento — o bloco acima é construído via concatenação para que o próprio
 # script não seja sobrescrito quando --fix rodar sobre si mesmo.
@@ -123,20 +151,28 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
                 if has_noqa_marker(line):
                     continue  # marker presente — silencia esta linha (defesa em profundidade)
                 prefix = line[: m.start()]
+                suffix = line[m.end() :]
                 # Skip se precedido por palavra-chave de declaração
                 if IDENT_PREFIX.search(prefix):
                     continue
-                # Skip se é parte de identificador (prefixo _ . - ou $)
-                if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=")):
+                # Skip se é parte de identificador (prefixo _ . - $ { = ou ` de code-span)
+                if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=", "`")):
+                    continue
+                # Skip se é slug kebab-case (ex.: validacao-visual) -- nome, não texto PT-BR
+                if suffix[:1] == "-" and suffix[1:2].islower():
                     continue
                 results.append((i, m.group(), correta, line.strip()))
             if fix:
+
                 def repl(match):
                     orig = match.group()
                     prefix = line[: match.start()]
+                    suffix = line[match.end() :]
                     if IDENT_PREFIX.search(prefix):
                         return orig
-                    if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=")):
+                    if prefix.rstrip().endswith(("_", ".", "-", "$", "{", "=", "`")):
+                        return orig
+                    if suffix[:1] == "-" and suffix[1:2].islower():
                         return orig
                     # Preservar capitalização do exemplo  # noqa-acento
                     if orig.isupper():
@@ -144,6 +180,7 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
                     if orig[0].isupper():
                         return correta[0].upper() + correta[1:]
                     return correta
+
                 new_line = pattern.sub(repl, new_line)
 
         if fix and new_line != line:
@@ -151,7 +188,9 @@ def check_file(path: Path, fix: bool = False) -> list[tuple[int, str, str, str]]
         fixed_lines.append(new_line)
 
     if fix and changed:
-        path.write_text("\n".join(fixed_lines) + ("\n" if lines else ""), encoding="utf-8")
+        path.write_text(
+            "\n".join(fixed_lines) + ("\n" if lines else ""), encoding="utf-8"
+        )
 
     return results
 
@@ -166,13 +205,23 @@ def iter_target_files(paths: list[Path]) -> list[Path]:
         elif root.is_dir():
             for ext in EXTENSIONS:
                 files.extend(root.rglob(f"*{ext}"))
-    excluded = ("/.git/", "/venv/", "/.venv/", "/.oh-my-zsh/", "/node_modules/", "/__pycache__/", "/docs/archive/")
+    excluded = (
+        "/.git/",
+        "/venv/",
+        "/.venv/",
+        "/.oh-my-zsh/",
+        "/node_modules/",
+        "/__pycache__/",
+        "/docs/archive/",
+    )
     return [f for f in files if not any(e in str(f) for e in excluded)]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fix", action="store_true", help="Aplica correções automáticas")
+    parser.add_argument(
+        "--fix", action="store_true", help="Aplica correções automáticas"
+    )
     parser.add_argument("--paths", nargs="+", type=Path, help="Caminhos a escanear")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
@@ -194,29 +243,63 @@ def main() -> int:
     files = iter_target_files(args.paths)
     total_violations = 0
     total_fixed = 0
+    fixed_files: dict[str, int] = {}  # arquivo -> palavras corrigidas
+    pending_files: dict[str, int] = {}  # arquivo -> violações residuais
 
     for f in files:
         before = check_file(f, fix=False)
         if not before:
             continue
+        rel = (
+            str(f.relative_to(CONFIG_ROOT))
+            if str(f).startswith(str(CONFIG_ROOT))
+            else str(f)
+        )
         if args.fix:
             check_file(f, fix=True)
             after = check_file(f, fix=False)
-            total_fixed += len(before) - len(after)
+            n_fixed = len(before) - len(after)
+            if n_fixed > 0:
+                fixed_files[rel] = n_fixed
+                total_fixed += n_fixed
             for lineno, errada, correta, _ in after:
-                rel = f.relative_to(CONFIG_ROOT) if str(f).startswith(str(CONFIG_ROOT)) else f
-                logging.warning("%s:%d: %r → %r (pendente)", rel, lineno, errada, correta)
+                logging.warning(
+                    "%s:%d: %r → %r (revisão manual)", rel, lineno, errada, correta
+                )
+                pending_files[rel] = pending_files.get(rel, 0) + 1
                 total_violations += 1
         else:
             for lineno, errada, correta, _ in before:
-                rel = f.relative_to(CONFIG_ROOT) if str(f).startswith(str(CONFIG_ROOT)) else f
                 logging.warning("%s:%d: %r → %r", rel, lineno, errada, correta)
+                pending_files[rel] = pending_files.get(rel, 0) + 1
                 total_violations += 1
 
+    # Politica: aplica a correção e informa -- duas listas separadas.
     if args.fix:
-        logging.info("Total: %d corrigidas, %d pendentes", total_fixed, total_violations)
+        if fixed_files:
+            logging.info(
+                "Corrigidos automaticamente: %d arquivo(s), %d palavra(s):",
+                len(fixed_files),
+                total_fixed,
+            )
+            for arq, n in sorted(fixed_files.items()):
+                logging.info("  %s (%d)", arq, n)
+        if pending_files:
+            logging.warning(
+                "Precisam de revisão manual: %d arquivo(s), %d palavra(s):",
+                len(pending_files),
+                total_violations,
+            )
+            for arq, n in sorted(pending_files.items()):
+                logging.warning("  %s (%d)", arq, n)
+        if not fixed_files and not pending_files:
+            logging.info("Acentuação: nada a corrigir.")
     elif total_violations:
-        logging.info("Total: %d violação(ões)", total_violations)
+        logging.info(
+            "Total: %d violação(ões) em %d arquivo(s)",
+            total_violations,
+            len(pending_files),
+        )
 
     return 1 if total_violations > 0 else 0
 

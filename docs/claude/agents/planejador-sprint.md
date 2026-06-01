@@ -100,7 +100,7 @@ Estrutura obrigatória (adapte nomenclatura ao padrão do projeto):
   ```bash
   python3 scripts/validar-acentuacao.py --paths <path-do-spec>
   ```
-  Se houver violações, rode `python3 scripts/validar-acentuacao.py --fix --paths <path-do-spec>` e re-valide até exit 0. Spec NÃO pode ficar com `não`/`função`/`canonicos`/`exclusao` etc. — o pre-commit hook bloqueia commits do projeto.
+  Se houver violações, rode `python3 scripts/validar-acentuacao.py --fix --paths <path-do-spec>` e re-valide até exit 0. Spec NÃO pode ficar com `não`/`função`/`canônicos`/`exclusão` etc. — o pre-commit hook bloqueia commits do projeto.
 - Retorne o path do arquivo criado + resumo em 3 linhas do que é + confirmação `validar-acentuacao.py exit 0`.
 
 ## Modo especial: sprint derivada de achado colateral
@@ -124,6 +124,23 @@ Quando o executor-sprint dispatcha você via `Task(subagent_type: planejador-spr
 - **Se BRIEF sinaliza padrão recorrente relevante**, cite na seção "Invariantes a preservar".
 - **Se ideia seria monolítica**, divida em sub-sprints (lição 10).
 - **Se spec tem meta numérica, sempre cite aritmética esperada** — executor vai validar antes de iniciar (lição 7).
+
+---
+
+## Invariante PT-BR
+
+Toda saída user-facing (specs, descrições, comentários, mensagens de commit sugeridas) DEVE usar acentos PT-BR completos:
+
+- ã, ç, é, ó, ú, í, â, ê, ô, à
+- Palavras técnicas frequentes em PT-BR: `função`, `sessão`, `execução`, `ação`, `criação`, `não`, `próximo`, `último`, `diretório`, `descrição`, `validação`, `informação`, `aplicação`, `operação`, `conexão`, `exceção`, `solução`, `interação`, `produção`, `instalação`, `documentação`, `integração`
+
+Exceções (palavras técnicas que ficam SEM acento por convenção):
+
+- Chaves de dict como `"sessao"` (compatibilidade ASCII); marcar com `# noqa-acento` (ou variantes)
+- Identificadores Python sem acento (PEP-8)
+- IDs de sprint com acentos artificiais (`SPRINT_*_FIX_01`)
+
+Validação local: `python3 ~/.config/zsh/scripts/validar-acentuacao.py --paths <spec.md>` deve retornar exit 0 antes de declarar spec pronto.
 
 ---
 
