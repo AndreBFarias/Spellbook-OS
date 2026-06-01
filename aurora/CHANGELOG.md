@@ -30,7 +30,8 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 | 2026-04 | 1.5 | mem-snapshot + logrotate | `/var/log/mem-snapshot.log` + units | bootstrap (units) | (pendente) |
 | 2026-04 | 1.5 | product-oom-watchdog | systemd unit | bootstrap (units) | (pendente) |
 | 2026-04 | 2.0 | Ollama keepalive + VRAM watchdog | `slices ollama.slice + units` | bootstrap (units) | (pendente) |
-| 2026-06-01 | 2.3 | amdgpu DMCUB display watchdog (recupera display AMD travado sem reboot: gpu_recover + restart do compositor) | `units amdgpu-dmcub-watchdog.{service,timer}` + `aurora/amdgpu-dmcub-watchdog` | bootstrap (units) | OK |
+| 2026-06-01 | 2.3 | amdgpu DMCUB display watchdog (recupera display AMD travado sem reboot: gpu_recover + restart do compositor; endurecido: detecta Wayland, valida debugfs/recover, rajada de reset >=3/10min, assinaturas extras de hang) | `units amdgpu-dmcub-watchdog.{service,timer}` + `aurora/amdgpu-dmcub-watchdog` | bootstrap (units) | OK |
+| 2026-06-01 | 2.3 | botão de pânico de GPU (Ctrl+Alt+0 via xbindkeys: 1x recupera, 2x reinicia a sessão) | `/usr/local/sbin/aurora-gpu-revive` + `/etc/sudoers.d/aurora-gpu-revive` + `~/.xbindkeysrc` + autostart | bootstrap (revive+sudoers) + aurora-gpu-shortcut-apply.sh | OK |
 | 2026-04 | 2.0 | Chrome dpkg-divert (anti-IA) | `/usr/bin/google-chrome-stable.distrib` + symlinks | aurora-chrome-divert-apply.sh | OK |
 | 2026-04 | 2.0 | Chrome policy IA/Antigravity | `/etc/opt/chrome/policies/managed/aurora-no-ai-no-antigravity.json` | aurora-chrome-divert-apply.sh | OK |
 | 2026-04 | 2.0 | Chrome --load-extension | `~/.local/share/applications/google-chrome.desktop` | aurora-chrome-extensions-apply.sh | OK |
@@ -47,7 +48,7 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 ## Para validar o sistema todo
 
 ```bash
-aurora-self-heal           # 13 checks, mostra drift e propoe fix
+aurora-self-heal           # 16 checks, mostra drift e propoe fix
 bash aurora-reapply-all.sh # reaplica tudo idempotente; loga em ~/.local/state/aurora-reapply.log
 sysupgrade                 # apt + topgrade + reapply em sequencia
 ```

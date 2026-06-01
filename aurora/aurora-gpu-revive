@@ -1,0 +1,133 @@
+#!/bin/bash
+# Aurora 2.3 - aurora-gpu-revive: botao de panico manual p/ hang do display AMD
+# ---------------------------------------------------------------------------
+# Aciona a MESMA recuperacao do amdgpu-dmcub-watchdog, mas FORCADA (ignora a
+# deteccao por janela/threshold) -- o usuario aperta porque a tela JA travou.
+# Pensado p/ o atalho global Ctrl+Alt+0 via xbindkeys, que captura a tecla mesmo
+# com o compositor travado (XGrabKey direto no servidor X), desde que o Xorg
+# esteja vivo -- exatamente o caso "so o cursor do mouse mexe".
+#
+# Escalada por DUPLO-APERTO:
+#   1o aperto  -> gpu_recover (MODE2 reset) + gnome-shell --replace  [nao-destrutivo]
+#   2o aperto em < REPEAT_S segundos -> restart do display manager
+#               [DESTRUTIVO: derruba a sessao grafica; use so se o 1o nao bastou,
+#                ex.: o "estado morto residual" -- device ok mas a tela nao redesenha]
+#
+# Roda como ROOT (debugfs + restart do DM). Instalado em /usr/local/sbin pelo
+# aurora-bootstrap.sh; acionado via 'sudo -n' (NOPASSWD em /etc/sudoers.d).
+# Tag de log: aurora-gpu-revive.
+set -u
+
+LOG_TAG="aurora-gpu-revive"
+REPEAT_S=15                         # 2o aperto dentro disso = escalar p/ restart do DM
+STATE_DIR="/run/aurora-amdgpu-wd"
+REVIVE_STAMP="$STATE_DIR/revive_stamp"
+DRY_RUN=0
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
+log() { logger -t "$LOG_TAG" "$*"; echo "[$LOG_TAG] $*"; }
+mkdir -p "$STATE_DIR" 2>/dev/null
+
+# Notificacao na sessao do usuario (best-effort; nunca derruba o script)
+notify_user() {
+  local msg="$1" pid u disp dbus
+  pid=$(pgrep -x gnome-shell 2>/dev/null | head -1) || return 0
+  [ -n "$pid" ] && [ -r "/proc/$pid/environ" ] || return 0
+  u=$(stat -c '%U' "/proc/$pid" 2>/dev/null)
+  disp=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^DISPLAY=//p' | head -1)
+  dbus=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p' | head -1)
+  [ -n "$u" ] && [ -n "$dbus" ] || return 0
+  runuser -u "$u" -- env DISPLAY="$disp" DBUS_SESSION_BUS_ADDRESS="$dbus" \
+    notify-send -u critical "Aurora GPU" "$msg" 2>/dev/null || true
+}
+
+# --- detectar duplo-aperto -------------------------------------------------
+now=$(date +%s)
+last=0
+[ -f "$REVIVE_STAMP" ] && last=$(cat "$REVIVE_STAMP" 2>/dev/null || echo 0)
+case "$last" in ''|*[!0-9]*) last=0 ;; esac
+if [ "$DRY_RUN" -eq 0 ]; then echo "$now" > "$REVIVE_STAMP" 2>/dev/null; fi
+HARD=0
+if [ "$last" -gt 0 ] && [ $(( now - last )) -lt "$REPEAT_S" ]; then
+  HARD=1
+fi
+
+# --- modo HARD: restart do display manager (DESTRUTIVO) --------------------
+if [ "$HARD" -eq 1 ]; then
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[DRY] 2o aperto (< ${REPEAT_S}s) -- reiniciaria a sessao grafica (display-manager)"
+    exit 0
+  fi
+  log "2o aperto (< ${REPEAT_S}s): passo 1 nao bastou -- reiniciando a sessao grafica"
+  notify_user "Reiniciando a sessao grafica. Faca login de novo."
+  sleep 1
+  systemctl restart display-manager.service 2>/dev/null \
+    || systemctl restart gdm3.service 2>/dev/null \
+    || systemctl restart gdm.service
+  exit 0
+fi
+
+# --- achar a GPU AMD -------------------------------------------------------
+amd_recover=""
+for d in /sys/kernel/debug/dri/*/; do
+  [ -f "${d}name" ] || continue
+  if grep -q "amdgpu" "${d}name" 2>/dev/null && [ -f "${d}amdgpu_gpu_recover" ]; then
+    amd_recover="${d}amdgpu_gpu_recover"
+    break
+  fi
+done
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  if [ -n "$amd_recover" ]; then
+    log "[DRY] 1o aperto: dispararia gpu_recover ($amd_recover) + gnome-shell --replace"
+  else
+    log "[DRY] 1o aperto: nenhuma GPU amdgpu encontrada -- so reiniciaria o compositor"
+  fi
+  exit 0
+fi
+
+log "1o aperto: recuperacao forcada (gpu_recover + restart do compositor)"
+notify_user "Recuperando o display AMD... aperte Ctrl+Alt+0 de novo se a tela nao voltar."
+
+# --- passo 1: gpu_recover (se houver AMD) ----------------------------------
+if [ -n "$amd_recover" ] && [ -r "$amd_recover" ]; then
+  if cat "$amd_recover" >/dev/null 2>&1; then
+    sleep 3
+    if dmesg 2>/dev/null | tail -40 | grep -qiE "recovered through reset|GPU reset.*succeeded"; then
+      log "gpu_recover OK -- device recuperado (DMUB reinit)"
+    else
+      log "gpu_recover disparado, sem confirmacao explicita -- seguindo"
+    fi
+  else
+    log "falha ao acionar $amd_recover -- seguindo so com restart do compositor"
+  fi
+else
+  log "sem amdgpu_gpu_recover acessivel -- pulando reset, so restart do compositor"
+fi
+
+# --- passo 2: restart do compositor (recria contexto GL apos o reset) ------
+shell_pid=$(pgrep -x gnome-shell 2>/dev/null | head -1)
+if [ -n "$shell_pid" ] && [ -r "/proc/$shell_pid/environ" ]; then
+  s_user=$(stat -c '%U' "/proc/$shell_pid" 2>/dev/null)
+  s_sess=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^XDG_SESSION_TYPE=//p' | head -1)
+  s_disp=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^DISPLAY=//p' | head -1)
+  s_xauth=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^XAUTHORITY=//p' | head -1)
+  s_xrt=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^XDG_RUNTIME_DIR=//p' | head -1)
+  s_dbus=$(tr '\0' '\n' < "/proc/$shell_pid/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p' | head -1)
+  if [ "$s_sess" = "wayland" ]; then
+    log "sessao Wayland: gnome-shell --replace nao se aplica. Se a tela nao voltar, aperte Ctrl+Alt+0 de novo p/ reiniciar a sessao."
+  elif [ -n "$s_disp" ] && [ -n "$s_user" ]; then
+    log "reiniciando compositor (user=$s_user DISPLAY=$s_disp)"
+    runuser -u "$s_user" -- env \
+      DISPLAY="$s_disp" XAUTHORITY="$s_xauth" \
+      XDG_RUNTIME_DIR="$s_xrt" DBUS_SESSION_BUS_ADDRESS="$s_dbus" \
+      nohup gnome-shell --replace >/tmp/aurora-gnome-replace.log 2>&1 </dev/null &
+  else
+    log "sem DISPLAY/usuario -- nao foi possivel reiniciar o compositor"
+  fi
+else
+  log "gnome-shell nao encontrado -- nada a reiniciar"
+fi
+
+log "recuperacao manual completa -- aperte Ctrl+Alt+0 de novo em ${REPEAT_S}s p/ reiniciar a sessao se a tela nao voltou"
+exit 0

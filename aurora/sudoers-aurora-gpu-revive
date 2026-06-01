@@ -1,0 +1,4 @@
+# Aurora 2.3 - permite o usuario disparar o botao de panico de GPU (Ctrl+Alt+0)
+# sem senha. O alvo vive em /usr/local/sbin (root-owned, nao-gravavel pelo user),
+# o que evita escalada de privilegio por edicao do script.
+andrefarias ALL=(root) NOPASSWD: /usr/local/sbin/aurora-gpu-revive

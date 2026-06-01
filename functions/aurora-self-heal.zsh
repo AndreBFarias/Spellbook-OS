@@ -99,6 +99,23 @@ aurora-self-heal() {
     fixes_root+=("$aurora/aurora-reapply-all.sh")
   fi
 
+  # Aurora 2.3: botão de pânico de GPU (Ctrl+Alt+0 -> aurora-gpu-revive)
+  if [ ! -x /usr/local/sbin/aurora-gpu-revive ]; then
+    issues+=("aurora-gpu-revive ausente em /usr/local/sbin (botão de pânico de GPU)")
+    fixes_root+=("$aurora/aurora-reapply-all.sh")
+  fi
+  if [ ! -f /etc/sudoers.d/aurora-gpu-revive ]; then
+    issues+=("sudoers do aurora-gpu-revive ausente (Ctrl+Alt+0 não roda sem senha)")
+    fixes_root+=("$aurora/aurora-reapply-all.sh")
+  fi
+  if ! pgrep -x xbindkeys >/dev/null 2>&1; then
+    issues+=("xbindkeys não está rodando (atalho Ctrl+Alt+0 inativo)")
+    fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
+  elif [ ! -f "$HOME/.xbindkeysrc" ] || ! grep -q "aurora-gpu-revive-trigger" "$HOME/.xbindkeysrc" 2>/dev/null; then
+    issues+=("~/.xbindkeysrc sem a entrada Ctrl+Alt+0 do aurora-gpu-revive")
+    fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
+  fi
+
   # oh-my-zsh drift (executabilidade removida em massa por causa desconhecida — incidente 2025-08-11).
   # Usa ${ZSH:-...} porque o host pode ter o OMZ ativo em ~/.config/zsh/.oh-my-zsh (modo ZDOTDIR)
   # em vez de ~/.oh-my-zsh — checar a variável canônica do OMZ, com fallback.

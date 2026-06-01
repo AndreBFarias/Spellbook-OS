@@ -126,6 +126,20 @@ copia_se_diff "$AURORA_REPO/aurora-vram-check"                  /usr/local/sbin/
 copia_se_diff "$AURORA_REPO/units/amdgpu-dmcub-watchdog.service" /etc/systemd/system/amdgpu-dmcub-watchdog.service root:root 0644
 copia_se_diff "$AURORA_REPO/units/amdgpu-dmcub-watchdog.timer"   /etc/systemd/system/amdgpu-dmcub-watchdog.timer   root:root 0644
 
+# Aurora 2.3: botão de pânico de GPU (Ctrl+Alt+0). Script root em /usr/local/sbin
+# (não-gravável pelo user -> sudoers NOPASSWD seguro). O atalho em si (xbindkeys)
+# é configurado em user-space na seção 6e (aurora-gpu-shortcut-apply.sh).
+copia_se_diff "$AURORA_REPO/aurora-gpu-revive" /usr/local/sbin/aurora-gpu-revive root:root 0755
+# sudoers: validar com visudo ANTES de ativar (um sudoers inválido quebra o sudo)
+if ! sudo -n cmp -s "$AURORA_REPO/sudoers-aurora-gpu-revive" /etc/sudoers.d/aurora-gpu-revive 2>/dev/null; then
+  if sudo -n visudo -cf "$AURORA_REPO/sudoers-aurora-gpu-revive" >/dev/null 2>&1; then
+    sudo -n install -o root -g root -m 0440 "$AURORA_REPO/sudoers-aurora-gpu-revive" /etc/sudoers.d/aurora-gpu-revive \
+      && log "Instalado: /etc/sudoers.d/aurora-gpu-revive"
+  else
+    warn "sudoers-aurora-gpu-revive inválido (visudo -cf falhou) -- NÃO instalado"
+  fi
+fi
+
 # Drop-in pra ollama.service apontar pra ollama.slice (só se ollama.service existe)
 if [ -f /etc/systemd/system/ollama.service ] || [ -f /lib/systemd/system/ollama.service ]; then
   sudo -n mkdir -p /etc/systemd/system/ollama.service.d
@@ -396,6 +410,11 @@ fi
 # ~/.config/systemd/user/ a partir dos templates em aurora/units/
 if [ -x "$AURORA_REPO/aurora-user-services-apply.sh" ]; then
   "$AURORA_REPO/aurora-user-services-apply.sh" | sed 's/^/[bootstrap] /' || warn "user-services-apply retornou erro (não bloqueia)"
+fi
+
+# 6e. Atalho Ctrl+Alt+0 -> aurora-gpu-revive (xbindkeys, dispara com a tela travada)
+if [ -x "$AURORA_REPO/aurora-gpu-shortcut-apply.sh" ]; then
+  "$AURORA_REPO/aurora-gpu-shortcut-apply.sh" | sed 's/^/[bootstrap] /' || warn "gpu-shortcut-apply retornou erro (não bloqueia)"
 fi
 
 # 7. Sunset do ritual antigo (so se ainda ativo)

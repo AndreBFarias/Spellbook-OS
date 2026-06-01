@@ -1,0 +1,5 @@
+#!/bin/bash
+# Aurora 2.3 - trigger do botao de panico de GPU (atalho Ctrl+Alt+0 via xbindkeys).
+# Roda na sessao do usuario; chama o aurora-gpu-revive (root) via sudo -n NOPASSWD.
+# O proprio aurora-gpu-revive cuida da notificacao e dos logs.
+exec sudo -n /usr/local/sbin/aurora-gpu-revive
