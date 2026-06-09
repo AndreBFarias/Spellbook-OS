@@ -4,6 +4,5 @@ Description=Aurora 2.2 - Slice para Claude Code (limites de memoria + prioridade
 [Slice]
 MemoryHigh=10G
 MemoryMax=12G
-OOMPolicy=kill
 CPUWeight=200
 IOWeight=200

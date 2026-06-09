@@ -30,9 +30,13 @@ SLICES_MONITORED = [
     "steam.slice",
     "browser.slice",
     "electron.slice",
-    "claude.slice",
     "ollama.slice",
     "heavy-other.slice",
+    # claude.slice deliberadamente FORA desta lista: com teto MemoryMax=12G ela é
+    # quase sempre a slice mais pesada e era eleita vítima sob pressão sistêmica,
+    # fechando TODAS as sessões de uma vez via cgroup.kill. Contenção do claude
+    # fica a cargo do próprio teto do cgroup (12G) + earlyoom (--avoid claude/node).
+    # Não re-adicionar sem rever essa decisão.
 ]
 PRESSURE_PCT = int(os.getenv("AURORA_OOM_PRESSURE_PCT", "92"))
 SLICE_HEAVY_PCT = int(os.getenv("AURORA_OOM_SLICE_HEAVY_PCT", "40"))

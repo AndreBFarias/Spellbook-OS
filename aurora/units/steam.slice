@@ -8,4 +8,3 @@ MemoryMax=11G
 MemorySwapMax=4G
 CPUWeight=70
 IOWeight=80
-OOMPolicy=kill
