@@ -135,13 +135,30 @@ while (iter < MAX_RETRIES) {
 
   // --- Sintese: agrega achados de todas as lentes e decide ---
   const achados = veredictos.flatMap((v) => v.achados || [])
-  const criticos = achados.filter((a) => a.severidade === 'CRITICO' || a.severidade === 'PONTO-CEGO')
-  const reprovou = veredictos.some((v) => v.status === 'REPROVADO') || criticos.length > 0
-  sintese = { iter, achados, criticos, reprovou, statusLentes: veredictos.map((v, i) => ({ lente: LENTES[i].key, status: v.status })) }
+  // Um achado que se auto-declara nao-acionavel (falso-positivo / nenhuma acao / gate
+  // oficial exit 0) e uma PISTA, nao um veredito: nao reprova nem vira patch-brief.
+  // Heuristica textual sobre `fix` (e `descricao` em fallback). RISCO: pode (a) descartar
+  // um achado real cujo `fix` use as palavras por engano, ou (b) nao pegar um falso-positivo
+  // fora do vocabulario; mitigado pelo `log` de descartes (auditavel) + pela porta de
+  // severidade (so CRITICO/PONTO-CEGO passam pelo filtro). Precedente: lente acentuacao.
+  const NAO_ACIONAVEL = /falso[- ]positivo|nenhuma a[cç][aã]o|sem a[cç][aã]o|manter como est[aá]|n[aã]o[- ]?op\b|noop|nada a (fazer|corrigir)|gate oficial.*(exit ?0|passa|aprov)/i
+  const ehAcionavel = (a) => !NAO_ACIONAVEL.test(a.fix || '') && !NAO_ACIONAVEL.test(a.descricao || '')
+  const severo = (a) => a.severidade === 'CRITICO' || a.severidade === 'PONTO-CEGO'
+  const criticos = achados.filter((a) => severo(a) && ehAcionavel(a))
+  const descartados = achados.filter((a) => severo(a) && !ehAcionavel(a))
+  if (descartados.length) {
+    log(`Sintese: ${descartados.length} achado(s) CRITICO/PONTO-CEGO auto-declarado(s) nao-acionavel(is) descartado(s) do veredito (falso-positivo).`)
+  }
+  // Reprovacao deriva SO de criticos ACIONAVEIS: uma lente que retorna REPROVADO sem nenhum
+  // achado acionavel critico/ponto-cego e auto-contraditoria; IMPORTANTE/MINUCIA ja viram
+  // sprint futura (nao entram no retry). Substitui o antigo `some(REPROVADO) || criticos>0`.
+  const reprovou = criticos.length > 0
+  sintese = { iter, achados, criticos, descartados, reprovou, statusLentes: veredictos.map((v, i) => ({ lente: LENTES[i].key, status: v.status })) }
 
   if (!reprovou) break  // APROVADO ou APROVADO_COM_RESSALVAS — sai do loop
 
-  // Retry: so achados CRITICO/PONTO-CEGO entram no patch-brief. MINUCIA/IMPORTANTE viram sprint futura (anti-debito).
+  // Retry: so achados CRITICO/PONTO-CEGO ACIONAVEIS entram no patch-brief. MINUCIA/IMPORTANTE
+  // (e auto-declarados nao-acionaveis) viram sprint futura / sao ignorados (anti-debito).
   patchBrief = criticos
   log(`Iteracao ${iter}/${MAX_RETRIES}: REPROVADO com ${criticos.length} achado(s) critico(s).` + (iter < MAX_RETRIES ? ' Retry...' : ' Limite de retries atingido.'))
 }
