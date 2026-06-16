@@ -4,6 +4,10 @@
 *.zwc
 .zsh_history
 
+# Artefatos efemeros de validacao visual (screenshots na raiz + cache do playwright MCP)
+.playwright-mcp/
+/*.png
+
 # Toolchain e docs internos
 # docs/claude/ — versionado a partir de 2026-05-20 (decisão: agentes Claude
 # devem ser reproduzíveis em reinstall; risco de exposição é baixo, o repo
