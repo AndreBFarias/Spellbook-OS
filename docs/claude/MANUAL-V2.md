@@ -1,6 +1,6 @@
 # Manual rápido — Spellbook-OS Claude Code v2
 
-Data: 2026-04-20. Versão Claude Code: 2.1.114.
+Data: 2026-04-20 (rev. 2026-06-15). Versão Claude Code: 2.1.178.
 
 Este manual descreve **o que mudou** no setup do Claude Code neste projeto. Para o índice completo de documentação, veja [`README.md`](./README.md).
 
@@ -105,7 +105,7 @@ Só pausa em:
 13. **Gauntlet como critério** — sprint CONCLUÍDA exige relatório Gauntlet.
 14. **Opus centro** — o próprio validador-sprint é esse check.
 
-Detalhes empíricos em [`PADROES-VALIDADOR.md`](./PADROES-VALIDADOR.md).
+Detalhes empíricos em [`PADROES-VALIDADOR.md`](./PADRÕES-VALIDADOR.md).
 
 ## Capacidades visuais (não diga "impossível" sem tentar)
 
@@ -217,7 +217,7 @@ Cada um com seções `[CORE]` preenchidas + checks universais marcados + contrat
 | Hooks (custom + plugins) | [`HOOKS.md`](./HOOKS.md) |
 | Screenshot / validação visual | [`CAPACIDADES-VISUAIS.md`](./CAPACIDADES-VISUAIS.md) |
 | Ciclo automático detalhado | [`SPRINT-WORKFLOW.md`](./SPRINT-WORKFLOW.md) |
-| 14 lições empíricas | [`PADROES-VALIDADOR.md`](./PADROES-VALIDADOR.md) |
+| 14 lições empíricas | [`PADROES-VALIDADOR.md`](./PADRÕES-VALIDADOR.md) |
 | Auto-memory | [`MEMORIA.md`](./MEMORIA.md) |
 | Plugins e settings | [`PLUGINS.md`](./PLUGINS.md), [`SETTINGS.md`](./SETTINGS.md) |
 | Problemas conhecidos | [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) |

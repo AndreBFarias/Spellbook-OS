@@ -219,7 +219,7 @@ source ~/.config/zsh/cca/aliases_cca.zsh
 ```bash
 claude install latest  # mesmo que update, mas explícito
 # ou
-claude install 2.1.114  # versão específica
+claude install 2.1.178  # versão específica
 ```
 
 ### Regressão após update

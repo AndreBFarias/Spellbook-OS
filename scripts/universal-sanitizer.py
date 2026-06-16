@@ -99,7 +99,7 @@ EMOJI_RE = re.compile(
 
 # Glyphs canônicos protegidos contra remoção do EMOJI_RE.
 # ALLOWED_GLYPHS centralizado em glyphs_canonicos.py (FONTE UNICA): antes cada
-# sanitizer tinha copia propria e divergiram (emoji_guardian sem allowlist
+# sanitizer tinha copia própria e divergiram (emoji_guardian sem allowlist
 # enquanto este tinha) -- causa da recidiva de estripamento (SPRINT 232).
 import os as _os  # noqa: E402
 import sys as _sys  # noqa: E402
@@ -241,7 +241,7 @@ def sanitize_file(filepath: str, identity_terms: list[str]) -> dict[str, int]:
 
     ext = Path(filepath).suffix.lower()
     safe_config_ext = {".cfg", ".ini", ".toml", ".yaml", ".yml", ".json"}
-    safe_names = {"LICENSE", "LICENSE.md", "AUTHORS", "CONTRIBUTORS", "pyproject.toml", "setup.cfg"}
+    safe_names = {"LICENSE", "LICENSE.md", "AUTHORS", "CONTRIBUTORS", "pyproject.toml", "setup.cfg", "SECURITY.md"}
 
     if ext not in safe_config_ext and Path(filepath).name not in safe_names:
         for term in identity_terms:

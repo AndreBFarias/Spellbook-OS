@@ -10,7 +10,7 @@
       "smoke_cmd": "./run_luna.sh --cli-health",
       "gauntlet_cmd": "./run_luna.sh --gauntlet",
       "regras_especiais": [
-        "Opus 4.6 exclusivo em sessões antigas (verificar feedback modelo_luna)",
+        "Opus 4.8 (verificar feedback modelo_luna; era Opus 4.6 em sessões antigas)",
         "Screenshots TUI obrigatórios via scripts/tui_tests/capture.sh",
         "ADR-018 GPU exclusiva com alternância",
         "Bypass consciente: LUNA_SKIP_EVIDENCE=1, LUNA_SKIP_REGISTRY_AUDIT=1"

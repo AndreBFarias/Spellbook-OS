@@ -139,7 +139,12 @@ IGNORE_DIRS = {
     # SANITIZER-VENDOR-EXCLUDE-HARDEN-01: código vendored/terceiros nunca deve
     # ser varrido (paridade com universal-sanitizer EXCLUDED_PATH_SUBSTRINGS).
     # Foi o emoji_guardian que corrompeu nyx/cockpit/static/vendor/xterm.js (U+25C6).
-    'vendor', 'third_party'
+    'vendor', 'third_party',
+    # SANITIZER-GUARDIAN-DOC-PRESERVE-01: docs de auditoria/sprint citam glifos
+    # (ex.: U+26A1) para documentar a remoção deles do código; são registro
+    # histórico, não saída de produto. Stripar corromperia a citação. O guard
+    # check_sanitizer_attack.py defende no commit; isto fecha a fonte.
+    'dev-journey',
 }
 
 # Extensões de arquivo para verificar
@@ -283,6 +288,12 @@ def clean_file(filepath: str, dry_run: bool = True) -> Tuple[int, int]:
     Limpa emojis de um arquivo.
     Retorna (linhas_modificadas, total_emojis_removidos).
     """
+    # SANITIZER-GUARDIAN-DOC-PRESERVE-01: defesa em profundidade -- mesmo numa
+    # invocação direta de arquivo (fora do os.walk que respeita IGNORE_DIRS),
+    # docs de dev-journey nunca são modificados.
+    if 'dev-journey' in Path(filepath).parts:
+        return (0, 0)
+
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()

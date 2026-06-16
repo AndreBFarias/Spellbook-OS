@@ -4,7 +4,7 @@ Documentação canônica do setup Claude Code em `~/.config/zsh` (Spellbook-OS).
 
 ## Visão geral
 
-O Claude Code (CLI v2.1.114) foi estruturado ao redor do ciclo de sprint:
+O Claude Code (CLI v2.1.178) foi estruturado ao redor do ciclo de sprint:
 
 ```
 planejar -> executar -> validar
@@ -252,7 +252,7 @@ Detalhes: [`MEMORIA.md`](./MEMORIA.md).
 - [`HOOKS.md`](./HOOKS.md) — todos os hooks (custom + plugins)
 - [`CAPACIDADES-VISUAIS.md`](./CAPACIDADES-VISUAIS.md) — browser MCPs + CLI X11 + pipeline 3-tentativas
 - [`SPRINT-WORKFLOW.md`](./SPRINT-WORKFLOW.md) — ciclo automático detalhado + 3-retry + anti-débito
-- [`PADROES-VALIDADOR.md`](./PADROES-VALIDADOR.md) — as 14 lições empíricas
+- [`PADROES-VALIDADOR.md`](./PADRÕES-VALIDADOR.md) — as 14 lições empíricas
 - [`MEMORIA.md`](./MEMORIA.md) — sistema de auto-memory
 - [`PLUGINS.md`](./PLUGINS.md) — 12 plugins oficiais
 - [`SETTINGS.md`](./SETTINGS.md) — organização settings.json vs local
@@ -270,7 +270,7 @@ Detalhes: [`MEMORIA.md`](./MEMORIA.md).
 
 ## Versão e referências
 
-- Claude Code: **2.1.114** (latest estável). `stable: 2.1.98`, `next: 2.1.116`.
+- Claude Code: **2.1.178** (instalada nesta máquina, confirmada via `claude --version`).
 - Plano-mestre original: `~/.claude/plans/estude-as-sprints-de-cozy-island.md`.
 - Plano v1 (antecessor): `~/.claude/plans/faz-assim-me-d-greedy-cerf.md`.
 - Repo: `~/.config/zsh` = `~/Desenvolvimento/Spellbook-OS` (GitHub: AndreBFarias/Spellbook-OS).

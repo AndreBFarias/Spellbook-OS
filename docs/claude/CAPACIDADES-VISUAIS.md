@@ -1,6 +1,6 @@
 # docs/claude/CAPACIDADES-VISUAIS.md — Visão / Screenshot / Validação Visual
 
-Catálogo completo das capacidades visuais disponíveis no ambiente Linux Pop!_OS X11 + Claude Code 2.1.114. Documentado aqui para que o Claude nunca mais diga "não consigo" sem tentar os 3 caminhos canônicos.
+Catálogo completo das capacidades visuais disponíveis no ambiente Linux Pop!_OS X11 + Claude Code 2.1.178. Documentado aqui para que o Claude nunca mais diga "não consigo" sem tentar os 3 caminhos canônicos.
 
 ## Pipeline oficial: 3 tentativas antes de declarar impossível
 
@@ -66,7 +66,7 @@ Depois: `Read /tmp/<png>` — Claude lê multimodalmente (PNG direto entra no co
 ## Tentativa 2 — `claude-in-chrome` MCP (app web com Chrome rodando)
 
 Extensão instalada: `fcoeoabgfenejglbffodgkkbkcdhcgfn` (Claude in Chrome) v1.0.68
-Native host: `~/.claude/chrome/chrome-native-host` -> `~/.local/share/claude/versions/2.1.114 --chrome-native-host`
+Native host: `~/.claude/chrome/chrome-native-host` -> `~/.local/share/claude/versions/2.1.178 --chrome-native-host`
 Atalho toggle side-panel: `Ctrl+E` no Chrome.
 
 ### Carregar tools via ToolSearch (deferred)
