@@ -1,0 +1,12 @@
+[Unit]
+Description=spellbook-autosync - Timer (cada 10min)
+
+[Timer]
+OnActiveSec=3min
+OnUnitActiveSec=10min
+AccuracySec=30s
+Persistent=true
+Unit=spellbook-autosync.service
+
+[Install]
+WantedBy=timers.target

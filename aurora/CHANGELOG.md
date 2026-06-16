@@ -45,6 +45,8 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 | 2026-05-19 | 2.4 | imagens-router daemon | `~/.config/systemd/user/imagens-router.service` | aurora-user-services-apply.sh | OK |
 | 2026-05-20 | 2.5 | aurora-reapply-all.sh consolidado | `~/.config/zsh/aurora/aurora-reapply-all.sh` | (próprio) | -- |
 | 2026-05-20 | 2.5 | self-heal ampliado (13 checks) | -- | -- | -- |
+| 2026-06-03 | 2.6 | systemd-coredump (diagnostica crash silencioso de terminal/app -- ghostty não deixava rastro) | pacote do sistema + `coredumpctl` | `sudo apt install systemd-coredump` (aguarda dono) | (pendente) |
+| 2026-06-16 | 2.7 | spellbook-autosync timer (commit+push periodico a cada 10min; independe de fechar terminal -- o hook zshexit mascarou parada de ~1 mes) | `~/.config/systemd/user/spellbook-autosync.{service,timer}` | aurora-user-services-apply.sh | OK |
 
 ## Para validar o sistema todo
 

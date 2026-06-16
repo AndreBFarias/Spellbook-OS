@@ -1,0 +1,13 @@
+[Unit]
+Description=spellbook-autosync - commit+push periodico do ~/.config/zsh (Spellbook-OS)
+After=default.target
+
+[Service]
+Type=oneshot
+# Push via SSH (git@github.com-personal). A chave personal nao tem passphrase; o
+# SSH_AUTH_SOCK aponta pro keyring do usuario como rede caso isso mude.
+Environment=SSH_AUTH_SOCK=%t/keyring/ssh
+ExecStart=/usr/bin/zsh %h/.config/zsh/aurora/spellbook-autosync-run.zsh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

@@ -19,26 +19,32 @@ USER_SERVICES=(
   "imagens-router.service"
 )
 
+# Timers (systemd --user): copia o .timer + o .service par; habilita SO o .timer.
+USER_TIMERS=(
+  "spellbook-autosync.timer"
+)
+
 log()  { printf '[user-services] %s\n' "$*"; }
 warn() { printf '[user-services][WARN] %s\n' "$*" >&2; }
+
+copy_unit() {
+  local unit="$1"
+  local src="$SRC_DIR/$unit" dst="$DST_DIR/$unit"
+  if [ ! -f "$src" ]; then warn "fonte ausente: $src"; return; fi
+  if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+    cp -- "$src" "$dst"; log "atualizado: $unit"; needs_reload=1
+  fi
+}
 
 mkdir -p "$DST_DIR"
 needs_reload=0
 
 for unit in "${USER_SERVICES[@]}"; do
-  src="$SRC_DIR/$unit"
-  dst="$DST_DIR/$unit"
-
-  if [ ! -f "$src" ]; then
-    warn "fonte ausente: $src"
-    continue
-  fi
-
-  if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
-    cp -- "$src" "$dst"
-    log "atualizado: $unit"
-    needs_reload=1
-  fi
+  copy_unit "$unit"
+done
+for timer in "${USER_TIMERS[@]}"; do
+  copy_unit "$timer"
+  copy_unit "${timer%.timer}.service"
 done
 
 if [ "$needs_reload" = "1" ]; then
@@ -52,5 +58,15 @@ for unit in "${USER_SERVICES[@]}"; do
   fi
   if ! systemctl --user is-active --quiet "$unit" 2>/dev/null; then
     systemctl --user start "$unit" 2>/dev/null && log "started: $unit"
+  fi
+done
+
+# Timers: habilita+start so o .timer (ele aciona o .service oneshot no schedule)
+for timer in "${USER_TIMERS[@]}"; do
+  if ! systemctl --user is-enabled --quiet "$timer" 2>/dev/null; then
+    systemctl --user enable "$timer" >/dev/null 2>&1 && log "enabled: $timer"
+  fi
+  if ! systemctl --user is-active --quiet "$timer" 2>/dev/null; then
+    systemctl --user start "$timer" 2>/dev/null && log "started: $timer"
   fi
 done
