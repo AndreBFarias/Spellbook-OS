@@ -67,7 +67,7 @@ const VERDICT_SCHEMA = {
 // Lentes adversariais: cada validador ve o MESMO diff com um foco distinto (diversidade > redundancia).
 const LENTES = [
   { key: 'correcao-runtime', foco: 'Correcao logica, regressoes, contratos quebrados, sincronizacao N-para-N, proof-of-work runtime-real (licoes 1, 11). Hipoteses verificadas via grep (licao 4); aritmetica de refactor (licao 7).' },
-  { key: 'acentuacao', foco: 'Acentuacao PT-BR em linhas perifericas de TODOS os arquivos tocados (licao 3). Rode validar-acentuacao.py se disponivel.' },
+  { key: 'acentuacao', foco: 'Acentuacao PT-BR em PROSA periferica (comentarios/docstrings/strings de prosa) de TODOS os arquivos tocados (licao 3). VEREDITO OFICIAL = o gate do projeto (ex: ".venv/bin/python scripts/check_acentuacao.py <arquivos>"), exit 0 = aprovado; ele JA ignora corretamente identificadores ASCII canonicos do projeto (descricao/periodo/selecao etc). O "validar-acentuacao.py" periferico conta hits SEM distinguir identificador de prosa (falso-positivo conhecido) — use-o apenas como pista e SEMPRE confirme contra o gate oficial: um hit que o gate oficial ignora NAO e achado (e identificador, nao prosa, e renomear quebraria chaves de dict). So marque CRITICO se o gate oficial FALHAR ou houver prosa real sem acento.' },
   { key: 'visual', foco: 'Se o diff toca UI/TUI/CSS/HTML/template/widget: evidencia visual obrigatoria via skill validacao-visual antes de qualquer claim de "concluida" (licoes 2, 12). Se NAO toca visual, retorne APROVADO com achados vazios.' },
   { key: 'anti-debito-integracao', foco: 'Integracao obrigatoria em registry/command/service (nada solto, licoes 11, 13). Zero follow-up acumulado: cada achado colateral vira Edit-pronto OU sprint-ID nova (licoes 5, 6, 9).' },
 ]
