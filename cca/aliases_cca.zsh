@@ -171,13 +171,21 @@ __cca_run() {
 
     local exit_code
     local node_opts="$(__cca_node_opts)"
+    # context7 (lookup de docs) fica OFF por default no settings.json p/ poupar ~168MB de RAM
+    # por instancia -- multiplicado por subagente, era o que mais apertava a maquina de 14G.
+    # playwright continua sempre on (a validação visual depende dele). Religa context7 sob
+    # demanda, sem comando novo: `CCA_CONTEXT7=1 cca` (injeta o server via --mcp-config aditivo).
+    local zroot="${ZDOTDIR:-$HOME/.config/zsh}"
+    local -a mcp_args=()
+    [ -n "${CCA_CONTEXT7:-}" ] && [ -f "$zroot/cca/mcp-context7.json" ] \
+        && mcp_args=(--mcp-config "$zroot/cca/mcp-context7.json")
     # Se claude.slice esta instalado no user systemd, rodar dentro dele (limites de memoria)
     if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
         NODE_OPTIONS="$node_opts" systemd-run --user --slice=claude.slice --scope --quiet --collect \
-            claude --dangerously-skip-permissions "$@"
+            claude "${mcp_args[@]}" --dangerously-skip-permissions "$@"
         exit_code=$?
     else
-        NODE_OPTIONS="$node_opts" command claude --dangerously-skip-permissions "$@"
+        NODE_OPTIONS="$node_opts" command claude "${mcp_args[@]}" --dangerously-skip-permissions "$@"
         exit_code=$?
     fi
 
