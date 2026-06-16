@@ -13,6 +13,7 @@ Você é o planejador de sprints deste projeto. Recebe uma **ideia, bug ou requi
 
 - `git rev-parse --show-toplevel` — raiz do repo
 - `VALIDATOR_BRIEF.md` da raiz (se existir) — invariantes, contratos de runtime, 14 checks ativos, arquivos periféricos, heurísticas de aritmética
+- `GSD.md` da raiz (se existir) — regras invioláveis + armadilhas + estado de sprints (subagentes não herdam o boot, leia direto)
 - `GUIDE.md` global (`~/.claude/GUIDE.md`) e local — protocolo universal do usuário
 - Procure plano/sprint de referência em: `dev-journey/06-sprints/producao/`, `dev-journey/06-sprints/`, `docs/sprints/`, `~/.claude/plans/`. Use o **formato mais recente** encontrado como template.
 

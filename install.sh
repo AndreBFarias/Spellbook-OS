@@ -30,7 +30,7 @@ if [ "$IS_RELINK" = "true" ]; then
 
     echo "[relink] Criando symlinks de $CLAUDE/* -> $DOCS/*"
 
-    mkdir -p "$CLAUDE/agents" "$CLAUDE/commands" "$CLAUDE/skills" "$CLAUDE/templates" "$CLAUDE/hooks"
+    mkdir -p "$CLAUDE/agents" "$CLAUDE/commands" "$CLAUDE/skills" "$CLAUDE/templates" "$CLAUDE/hooks" "$CLAUDE/workflows"
 
     # Docs de nivel raiz
     for f in PLUGINS.md SETTINGS.md SPECIAL_PROJECTS.json; do
@@ -66,6 +66,15 @@ if [ "$IS_RELINK" = "true" ]; then
     for f in "$DOCS"/hooks/*.py; do
         [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/hooks/$(basename "$f")"
     done
+
+    # Workflows (scripts JS de orquestracao deterministica)
+    for f in "$DOCS"/workflows/*.js; do
+        [ -f "$f" ] && ln -sfv "$f" "$CLAUDE/workflows/$(basename "$f")"
+    done
+
+    # Statusline (vai para a RAIZ do .claude, não para hooks/: settings.json aponta
+    # statusLine.command para ~/.claude/statusline.sh)
+    [ -f "$DOCS/hooks/statusline.sh" ] && ln -sfv "$DOCS/hooks/statusline.sh" "$CLAUDE/statusline.sh"
 
     echo "[relink] Concluido. Verifique com: ls -la ~/.claude/"
     exit 0
@@ -1215,7 +1224,7 @@ Terminais recomendados para Claude Code:
   kitty              -- alternativa (0.21.2 do apt ja suporta OSC 9)
   gnome-terminal     -- compativel mas sem suporte a OSC 9 (push notif vazam)
 
-Sync automatico:
+Sync automático:
   Ao abrir terminal: commit local + pull remoto
   Ao fechar terminal: commit + push (background)
 
@@ -1253,7 +1262,7 @@ _step_deploy() {
         fi
     fi
 
-    # Caso 2: Executando direto do ZDOTDIR (usuario ja migrou manualmente)
+    # Caso 2: Executando direto do ZDOTDIR (usuário ja migrou manualmente)
     if [[ "$SCRIPT_DIR" == "$ZDOTDIR_TARGET" ]]; then
         _ok "Executando direto de ~/.config/zsh/"
         if ! git -C "$ZDOTDIR_TARGET" remote get-url origin &>/dev/null; then
@@ -1262,9 +1271,12 @@ _step_deploy() {
                 _run git -C "$ZDOTDIR_TARGET" remote add origin "$REPO_URL_SSH"
             else
                 _run git -C "$ZDOTDIR_TARGET" remote add origin "$REPO_URL_HTTPS"
-                _warn "Usando HTTPS — configure SSH para push automatico"
+                _warn "Usando HTTPS — configure SSH para push automático"
             fi
         fi
+        # Garante tracking do main (filter-repo/remote-add não restauram upstream sozinhos)
+        git -C "$ZDOTDIR_TARGET" config branch.main.remote origin
+        git -C "$ZDOTDIR_TARGET" config branch.main.merge refs/heads/main
         _step_deploy_symlink
         return 0
     fi
@@ -1297,7 +1309,7 @@ _step_deploy() {
         _ok "Clone via SSH concluido"
     elif _run git clone "$REPO_URL_HTTPS" "$ZDOTDIR_TARGET"; then
         _ok "Clone via HTTPS concluido"
-        _warn "Usando HTTPS — configure SSH para push automatico"
+        _warn "Usando HTTPS — configure SSH para push automático"
     else
         _err "Falha ao clonar Spellbook-OS. Verifique conectividade."
     fi

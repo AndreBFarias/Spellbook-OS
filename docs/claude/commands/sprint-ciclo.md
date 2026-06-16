@@ -1,77 +1,75 @@
 ---
-description: Ciclo automático de sprint (planejar → executar → validar) sem checkpoints. Até 3 iterações de auto-correção se REPROVADO. Auto-commit + auto-push + auto-PR ao APROVADO.
+description: Ciclo automático de sprint (planejar → executar → validar) via Workflow determinístico, com painel adversarial de validação e até 3 iterações de auto-correção. Auto-commit + auto-push + auto-PR ao APROVADO.
 argument-hint: <ideia-da-sprint>
 ---
 
-Execute o ciclo completo de uma sprint de forma **totalmente automática**. Só pause para intervenção do usuário em REPROVADO após 3 iterações ou em ambiguidade explícita do spec.
+Execute o ciclo completo de uma sprint de forma **automática e determinística**, orquestrado pela ferramenta `Workflow` (loop de retry em código, não na memória do modelo) com **validação adversarial multi-lente**.
 
-## Fluxo automático (zero checkpoints de aprovação)
+## Mecanismo primário — Workflow
 
-**Etapa 1 — Planejamento**
+Invoque a ferramenta `Workflow` com o script versionado:
 
-1. Dispatche `planejador-sprint` (subagent, model: opus) com `$ARGUMENTS`.
-2. Capture o path do spec gerado (retorno do subagent).
-3. Se planejador reporta **ambiguidade** na ideia, PAUSE e peça clarificação ao usuário. Ambiguidade é blocker.
-4. Senão, siga IMEDIATAMENTE para Etapa 2 — sem mostrar o spec ao usuário (se quiser revisar, usuário pode rodar `/sprint-ciclo-manual` em vez).
+```
+Workflow({ name: 'sprint-ciclo', args: "$ARGUMENTS" })
+```
 
-**Etapa 2 — Execução**
+(Este comando instruindo o uso conta como opt-in explícito do Workflow.)
 
-1. Dispatche `executor-sprint` (subagent, model: opus) com o spec path.
-2. Executor aplica o protocolo v2 (passos PRÉ-0, 0.3, 0.4, 1-7).
-3. Se executor retorna **bloqueador** (hipótese divergente via rg, aritmética não fecha, touches fora do escopo), PAUSE e apresente ao usuário.
-4. Senão, siga IMEDIATAMENTE para Etapa 3.
+O workflow (`~/.claude/workflows/sprint-ciclo.js`, canônico em `docs/claude/workflows/`) executa:
 
-**Etapa 3 — Validação**
+1. **Planejar** — `planejador-sprint` redige a spec (lê BRIEF + GSD.md + GUIDE; grep confirma identificadores).
+2. **Executar** — `executor-sprint` implementa (protocolo v2: PRÉ-0..7, proof-of-work runtime-real).
+3. **Validar (adversarial)** — painel paralelo de `validador-sprint`, uma instância por **lente**, todas READ-ONLY:
+   - `correcao-runtime` (lições 1, 4, 7, 11)
+   - `acentuacao` (lição 3)
+   - `visual` (lições 2, 12 — só se o diff toca UI)
+   - `anti-debito-integracao` (lições 5, 6, 9, 13)
+4. **Retry determinístico** — se algum achado `CRÍTICO`/`PONTO-CEGO`, empacota como patch-brief e re-executa, até `maxRetries` (default 3). `MINÚCIA`/`IMPORTANTE` **não** entram no patch-brief — viram sprints futuras (anti-débito).
 
-1. Dispatche `validador-sprint` (subagent, model: opus) com spec + diff + proof-of-work.
-2. Capture veredicto: `APROVADO` / `APROVADO_COM_RESSALVAS` / `REPROVADO`.
+O workflow **não commita**: ele retorna o veredicto para você (main loop) agir. Isso mantém o gate de ação sensível e reusa o `/commit-push-pr` + `guardian.py`.
 
-## Protocolo anti-REPROVADO (auto-correção)
+## Tratamento do retorno do workflow
 
-Lê orçamento de retries de `$CLAUDE_SPRINT_CICLO_MAX_RETRIES` (default 3).
+O workflow retorna um objeto com `status`. Aja conforme:
 
-- **Iteração 1** (após primeira validação falhar): empacote achados CRÍTICOS + PONTO-CEGO do veredicto como patch-brief. Dispatche executor-sprint novamente com:
-  ```
-  Retry patch-brief para sprint <ID> (iteração 2/3).
-  Achados a corrigir: <lista priorizada com Edit-prontos ou sprint-IDs>.
-  Escopo restrito: não expanda touches além do spec original.
-  ```
-  Achados MINÚCIA **não** entram no patch-brief — viram sprints futuras (anti-débito).
-
-- **Iteração 2** (se validador ainda REPROVA): mesma lógica, segundo retry.
-
-- **Iteração 3** (última tentativa): mesma lógica, terceiro retry.
-
-- **Após 3 iterações** sem APROVADO: PARE. Apresente ao usuário:
-  - Diff acumulado
-  - Achados persistentes em cada iteração
-  - Sugestão de ação (ajustar spec, promover achado para sprint dedicada, abandonar)
+- **`PAUSA_AMBIGUIDADE`** — a ideia é ambígua. PARE e apresente `perguntas` ao usuário (use AskUserQuestion). Ambiguidade é blocker.
+- **`PAUSA_BLOQUEADOR`** — o executor reportou hipótese divergente (grep), aritmética que não fecha, ou touches fora do escopo. PARE e apresente `motivo` + `exec` ao usuário.
+- **`REPROVADO_APOS_RETRIES`** — esgotou os retries sem aprovar. PARE e apresente `criticosPersistentes` + `diff` + `sugestao` (ajustar spec, promover a sprint dedicada, ou abandonar).
+- **`APROVADO`** / **`APROVADO_COM_RESSALVAS`** — siga para o commit (abaixo).
+- **`ERRO`** — reporte `motivo` ao usuário.
 
 ## Ao sucesso (APROVADO ou APROVADO_COM_RESSALVAS)
 
-Execute auto-commit + auto-push + auto-PR:
+Execute auto-commit + auto-push + auto-PR invocando o slash command `/commit-push-pr`:
 
-1. Extraia mensagem de commit do spec (título + 1-3 bullets de summary).
-2. Invoque o slash command `/commit-push-pr` do plugin `commit-commands`:
-   - `git add` apenas arquivos tocados pela sprint.
-   - `git commit -m "<título do spec>"` com corpo do spec.
-   - **PROIBIDO** na mensagem de commit: emoji, menção a qualquer nome de IA, `Co-Authored-By`, endereços de atribuição automática. O hook `guardian.py` bloqueia se detectar; se bloquear, reescreva a mensagem sem essas atribuições.
-   - Se upstream não configurado: `git push -u origin <branch>`. Senão: `git push origin <branch>`.
-   - `gh pr create --title "<título>" --body "<body>"`.
-3. PR body:
-   - Seção `## Summary` (do spec)
-   - Seção `## Test plan` (do spec + comandos runtime-real do BRIEF)
-   - Seção `## Ressalvas` (se APROVADO_COM_RESSALVAS)
+1. Mensagem de commit = `titulo` do retorno (+ 1-3 bullets do `resumo`).
+2. `git add` **apenas** os `arquivosTocados` do retorno (commit curado por path; **nunca** `git add -A`).
+3. **PROIBIDO** na mensagem: emoji, menção a qualquer nome de IA, `Co-Authored-By`, endereços de atribuição automática. O hook `guardian.py` bloqueia; se bloquear, reescreva sem essas atribuições.
+4. Se upstream não configurado: `git push -u origin <branch>`. Senão: `git push origin <branch>`.
+5. PR body:
+   - `## Summary` (do `resumo`)
+   - `## Test plan` (do `proofOfWork` + comandos runtime-real do BRIEF)
+   - `## Ressalvas` (das `ressalvas`, se `APROVADO_COM_RESSALVAS`)
    - Link para `VALIDATOR_BRIEF.md` se foi atualizado
-4. Retorne URL do PR ao usuário.
+6. Retorne a URL do PR ao usuário.
 
-## Regras do ciclo
+## Regras do ciclo (invariantes — valem para Workflow e fallback)
 
-- **Zero checkpoints** entre planejar → executar → validar. Usuário só intervém em REPROVADO após 3 iterações ou em ambiguidade explícita.
-- **Protocolo anti-débito absoluto**: achados colaterais do executor viram sprints novas (auto-dispatch de planejador-sprint). Executor NÃO fixa inline.
-- **Todos os subagentes usam `VALIDATOR_BRIEF.md`** do projeto atual como memória compartilhada. Se BRIEF ausente, executor dispatcha validador em MODO BOOTSTRAP antes de começar.
-- **Auto-correção máx 3 iterações** por ciclo.
-- **Ambiguidade é blocker sempre**. Se spec é ambíguo, pause.
-- **Não use `--force`, `--no-verify`, `reset --hard`** em nenhuma etapa.
+- **Zero checkpoints** entre planejar → executar → validar. O usuário só intervém em `PAUSA_*` ou `REPROVADO_APOS_RETRIES`.
+- **Protocolo anti-débito absoluto**: achados colaterais viram sprints novas; executor NÃO fixa inline. `MINÚCIA`/`IMPORTANTE` nunca entram no patch-brief de retry.
+- **BRIEF + GSD.md** são memória compartilhada de todos os subagentes. Subagentes não herdam o boot da sessão — cada um lê BRIEF e GSD.md diretamente. Se BRIEF ausente, o executor dispatcha validador em MODO BOOTSTRAP antes de começar.
+- **Auto-correção máx `maxRetries`** (default 3) por ciclo.
+- **Ambiguidade é blocker sempre.**
+- **Nunca** `--force`, `--no-verify`, `reset --hard` em nenhuma etapa.
+
+## Fallback manual (se a ferramenta Workflow estiver indisponível)
+
+Se não for possível invocar `Workflow`, execute o ciclo manualmente, dispatchando os subagentes em sequência e aplicando as mesmas Regras do ciclo acima:
+
+1. Dispatch `planejador-sprint` (model: opus) com `$ARGUMENTS`; capture o spec path. Ambiguidade → pause.
+2. Dispatch `executor-sprint` (model: opus) com o spec path. Bloqueador → pause.
+3. Dispatch `validador-sprint` (model: opus) com spec + diff + proof-of-work; capture veredicto.
+4. Se `REPROVADO`: empacote achados `CRÍTICO`/`PONTO-CEGO` como patch-brief e re-dispatch o executor (iteração 2/3, depois 3/3). Após 3 sem aprovar, pare e apresente o diff acumulado.
+5. Ao `APROVADO`/`APROVADO_COM_RESSALVAS`: siga a seção "Ao sucesso" acima.
 
 Para ciclo com checkpoints manuais entre fases, use `/sprint-ciclo-manual`.

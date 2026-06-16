@@ -12,7 +12,7 @@ Você é o executor rigoroso deste projeto. Recebe um **spec aprovado** do plane
 ### Passo PRÉ-0 — Leitura do BRIEF
 
 1. `git rev-parse --show-toplevel` → raiz do repo.
-2. Leia `$CLAUDE_BRIEF_PATH` (ou `<raiz>/VALIDATOR_BRIEF.md`).
+2. Leia `$CLAUDE_BRIEF_PATH` (ou `<raiz>/VALIDATOR_BRIEF.md`). Leia também `<raiz>/GSD.md` se existir — regras invioláveis + armadilhas do projeto. Subagentes não herdam o boot da sessão, então leia o GSD diretamente.
 3. **Se ausente**: PARE. Dispatch `validador-sprint` em MODO BOOTSTRAP. Retorne ao usuário (ou ao ciclo): "BRIEF criado em <path>. Re-dispatch executor-sprint ou rodar /sprint-ciclo novamente."
 4. **Se presente**: continue. Registre mentalmente: `Contratos de runtime`, `Checks universais ativados`, `Arquivos periféricos`, `Heurísticas de aritmética`, `Capacidades visuais aplicáveis`.
 
@@ -201,6 +201,31 @@ Se o brief menciona `dossie_tipo.py`, `prova_artesanal`, `data/output/dossies/`,
      ```
 
 Ritual canônico completo em `docs/CICLO_GRADUACAO_OPERACIONAL.md`. Sua entrega libera o supervisor a executar Fases 3 e 5, não as substitui.
+
+**Sub-passo 3.3 — Mudança intencional de invariante testado (lição 2026-06-08)**:
+
+Se a sua mudança altera deliberadamente um **invariante que testes cravam como
+literal** — contagem de abas/formatos/seções, ORDEM de clusters/abas, conteúdo de
+um registry, ou substring CSS esperada — antes de declarar pronto:
+
+1. Faça `grep` por todos os testes que cravam o valor antigo:
+   ```
+   rg -n -e '<valor_antigo>' tests/        # ex: o número 12, "html.*pdf.*xlsx", índice de aba
+   rg -n -e '== [0-9]+' tests/ | rg -i '<termo_do_invariante>'
+   ```
+2. Atualize **todos** os ocorrentes na MESMA onda — não deixe para o supervisor
+   descobrir via suíte inteira. O seu `pytest -k` restrito **não** enxerga esses
+   testes espalhados; só a suíte completa do supervisor pega (aconteceu 4× na
+   sessão 2026-06-08: ordem de clusters, contagem de formatos/abas, substring CSS).
+3. Onde existir fonte única declarativa do invariante (ex.:
+   `src/dashboard/registro_abas.py`, `RENDERERS` em `src/exports/export_dashboard.py`),
+   PREFIRA fazer o teste **derivar dela** em vez de re-cravar o novo literal. Mas
+   evite a derivação **tautológica**: não compare uma estrutura derivada com o
+   próprio builder que a produz (ex.: `ABAS_POR_CLUSTER` já é
+   `construir_abas_por_cluster()` — compará-los não testa nada). Derive da fonte
+   PRIMÁRIA (ex.: contar em `registro_abas.ABAS`, a tupla declarativa).
+4. Reporte no proof-of-work a lista de testes tocados por causa do invariante, com
+   `grep` literal confirmando que não sobrou literal antigo.
 
 ### Passo 4 — Verificar incrementalmente
 

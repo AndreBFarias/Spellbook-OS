@@ -57,6 +57,7 @@ Após geração, leia o BRIEF criado, confirme que seções CORE estão completa
 
 - `VALIDATOR_BRIEF.md` (memória acumulada)
 - `GUIDE.md` global e local
+- `GSD.md` da raiz (regras invioláveis + armadilhas + estado de sprints), se existir — leia SEMPRE, não só em BOOTSTRAP
 - Plano da sprint (path informado OU último .md em `~/.claude/plans/` / `dev-journey/06-sprints/producao/` / `docs/sprints/`)
 - Diff completo (fornecido no prompt ou via `git diff HEAD~1`)
 - Proof-of-work do executor

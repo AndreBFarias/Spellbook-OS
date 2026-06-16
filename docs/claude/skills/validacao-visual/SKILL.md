@@ -120,6 +120,33 @@ Uso:
 
 Se falha (ex: `npx` sem cache, porta não responde, timeout), log literal o erro.
 
+## REGRA OBRIGATÓRIA: capturar a PÁGINA INTEIRA (rolar até o fim)
+
+**Apps web com scroll interno (Streamlit, e qualquer app que rola um container interno em vez da
+janela) NÃO rolam o `document.body`. Logo `screenshot(fullPage=true)` e screenshots de viewport
+capturam SÓ a dobra visível (o topo) — NÃO o conteúdo abaixo. Validar só a dobra é CEGO ao
+rodapé das telas e reporta layout quebrado como "OK".** (Incidente 2026-06-06; ver ADR-32.)
+
+Antes de CADA screenshot de validação, garanta a página inteira por UM dos métodos:
+
+1. **Rolar o container interno até o fim** (renderiza lazy + traz o rodapé), e capturar topo +
+   meio + fim:
+
+   ```js
+   // browser_evaluate antes do screenshot
+   const cands = [document.scrollingElement,
+                  document.querySelector('section.main'),
+                  document.querySelector('[data-testid="stMain"]'),
+                  document.querySelector('[data-testid="stAppViewContainer"]')].filter(Boolean);
+   cands.forEach(el => el.scrollTop = el.scrollHeight);
+   ```
+
+2. **Viewport alto**: `browser_resize` para `1920×3600` (largura realista preserva colunas; a
+   altura grande faz a página inteira caber em um `fullPage`).
+
+Na descrição multimodal, **confirme explicitamente que você viu o RODAPÉ** da tela (a última
+seção, o expander final, etc.). Se você só descreveu o topo, a validação está incompleta.
+
 ## Critério de sucesso
 
 Proof-of-work visual obriga 3 itens:
@@ -173,6 +200,7 @@ Sem este bloco, validador-sprint REPROVA a sprint.
 - **Respeitar permissões** — CLI tools estão pré-autorizadas em `settings.json`; MCPs carregam via ToolSearch.
 - **Se sessão SSH / sem DISPLAY**: pule tentativa 1 explicitamente, vá direto para 2 ou 3.
 - **Nunca inventar** descrição. Se não consegue ler o PNG, reporte como impossível.
+- **Página inteira, não só a dobra** — role o container interno até o fim (ou use viewport alto) e confirme que viu o RODAPÉ. `fullPage` em Streamlit só pega o topo (ADR-32).
 
 ## Integração com sprint-workflow
 

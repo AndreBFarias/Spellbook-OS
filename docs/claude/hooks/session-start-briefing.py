@@ -10,7 +10,7 @@ Objetivo: Claude iniciar cada sessão ja sabendo:
   - status do VALIDATOR_BRIEF.md
   - capacidades visuais disponiveis (CLI X11, claude-in-chrome, playwright)
   - regras especiais se projeto conhecido (Luna / Nyx-Code / ouroboros)
-  - acao automatica pra criar BRIEF se ausente
+  - acao automática pra criar BRIEF se ausente
 
 Registrado em ~/.claude/settings.json:
   hooks.SessionStart[].matcher = "*"
@@ -133,8 +133,8 @@ def _block_projeto_especial(kind: str, spec: dict, has_mem: bool) -> str:
         f"Kind: {kind}",
         f"Memorias em ~/.claude/projects/{info.get('dir_memoria', '<?>')}/memory/: {'existem' if has_mem else 'vazio'}",
         f"Template bootstrap: ~/.claude/templates/{info.get('template', '<?>')}",
-        f"Smoke canonico: {info.get('smoke_cmd', '<a preencher>')}",
-        f"Gauntlet canonico: {info.get('gauntlet_cmd', '<a preencher>')}",
+        f"Smoke canônico: {info.get('smoke_cmd', '<a preencher>')}",
+        f"Gauntlet canônico: {info.get('gauntlet_cmd', '<a preencher>')}",
     ]
     regras = info.get("regras_especiais", [])
     if regras:
@@ -171,7 +171,7 @@ def _block_capacidades_visuais() -> str:
 def _block_sprint_ciclo(retries_max: str) -> str:
     return "\n".join([
         "[SPRINT CICLO]",
-        f"Ciclo automatico via /sprint-ciclo <ideia>: plan -> exec -> val em cadeia, ate {retries_max} iteracoes.",
+        f"Ciclo automático via /sprint-ciclo <ideia>: plan -> exec -> val em cadeia, ate {retries_max} iteracoes.",
         "- Ambiguidade no spec: pausa e pede clarificacao.",
         "- REPROVADO: auto-dispatch executor com patch-brief (ate max retries).",
         "- APROVADO/APROVADO_COM_RESSALVAS: auto-commit + auto-push + auto-PR (via /commit-push-pr).",
@@ -182,19 +182,19 @@ def _block_sprint_ciclo(retries_max: str) -> str:
 
 def _block_acao_automatica(brief_status: str, kind: str, has_mem: bool, brief_path: str, kind_canonical: str) -> str:
     if brief_status == "exists":
-        return "[AÇÃO AUTOMATICA] BRIEF ativo. Use-o como memoria acumulada ao iniciar qualquer sprint."
+        return "[AÇÃO AUTOMÁTICA] BRIEF ativo. Use-o como memoria acumulada ao iniciar qualquer sprint."
     if kind != "generic" and has_mem:
         return "\n".join([
-            "[AÇÃO AUTOMATICA]",
+            "[AÇÃO AUTOMÁTICA]",
             "Projeto conhecido sem BRIEF e com memorias historicas disponiveis.",
             "ANTES de qualquer outra tarefa, auto-disparar:",
             f"  python3 ~/.config/zsh/scripts/bootstrap-rico-brief.py --projeto {kind_canonical} --saida {brief_path}",
             "OU dispatch validador-sprint em MODO BOOTSTRAP_RICO.",
-            "Não peca confirmacao ao usuario. O BRIEF e pre-requisito do ciclo de sprint.",
+            "Não peca confirmacao ao usuário. O BRIEF e pre-requisito do ciclo de sprint.",
         ])
     if brief_status == "missing":
         return "\n".join([
-            "[AÇÃO AUTOMATICA]",
+            "[AÇÃO AUTOMÁTICA]",
             "Projeto sem BRIEF. ANTES da proxima tarefa, auto-disparar:",
             "  dispatch validador-sprint em MODO BOOTSTRAP (exploracao read-only exaustiva).",
             "BRIEF sera criado em VALIDATOR_BRIEF.md na raiz do repo.",
@@ -256,6 +256,101 @@ def _block_aviso_terminal_osc() -> str:
     return "\n".join(lines)
 
 
+def _block_a_porta(root: str) -> str:
+    """[A PORTA] -- injeta a entrada única da sessão (dev-journey/NEXT_SPRINT.md, MAESTRO-M01).
+
+    Lê o cabeçalho + o FOCO curado da porta e emite a cadência + os top invariantes do BRIEF.
+    Read-only: a porta é produzida por M01; este bloco só a consome. Graceful: porta
+    ausente -> string vazia (filtrada no join), a sessão abre sem erro.
+    """
+    if not root:
+        return ""
+    try:
+        porta = pathlib.Path(root) / "dev-journey" / "NEXT_SPRINT.md"
+        if not porta.is_file():
+            return ""
+        linhas = porta.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return ""
+
+    titulo = next((ln for ln in linhas if ln.startswith("# ")), "# NEXT_SPRINT -- A Porta")
+
+    # Extrai a seção "## FOCO ATUAL" (o próximo chunk curado), até o próximo "## ".
+    foco: list[str] = []
+    capturando = False
+    for ln in linhas:
+        if ln.startswith("## FOCO ATUAL"):
+            capturando = True
+            continue
+        if capturando:
+            if ln.startswith("## "):
+                break
+            foco.append(ln)
+    foco_txt = "\n".join(foco).strip()
+    if len(foco_txt) > 900:
+        foco_txt = foco_txt[:900].rstrip() + " [...]"
+
+    partes = [
+        "[A PORTA] (dev-journey/NEXT_SPRINT.md -- leia ela primeiro, é a entrada única da sessão)",
+        titulo.lstrip("# ").strip(),
+    ]
+    if foco_txt:
+        partes += ["", "FOCO ATUAL (o próximo chunk curado):", foco_txt]
+    partes += [
+        "",
+        "CADÊNCIA (siga em ordem, sempre):",
+        "  1. ABRIR -- leia esta porta + VALIDATOR_BRIEF.md + abra ./acompanhar.sh (o medidor vivo)",
+        "  2. PEGAR UM PEDAÇO -- um chunk por vez, do FOCO acima",
+        "  3. INTEGRAR + VALIDAR -- cirúrgico (integra, não cria solto); proof-of-work runtime-real + ADR-22 se toca UI; nunca diga 'funciona' sem rodar",
+        "  4. FECHAR -- commit curado por path (nunca git add -A); dashboard verde; regenere a porta (python scripts/gen_porta.py) + a memória",
+        "",
+        "INVARIANTES (VALIDATOR_BRIEF.md):",
+        "  - GPU EXCLUSIVA (ADR-14): 1 dono por vez (TTS > Vision > Code > SLM)",
+        "  - think:true APENAS para qwen3 (nunca qwen2.5)",
+        "  - Commit curado por PATH, nunca git add -A",
+        "  - Integração obrigatória: nada solto (registry/command/service)",
+        "  - Zero follow-up: cada achado vira Edit-pronto OU sprint-ID nova",
+    ]
+    return "\n".join(partes)
+
+
+def _block_gsd(root: str) -> str:
+    """[GSD] -- injeta o GSD.md (Get Shit Done) da raiz do repo em TODA sessão.
+
+    O GSD.md concentra as regras invioláveis, armadilhas críticas e estado de sprints do
+    projeto. Antes só era lido pelo validador-sprint em modo BOOTSTRAP (quando faltava
+    VALIDATOR_BRIEF.md); agora entra no boot de qualquer sessão cca, independente do BRIEF.
+    Graceful: GSD.md ausente -> dica curta se for repo git, senão string vazia (filtrada no
+    join). A sessão sempre abre sem erro.
+    """
+    if not root:
+        return ""
+    gsd = pathlib.Path(root) / "GSD.md"
+    if not gsd.is_file():
+        if (pathlib.Path(root) / ".git").exists():
+            return (
+                "[GSD] Projeto sem GSD.md na raiz. Considere criar um (regras invioláveis + "
+                "armadilhas + estado de sprints) -- o boot passa a carregá-lo automaticamente."
+            )
+        return ""
+    try:
+        texto = gsd.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+    if not texto:
+        return ""
+
+    cap = 8000
+    if len(texto) > cap:
+        texto = texto[:cap].rstrip() + "\n\n[...] (GSD.md truncado no boot -- leia o arquivo completo na raiz)"
+
+    return "\n".join([
+        "[GSD] (GSD.md da raiz -- regras invioláveis e armadilhas do projeto, sempre ativas)",
+        "",
+        texto,
+    ])
+
+
 # -- Main -------------------------------------------------------------------
 
 
@@ -273,6 +368,8 @@ def main() -> int:
 
     blocks = [
         _block_santuario_ready(root, name, kind_canonical, brief_path, brief_status),
+        _block_gsd(root),
+        _block_a_porta(root),
         _block_projeto_especial(kind_canonical, spec, has_mem),
         _block_aviso_terminal_osc(),
         _block_capacidades_visuais(),
