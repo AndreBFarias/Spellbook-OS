@@ -51,7 +51,7 @@ claude-safe() {
     __cca_export_contexto
 
     local start_time=$(date +%s)
-    command claude "$@"
+    NODE_OPTIONS="$(__cca_node_opts)" command claude "$@"
     local exit_code=$?
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
@@ -116,7 +116,7 @@ claude-peek() {
 # Forçar comando ignorando limites (use com cuidado)
 claude-force() {
     echo "[!] FORCANDO comando sem verificacoes!"
-    CLAUDE_FORCE=1 command claude "$@"
+    CLAUDE_FORCE=1 NODE_OPTIONS="$(__cca_node_opts)" command claude "$@"
 }
 
 # Proposito: Relatorio semanal de uso e dicas para economizar quota
@@ -150,6 +150,14 @@ claude-init() {
     echo "  claude-force       - Forçar (não recomendado)"
 }
 
+# Headroom de heap V8: o heap default do V8 nesta maquina e ~2G (medido) -- pequeno pra
+# sessões grandes (1M context), que crasham com "JS heap out of memory". Subimos pra 8G,
+# mantendo folga DENTRO do teto de 12G do slice (que segue como rede dura via SIGKILL +
+# earlyoom). Aplicado como prefixo inline: afeta so o processo claude, não vaza pro shell.
+# Preserva NODE_OPTIONS pre-existente. Usado por TODO ponto de entrada do claude (cca,
+# cca-here, cca-ghostty, cca-tmux, cca-resume, claude-safe, claude-force).
+__cca_node_opts() { printf '%s' "${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=8192"; }
+
 # Aurora 2.0 - helper interno: executa Claude com slice + token tracking real
 # Não chamar direto. Use 'cca'.
 __cca_run() {
@@ -162,13 +170,14 @@ __cca_run() {
     [ -d "$enc_dir" ] && pre_size=$(du -bs "$enc_dir" 2>/dev/null | awk '{print $1}')
 
     local exit_code
+    local node_opts="$(__cca_node_opts)"
     # Se claude.slice esta instalado no user systemd, rodar dentro dele (limites de memoria)
     if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
-        systemd-run --user --slice=claude.slice --scope --quiet --collect \
+        NODE_OPTIONS="$node_opts" systemd-run --user --slice=claude.slice --scope --quiet --collect \
             claude --dangerously-skip-permissions "$@"
         exit_code=$?
     else
-        command claude --dangerously-skip-permissions "$@"
+        NODE_OPTIONS="$node_opts" command claude --dangerously-skip-permissions "$@"
         exit_code=$?
     fi
 
@@ -350,12 +359,13 @@ cca-resume() {
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
     __cca_export_contexto
     local rc
+    local node_opts="$(__cca_node_opts)"  # retomar sessão caida e o caso mais propenso a OOM de heap
     if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
-        systemd-run --user --slice=claude.slice --scope --quiet --collect \
+        NODE_OPTIONS="$node_opts" systemd-run --user --slice=claude.slice --scope --quiet --collect \
             claude --continue --dangerously-skip-permissions "$@"
         rc=$?
     else
-        command claude --continue --dangerously-skip-permissions "$@"
+        NODE_OPTIONS="$node_opts" command claude --continue --dangerously-skip-permissions "$@"
         rc=$?
     fi
     __cca_unset_contexto
