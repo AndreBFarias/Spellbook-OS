@@ -32,6 +32,11 @@ AI_ATTRIBUTION = re.compile(
 
 AI_EMAIL = re.compile(r"noreply@anthropic", re.IGNORECASE)
 
+# Commit curado por path: bloqueia stage em massa (git add -A / --all / git add .).
+# Forca listar os arquivos explicitamente (regra anti-debito do sprint-ciclo). NAO pega
+# `git add -p` nem `-u` (atualizacao seletiva de tracked), nem `git add ./caminho`.
+GIT_ADD_ALL = re.compile(r"\bgit\s+add\s+(?:-A\b|--all\b|\.(?:\s|$))")
+
 
 def get_content(tool_input: dict, tool_name: str) -> str:
     texts = []
@@ -101,6 +106,13 @@ def main() -> None:
                 f"Comando tenta contornar defesas anti-IA ({m.group(0)!r}). "
                 "Politica: --no-verify, --no-gpg-sign e override de core.hookspath "
                 "estao bloqueados. Use o caminho correto: corrija a causa, não bypass."
+            )
+        m = GIT_ADD_ALL.search(cmd)
+        if m:
+            block(
+                f"Stage em massa bloqueado ({m.group(0)!r}). Commit curado por path: "
+                "liste os arquivos explicitamente (git add caminho1 caminho2). "
+                "Regra anti-debito do sprint-ciclo (nunca git add -A / --all / git add .)."
             )
         if AI_ATTRIBUTION.search(cmd) or AI_EMAIL.search(cmd):
             block(
