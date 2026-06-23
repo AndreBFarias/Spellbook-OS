@@ -5,7 +5,7 @@ set -u
 
 log() { printf '[aurora-watchdog] %s\n' "$*"; }
 
-ALVO_GOVERNOR="performance"
+ALVO_GOVERNOR="powersave"   # Aurora 2.6: governor dinâmico (laptop-friendly)
 desviou=0
 
 # Verifica governor
@@ -30,31 +30,8 @@ if ! systemctl is-active --quiet earlyoom.service; then
   desviou=1
 fi
 
-# Aurora 2.3 ULTRA - checks adicionais
-# Anti-suspend: targets mascarados + logind drop-in
-SLEEP_TARGETS=(sleep.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target)
-for t in "${SLEEP_TARGETS[@]}"; do
-  state=$(systemctl is-enabled "$t" 2>/dev/null || true)
-  if [ "$state" != "masked" ]; then
-    log "DESVIO: $t não mascarado (state=$state)"
-    desviou=1
-  fi
-done
-
-if [ ! -f /etc/systemd/logind.conf.d/99-no-suspend.conf ]; then
-  log "DESVIO: /etc/systemd/logind.conf.d/99-no-suspend.conf ausente"
-  desviou=1
-fi
-
-# CPU pinned: scaling_min == scaling_max em cpu0 (representativo)
-if [ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]; then
-  cmax=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2>/dev/null)
-  cmin=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 2>/dev/null)
-  if [ "$cmin" != "$cmax" ]; then
-    log "DESVIO: scaling_min_freq($cmin) != scaling_max_freq($cmax)"
-    desviou=1
-  fi
-fi
+# Aurora 2.6 - suspend e downclock em idle agora são PERMITIDOS (laptop-friendly):
+# removidos os checks de anti-suspend (targets mascarados + logind) e de CPU pinned.
 
 # boost = 1
 if [ -f /sys/devices/system/cpu/cpufreq/boost ]; then

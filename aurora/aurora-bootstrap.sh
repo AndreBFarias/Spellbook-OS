@@ -51,7 +51,6 @@ log "Modo: $MODE"
 # 1. Kernelstub args (so em first-install OU se faltando algum param-chave)
 KERNELSTUB_PARAMS=(
   "amd_pstate=active"
-  "processor.max_cstate=1"
   "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
   "transparent_hugepage=madvise"
   "mitigations=off"
@@ -205,18 +204,9 @@ copia_se_diff "$AURORA_REPO/units/product-oom-watchdog.service" /etc/systemd/sys
 copia_se_diff "$AURORA_REPO/product-oom-watchdog"               /usr/local/sbin/product-oom-watchdog              root:root 0755
 copia_se_diff "$AURORA_REPO/luna-launch"                        /usr/local/bin/luna-launch                        root:root 0755
 
-# Aurora 2.3 ULTRA - anti-suspend (logind drop-in + dconf system-wide)
-sudo -n install -d -m 0755 /etc/systemd/logind.conf.d
-copia_se_diff "$AURORA_REPO/99-no-suspend.conf" /etc/systemd/logind.conf.d/99-no-suspend.conf root:root 0644
-
-sudo -n install -d -m 0755 /etc/dconf/db/local.d /etc/dconf/db/local.d/locks /etc/dconf/profile
-dconf_changed=0
-copia_se_diff "$AURORA_REPO/dconf/no-suspend.db"    /etc/dconf/db/local.d/00-no-suspend       root:root 0644 && dconf_changed=1 || true
-copia_se_diff "$AURORA_REPO/dconf/no-suspend.locks" /etc/dconf/db/local.d/locks/00-no-suspend root:root 0644 && dconf_changed=1 || true
-copia_se_diff "$AURORA_REPO/dconf/profile-user"     /etc/dconf/profile/user                   root:root 0644 && dconf_changed=1 || true
-if [ "$dconf_changed" -eq 1 ] && command -v dconf >/dev/null 2>&1; then
-  sudo -n dconf update && log "dconf db atualizado"
-fi
+# Aurora 2.6 - anti-suspend DESATIVADO (laptop-friendly): não instalamos mais o
+# logind drop-in nem o dconf no-suspend, para o laptop poder suspender/dormir.
+# A remoção dos arquivos já instalados foi feita uma vez no apply do Sprint A.
 
 # Aurora 2.3 ULTRA - Wi-Fi powersave off (NetworkManager)
 copia_se_diff "$AURORA_REPO/99-aurora-ultra-wifi.conf" /etc/NetworkManager/conf.d/99-aurora-ultra-wifi.conf root:root 0644

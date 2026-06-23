@@ -47,7 +47,7 @@ add_contexto() {
 
 # --- Check 1: kernel cmdline (kernelstub args ativos apos reboot) ---
 cmdline=$(cat /proc/cmdline 2>/dev/null || echo "")
-PARAMS_OBRIGATORIOS=(amd_pstate=active processor.max_cstate=1 mitigations=off transparent_hugepage=madvise nvidia.NVreg_PreserveVideoMemoryAllocations=1 pcie_aspm=off nvme_core.default_ps_max_latency_us=0)
+PARAMS_OBRIGATORIOS=(amd_pstate=active mitigations=off transparent_hugepage=madvise nvidia.NVreg_PreserveVideoMemoryAllocations=1 pcie_aspm=off nvme_core.default_ps_max_latency_us=0)
 faltando_kernel=()
 for p in "${PARAMS_OBRIGATORIOS[@]}"; do
   echo "$cmdline" | grep -qF -- "$p" || faltando_kernel+=("$p")
@@ -187,37 +187,9 @@ Rode: \`sudo systemctl enable oom-postmortem.service\`
   fi
 fi
 
-# --- Check 10: Aurora 2.3 ULTRA — anti-suspend (logind drop-in + targets mascarados) ---
-if [ ! -f /etc/systemd/logind.conf.d/99-no-suspend.conf ]; then
-  falhas+=("logind drop-in 99-no-suspend.conf ausente (USB não carrega em suspend)")
-  add_contexto "### Anti-suspend (Aurora 2.3 ULTRA)
-\`/etc/systemd/logind.conf.d/99-no-suspend.conf\` ausente.
-Rode: \`bash ~/.config/zsh/aurora/aurora-bootstrap.sh --post-update\`
-"
-fi
-
-SLEEP_TARGETS_CHECK=(sleep.target suspend.target hibernate.target hybrid-sleep.target)
-sleep_nao_mascarados=()
-for t in "${SLEEP_TARGETS_CHECK[@]}"; do
-  if [ "$(systemctl is-enabled "$t" 2>/dev/null)" != "masked" ]; then
-    sleep_nao_mascarados+=("$t")
-  fi
-done
-if [ ${#sleep_nao_mascarados[@]} -gt 0 ]; then
-  falhas+=("sleep targets não mascarados: ${sleep_nao_mascarados[*]}")
-  add_contexto "### Sleep targets não mascarados
-Rode: \`sudo systemctl mask ${sleep_nao_mascarados[*]}\`
-"
-fi
-
-# --- Check 11: Aurora 2.3 ULTRA — CPU pinned + boost + NVIDIA pm ---
-if [ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]; then
-  cmax=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq)
-  cmin=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq)
-  if [ "$cmin" != "$cmax" ]; then
-    falhas+=("CPU não pinned: scaling_min($cmin) != scaling_max($cmax)")
-  fi
-fi
+# --- Check 10/11: Aurora 2.6 — suspend e downclock em idle PERMITIDOS (laptop-friendly) ---
+# Removidos os checks de anti-suspend (logind/targets mascarados) e de CPU pinned.
+# Boost e NVIDIA persistence-mode (abaixo) seguem validados.
 
 if [ -f /sys/devices/system/cpu/cpufreq/boost ]; then
   bst=$(cat /sys/devices/system/cpu/cpufreq/boost)
