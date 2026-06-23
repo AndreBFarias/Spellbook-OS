@@ -136,6 +136,24 @@ aurora-self-heal() {
     fi
   fi
 
+  # Guardas dos .desktop (perm 644 + Exec PhotoGIMP gimp-3.0→gimp + órfãos
+  # NoDisplay apontando p/ Flatpak desinstalado) e tracker-extract-3 mascarado.
+  # Incidentes 2026-06-22; applier é idempotente e também limpa órfãos ao rodar.
+  local apps_dir="$HOME/.local/share/applications"
+  if [ -d "$apps_dir" ]; then
+    if find "$apps_dir" -maxdepth 1 -type f -name '*.desktop' ! -perm -044 2>/dev/null | grep -q .; then
+      issues+=(".desktop com permissão restritiva (launcher do Pop não abre o app)")
+      fixes_user+=("$aurora/aurora-desktop-guards-apply.sh")
+    elif [ -f "$apps_dir/org.gimp.GIMP.desktop" ] && grep -q -- '--command=gimp-3\.0' "$apps_dir/org.gimp.GIMP.desktop" 2>/dev/null; then
+      issues+=("PhotoGIMP com Exec gimp-3.0 (inexistente no GIMP 3.2+, não abre)")
+      fixes_user+=("$aurora/aurora-desktop-guards-apply.sh")
+    fi
+  fi
+  if [ "$(systemctl --user is-enabled tracker-extract-3.service 2>/dev/null)" != "masked" ]; then
+    issues+=("tracker-extract-3 não mascarado (loop de crash SIGSYS volta)")
+    fixes_user+=("$aurora/aurora-desktop-guards-apply.sh")
+  fi
+
   if [ ${#issues[@]} -eq 0 ]; then
     return 0
   fi
