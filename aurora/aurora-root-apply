@@ -6,7 +6,7 @@ set -u
 log() { printf '[aurora-root] %s\n' "$*"; }
 warn() { printf '[aurora-root][WARN] %s\n' "$*" >&2; }
 
-ALVO_GOVERNOR="powersave"   # Aurora 2.6: governor dinâmico (downclock em idle, turbo sob carga via EPP+boost)
+ALVO_GOVERNOR="performance"   # mantido em performance (escolha do usuário); suspend + C-states + unpin seguem relaxados
 ALVO_EPP="performance"
 SYSCTL_FILE="/etc/sysctl.d/99-aurora.conf"
 

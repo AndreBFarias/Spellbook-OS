@@ -5,7 +5,7 @@ set -u
 
 log() { printf '[aurora-watchdog] %s\n' "$*"; }
 
-ALVO_GOVERNOR="powersave"   # Aurora 2.6: governor dinâmico (laptop-friendly)
+ALVO_GOVERNOR="performance"   # mantido em performance (escolha do usuário)
 desviou=0
 
 # Verifica governor
