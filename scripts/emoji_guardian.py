@@ -154,15 +154,30 @@ IGNORE_DIRS = {
 # dir; estes exigem match por substring de caminho (paridade com o
 # EXCLUDED_PATH_SUBSTRINGS do universal-sanitizer).
 EXCLUDED_PATH_SUBSTRINGS = (
-    '/obsidian/config/plugins/',   # config do Obsidian vendorizada (Dracula_OS-Theme)
-    '/.obsidian/plugins/',         # plugins instalados num vault real
+    '/.obsidian/',                 # vault real do Obsidian (plugins/themes/snippets de terceiros)
+    '/obsidian/config/plugins/',   # plugins vendorizados (Dracula_OS-Theme)
+    '/obsidian/config/themes/',    # temas vendorizados (Dracula_OS-Theme)
 )
 
 
+def _eh_pacote_terceiros(filepath) -> bool:
+    """Heuristica generica: existe manifest.json no diretório do arquivo -> e um
+    pacote de terceiros (plugin/tema do Obsidian e afins), cujos emojis sao DADOS
+    funcionais (mapa glifo->nome do icon-folder, native com emoji, etc.). Cobre os
+    casos novos sem precisar enumerar cada caminho."""
+    try:
+        return (Path(filepath).parent / 'manifest.json').is_file()
+    except OSError:
+        return False
+
+
 def _path_excluido(filepath: str) -> bool:
-    """True se o caminho cai numa subtree de codigo de terceiros a preservar."""
+    """True se o caminho cai numa subtree de codigo de terceiros a preservar:
+    por substring conhecida OU pela assinatura manifest.json (mais generico)."""
     p = str(Path(filepath)).replace(os.sep, '/')
-    return any(sub in p for sub in EXCLUDED_PATH_SUBSTRINGS)
+    if any(sub in p for sub in EXCLUDED_PATH_SUBSTRINGS):
+        return True
+    return _eh_pacote_terceiros(filepath)
 
 # Extensões de arquivo para verificar
 TEXT_EXTENSIONS = {
