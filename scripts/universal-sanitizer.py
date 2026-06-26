@@ -57,6 +57,11 @@ EXCLUDED_PATH_SUBSTRINGS = (
     "/vendor/",
     "/third_party/",
     "/node_modules/",
+    # Pacotes de terceiros do Obsidian (plugins/temas): emojis sao dados
+    # funcionais (mapa glifo->nome do icon-folder, native com emoji, etc.).
+    "/.obsidian/",
+    "/obsidian/config/plugins/",
+    "/obsidian/config/themes/",
 )
 
 EXCLUDED_NAMES = {
@@ -170,6 +175,13 @@ def is_excluded(filepath: str) -> bool:
         return True
     if path.name in EXCLUDED_NAMES:
         return True
+    # Heuristica generica: arquivo dentro de um pacote de terceiros (manifest.json
+    # no mesmo diretório) -- plugin/tema do Obsidian e afins. Emojis sao dados.
+    try:
+        if (path.parent / "manifest.json").is_file():
+            return True
+    except OSError:
+        pass
 
     return False
 
