@@ -123,10 +123,17 @@ santuario() {
         else
             # Delegação para install.sh do projeto (respeita configuração de venv do projeto)
             if [ -f "install.sh" ]; then
-                local venv_base="venv"
-                if [ ! -d "$venv_base" ] || [ "$sync_dependencias" = true ]; then
-                    echo -e "  ${D_GREEN}[SETUP]${D_RESET} Delegando para install.sh do projeto..."
-                    bash install.sh || __warn "Falha ao executar install.sh"
+                # Exceção: Dracula_OS-Theme não usa venv e seu install.sh exige modo.
+                # Instala/reaplica TUDO de forma idempotente (pula o que já está aplicado).
+                if [[ "$(basename "$(pwd)")" == "Dracula_OS-Theme" ]]; then
+                    echo -e "  ${D_GREEN}[SETUP]${D_RESET} Dracula_OS-Theme: install.sh --user --all (idempotente)..."
+                    bash install.sh --user --all || __warn "Falha ao executar install.sh --user --all"
+                else
+                    local venv_base="venv"
+                    if [ ! -d "$venv_base" ] || [ "$sync_dependencias" = true ]; then
+                        echo -e "  ${D_GREEN}[SETUP]${D_RESET} Delegando para install.sh do projeto..."
+                        bash install.sh || __warn "Falha ao executar install.sh"
+                    fi
                 fi
             fi
 
