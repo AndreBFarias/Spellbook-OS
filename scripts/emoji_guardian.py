@@ -147,6 +147,23 @@ IGNORE_DIRS = {
     'dev-journey',
 }
 
+# SANITIZER-OBSIDIAN-PLUGINS-EXCLUDE-01: plugins de apps de terceiros guardam
+# emojis como DADOS funcionais (ex.: mapa glyph->nome do obsidian-icon-folder;
+# native:"<emoji>" do obsidian-emoji-toolbar). Stripar corrompe o plugin -- mesma
+# classe de bug do vendor/xterm.js (ver IGNORE_DIRS). IGNORE_DIRS casa só nome de
+# dir; estes exigem match por substring de caminho (paridade com o
+# EXCLUDED_PATH_SUBSTRINGS do universal-sanitizer).
+EXCLUDED_PATH_SUBSTRINGS = (
+    '/obsidian/config/plugins/',   # config do Obsidian vendorizada (Dracula_OS-Theme)
+    '/.obsidian/plugins/',         # plugins instalados num vault real
+)
+
+
+def _path_excluido(filepath: str) -> bool:
+    """True se o caminho cai numa subtree de codigo de terceiros a preservar."""
+    p = str(Path(filepath)).replace(os.sep, '/')
+    return any(sub in p for sub in EXCLUDED_PATH_SUBSTRINGS)
+
 # Extensões de arquivo para verificar
 TEXT_EXTENSIONS = {
     '.md', '.txt', '.py', '.sh', '.zsh', '.bash',
@@ -267,6 +284,9 @@ def scan_directory(
             if not should_check_file(filepath):
                 continue
 
+            if _path_excluido(filepath):
+                continue
+
             results = find_emojis_in_file(filepath)
 
             if results and results[0][0] != 0:  # Skip erros de leitura
@@ -292,6 +312,10 @@ def clean_file(filepath: str, dry_run: bool = True) -> Tuple[int, int]:
     # invocação direta de arquivo (fora do os.walk que respeita IGNORE_DIRS),
     # docs de dev-journey nunca são modificados.
     if 'dev-journey' in Path(filepath).parts:
+        return (0, 0)
+    # SANITIZER-OBSIDIAN-PLUGINS-EXCLUDE-01: defesa em profundidade -- plugins de
+    # terceiros nunca são modificados, mesmo em invocação direta de arquivo.
+    if _path_excluido(filepath):
         return (0, 0)
 
     try:
