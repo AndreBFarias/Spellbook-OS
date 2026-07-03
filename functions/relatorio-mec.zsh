@@ -49,6 +49,8 @@ __relatorio_novo() {
         mkdir -p "$__RELATORIO_MENSAIS"
         cp "$__RELATORIO_TEMPLATE" "$destino"
         echo -e "  ${D_GREEN}OK${D_RESET} criado: $destino"
+        echo -e "  ${D_YELLOW}!!${D_RESET} ATENÇÃO: o template carrega o CONTEÚDO do mês anterior"
+        echo -e "  ${D_COMMENT}   revise TODAS as seções (narrativa, Encarte B, prints do Encarte C)${D_RESET}"
     fi
     command -v xdg-open >/dev/null && xdg-open "$destino" >/dev/null 2>&1 &
 }
