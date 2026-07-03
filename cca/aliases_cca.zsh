@@ -81,12 +81,15 @@ __cca_preflight() {
     local seg_login seg_design seg_consent seg_plugins
 
     # 1. Login principal (local, ~0.3s)
-    if timeout 10 command claude auth status --json 2>/dev/null | jq -e '.loggedIn' >/dev/null 2>&1; then
+    # Nota: NUNCA "timeout command claude" — timeout é binário e não executa o
+    # builtin command (exit 127). E jq -e com input vazio retorna 0 (falso-OK
+    # no jq 1.6): por isso comparação de string, não exit code.
+    if [ "$(timeout 10 claude auth status --json 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
         seg_login="login ${D_GREEN}OK${D_RESET}"
     elif [ -t 0 ]; then
         echo -e "${D_PURPLE}[cca]${D_RESET} deslogado — abrindo login antes da sessão..."
         command claude auth login
-        if timeout 10 command claude auth status --json 2>/dev/null | jq -e '.loggedIn' >/dev/null 2>&1; then
+        if [ "$(timeout 10 claude auth status --json 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
             seg_login="login ${D_GREEN}OK${D_RESET}"
         else
             __err "login falhou ou foi abortado — sessão não aberta"
@@ -114,7 +117,7 @@ __cca_preflight() {
         saved_id=$(__cca_pf_get consent_client_id)
         if [ -z "$force" ] && [ "$saved_id" = "$client_id" ] && [ $(( now - last_ok )) -lt $ttl ]; then
             seg_consent="consent ${D_GREEN}OK${D_RESET} ${D_COMMENT}(cache)${D_RESET}"
-        elif timeout 30 command claude -p --bare "/design consent" >/dev/null 2>&1; then
+        elif timeout 30 claude -p --bare "/design consent" </dev/null >/dev/null 2>&1; then
             __cca_pf_set last_consent_ok "$now"
             __cca_pf_set consent_client_id "$client_id"
             seg_consent="consent ${D_GREEN}OK${D_RESET}"
@@ -131,7 +134,7 @@ __cca_preflight() {
     last_sync=$(__cca_pf_get last_plugin_sync); : "${last_sync:=0}"
     if [ -z "$force" ] && [ $(( now - last_sync )) -lt $ttl ]; then
         seg_plugins="plugins ${D_GREEN}OK${D_RESET} ${D_COMMENT}(cache)${D_RESET}"
-    elif timeout 60 command claude plugin marketplace update >/dev/null 2>&1; then
+    elif timeout 60 claude plugin marketplace update </dev/null >/dev/null 2>&1; then
         local desatualizados pid old new falha=""
         desatualizados=$(command claude plugin list --json --available 2>/dev/null | jq -r '
             (.available | map({key: .pluginId, value: .version}) | from_entries) as $av
@@ -141,7 +144,7 @@ __cca_preflight() {
             | "\(.id) \(.version) \($av[.id])"' 2>/dev/null)
         while IFS=' ' read -r pid old new; do
             [ -z "$pid" ] && continue
-            if timeout 60 command claude plugin update "$pid" >/dev/null 2>&1; then
+            if timeout 60 claude plugin update "$pid" </dev/null >/dev/null 2>&1; then
                 echo -e "${D_PURPLE}[cca]${D_RESET} plugin ${pid%%@*} ${old} -> ${D_GREEN}${new}${D_RESET}"
             else
                 falha=1
