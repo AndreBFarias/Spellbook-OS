@@ -81,15 +81,19 @@ __cca_preflight() {
     local seg_login seg_design seg_consent seg_plugins
 
     # 1. Login principal (local, ~0.3s)
-    # Nota: NUNCA "timeout command claude" — timeout é binário e não executa o
-    # builtin command (exit 127). E jq -e com input vazio retorna 0 (falso-OK
-    # no jq 1.6): por isso comparação de string, não exit code.
-    if [ "$(timeout 10 claude auth status --json 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
+    # Notas de campo (não simplificar):
+    # - NUNCA "timeout command claude" — timeout é binário e não executa o
+    #   builtin command (exit 127).
+    # - jq -e com input vazio retorna 0 (falso-OK no jq 1.6): por isso
+    #   comparação de string, não exit code.
+    # - TODA chamada claude dentro de $() precisa de </dev/null: com stdin
+    #   TTY e stdout capturado, o CLI bloqueia (travava o cca inteiro).
+    if [ "$(timeout 10 claude auth status --json </dev/null 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
         seg_login="login ${D_GREEN}OK${D_RESET}"
     elif [ -t 0 ]; then
         echo -e "${D_PURPLE}[cca]${D_RESET} deslogado — abrindo login antes da sessão..."
         command claude auth login
-        if [ "$(timeout 10 claude auth status --json 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
+        if [ "$(timeout 10 claude auth status --json </dev/null 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
             seg_login="login ${D_GREEN}OK${D_RESET}"
         else
             __err "login falhou ou foi abortado — sessão não aberta"
@@ -136,7 +140,7 @@ __cca_preflight() {
         seg_plugins="plugins ${D_GREEN}OK${D_RESET} ${D_COMMENT}(cache)${D_RESET}"
     elif timeout 60 claude plugin marketplace update </dev/null >/dev/null 2>&1; then
         local desatualizados pid old new falha=""
-        desatualizados=$(command claude plugin list --json --available 2>/dev/null | jq -r '
+        desatualizados=$(command claude plugin list --json --available </dev/null 2>/dev/null | jq -r '
             (.available | map({key: .pluginId, value: .version}) | from_entries) as $av
             | .installed[]
             | select(.version != null and .version != "unknown")
