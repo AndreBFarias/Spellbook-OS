@@ -133,6 +133,15 @@ CCA_NO_PREFLIGHT=1 zsh -ic '__cca_preflight; echo exit=$?'
 git status --porcelain | grep -vE '^\?\?|aliases_cca\.zsh|\.gitignore|docs/sprints/' || echo "OK escopo"
 ```
 
+## Descobertas na execução (2026-07-03)
+
+Duas armadilhas encontradas pelo proof-of-work (passo 3.2 falhou na primeira rodada) e corrigidas no código e neste plano:
+
+1. **`timeout` + builtin `command`**: `timeout 30 command claude ...` falha com exit 127 — `timeout` é binário coreutils e tenta `exec("command")`, que é builtin do shell e não existe no PATH. Dentro de `timeout`, chamar `claude` direto (resolução via PATH nunca vê funções/aliases do shell).
+2. **`jq -e` com input vazio retorna 0 no jq 1.6**: o check de login dava falso-OK quando o pipe anterior falhava (stdout vazio). Corrigido com comparação de string: `[ "$(... | jq -r '.loggedIn')" = "true" ]`.
+
+Ambas registradas também no `VALIDATOR_BRIEF.md` (Pegadinhas).
+
 ## Riscos e não-objetivos
 
 - **Não-objetivo**: automatizar `/design-login` (OAuth com browser+callback; manual por natureza, raro).
