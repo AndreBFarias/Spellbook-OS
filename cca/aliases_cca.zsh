@@ -43,6 +43,133 @@ __cca_unlock_secrets() {
     source "$HOME/.config/zsh/.zsh_secrets"
 }
 
+# ---------------------------------------------------------------------------
+# Preflight de sessão (SPR-2026-07-03-cca-preflight)
+# Resolve ANTES de abrir a sessão: login principal, design login, design
+# consent (headless via print mode — em bypass o prompt de consent nunca
+# aparece) e frescor de plugins (marketplace + update dos desatualizados).
+# Checks locais toda sessão (~0.3s); rede em cadência de 1 dia, retry
+# automático em falha (timestamp só grava em sucesso).
+# Escape: CCA_NO_PREFLIGHT=1. Doctor: cca-preflight (ignora cadência).
+# ---------------------------------------------------------------------------
+
+# Propósito: lê uma chave do estado do preflight (formato chave=valor).
+__cca_pf_get() {
+    local f="${ZDOTDIR:-$HOME/.config/zsh}/cca/.cca_preflight_state"
+    [ -f "$f" ] || return 1
+    grep -m1 "^${1}=" "$f" 2>/dev/null | cut -d= -f2-
+}
+
+# Propósito: grava/substitui uma chave no estado (leitura via grep, nunca source).
+__cca_pf_set() {
+    local f="${ZDOTDIR:-$HOME/.config/zsh}/cca/.cca_preflight_state"
+    local resto=""
+    [ -f "$f" ] && resto=$(grep -v "^${1}=" "$f" 2>/dev/null)
+    { [ -n "$resto" ] && printf '%s\n' "$resto"; printf '%s=%s\n' "$1" "$2"; } > "$f"
+}
+
+# Propósito: preflight de sessão. Interno (__cca_run/cca-resume/claude-safe)
+# ou manual via cca-preflight. Com --force ignora cadência.
+__cca_preflight() {
+    [ -n "${CCA_NO_PREFLIGHT:-}" ] && return 0
+    command -v jq >/dev/null 2>&1 || return 0  # sem jq, falha-soft: sessão abre sem preflight
+
+    local force=""
+    [ "$1" = "--force" ] && force=1
+    local ttl=86400 now creds="$HOME/.claude/.credentials.json"
+    now=$(date +%s)
+    local seg_login seg_design seg_consent seg_plugins
+
+    # 1. Login principal (local, ~0.3s)
+    if timeout 10 command claude auth status --json 2>/dev/null | jq -e '.loggedIn' >/dev/null 2>&1; then
+        seg_login="login ${D_GREEN}OK${D_RESET}"
+    elif [ -t 0 ]; then
+        echo -e "${D_PURPLE}[cca]${D_RESET} deslogado — abrindo login antes da sessão..."
+        command claude auth login
+        if timeout 10 command claude auth status --json 2>/dev/null | jq -e '.loggedIn' >/dev/null 2>&1; then
+            seg_login="login ${D_GREEN}OK${D_RESET}"
+        else
+            __err "login falhou ou foi abortado — sessão não aberta"
+            return 1
+        fi
+    else
+        __warn "deslogado e sem TTY — a sessão vai pedir /login"
+        seg_login="login ${D_YELLOW}FALTA${D_RESET}"
+    fi
+
+    # 2. Design login (local, instantâneo)
+    local client_id
+    client_id=$(jq -r '.designOauth.clientId // empty' "$creds" 2>/dev/null)
+    if [ -n "$client_id" ]; then
+        seg_design="design ${D_GREEN}OK${D_RESET}"
+    else
+        __warn "design deslogado — rode /design-login dentro da sessão"
+        seg_design="design ${D_YELLOW}FALTA${D_RESET}"
+    fi
+
+    # 3. Consent do design (1x/dia, ou na hora se o clientId mudou = relogin)
+    if [ -n "$client_id" ]; then
+        local last_ok saved_id
+        last_ok=$(__cca_pf_get last_consent_ok); : "${last_ok:=0}"
+        saved_id=$(__cca_pf_get consent_client_id)
+        if [ -z "$force" ] && [ "$saved_id" = "$client_id" ] && [ $(( now - last_ok )) -lt $ttl ]; then
+            seg_consent="consent ${D_GREEN}OK${D_RESET} ${D_COMMENT}(cache)${D_RESET}"
+        elif timeout 30 command claude -p --bare "/design consent" >/dev/null 2>&1; then
+            __cca_pf_set last_consent_ok "$now"
+            __cca_pf_set consent_client_id "$client_id"
+            seg_consent="consent ${D_GREEN}OK${D_RESET}"
+        else
+            __warn "design consent falhou (rede?) — nova tentativa na próxima sessão"
+            seg_consent="consent ${D_YELLOW}FALHOU${D_RESET}"
+        fi
+    else
+        seg_consent="consent ${D_COMMENT}pulado${D_RESET}"
+    fi
+
+    # 4. Plugins (1x/dia: marketplace update + update só dos desatualizados)
+    local last_sync
+    last_sync=$(__cca_pf_get last_plugin_sync); : "${last_sync:=0}"
+    if [ -z "$force" ] && [ $(( now - last_sync )) -lt $ttl ]; then
+        seg_plugins="plugins ${D_GREEN}OK${D_RESET} ${D_COMMENT}(cache)${D_RESET}"
+    elif timeout 60 command claude plugin marketplace update >/dev/null 2>&1; then
+        local desatualizados pid old new falha=""
+        desatualizados=$(command claude plugin list --json --available 2>/dev/null | jq -r '
+            (.available | map({key: .pluginId, value: .version}) | from_entries) as $av
+            | .installed[]
+            | select(.version != null and .version != "unknown")
+            | select(($av[.id] // "unknown") != "unknown" and $av[.id] != .version)
+            | "\(.id) \(.version) \($av[.id])"' 2>/dev/null)
+        while IFS=' ' read -r pid old new; do
+            [ -z "$pid" ] && continue
+            if timeout 60 command claude plugin update "$pid" >/dev/null 2>&1; then
+                echo -e "${D_PURPLE}[cca]${D_RESET} plugin ${pid%%@*} ${old} -> ${D_GREEN}${new}${D_RESET}"
+            else
+                falha=1
+                __warn "update de ${pid%%@*} falhou"
+            fi
+        done <<< "$desatualizados"
+        if [ -z "$falha" ]; then
+            __cca_pf_set last_plugin_sync "$now"
+            seg_plugins="plugins ${D_GREEN}OK${D_RESET}"
+        else
+            seg_plugins="plugins ${D_YELLOW}PARCIAL${D_RESET}"
+        fi
+    else
+        __warn "marketplace update falhou (rede?) — nova tentativa na próxima sessão"
+        seg_plugins="plugins ${D_YELLOW}FALHOU${D_RESET}"
+    fi
+
+    echo -e "${D_PURPLE}[cca]${D_RESET} preflight: $seg_login · $seg_design · $seg_consent · $seg_plugins"
+    return 0
+}
+
+# Propósito: doctor do cca — preflight completo ignorando cadência.
+# Uso: cca-preflight
+cca-preflight() {
+    __header "CCA PREFLIGHT" "$D_PURPLE"
+    __cca_preflight --force
+}
+
 # Proposito: Wrapper seguro para Claude Code com quota guard
 # Uso: claude <args>
 claude-safe() {
