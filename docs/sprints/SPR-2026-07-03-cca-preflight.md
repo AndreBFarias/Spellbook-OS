@@ -77,7 +77,7 @@ O preflight roda antes de `cca_guard.sh before` e antes da medição `pre_size` 
 - Arquivo `cca/.cca_preflight_state`, formato `chave=valor` (uma por linha): `last_consent_ok`, `consent_client_id`, `last_plugin_sync`.
 - Leitura via grep/cut (sem source — sem execução de conteúdo).
 - Cadência: 86400s. Passo de rede que falha não grava timestamp -> retry automático na próxima sessão.
-- `clientId` do designOauth diferente do gravado -> consent re-garantido imediatamente (relogin do design inválida cache).
+- `clientId` do designOauth diferente do gravado -> consent re-garantido imediatamente (relogin do design zera o cache).
 
 ### Saída (paleta Dracula, helpers ASCII da casa)
 
