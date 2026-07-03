@@ -37,6 +37,7 @@ novo_login_de_acesso.json
 profiles.yml
 .claude_quota
 .cca_quota
+.cca_preflight_state
 .cca_guard_config
 vault/secrets.gpg.bak-*
 # Passphrase do vault: mora em ~/.local/state/zsh-vault-passphrase (fora do repo).
