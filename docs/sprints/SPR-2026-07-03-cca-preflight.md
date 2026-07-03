@@ -264,7 +264,7 @@ __cca_preflight() {
             | "\(.id) \(.version) \($av[.id])"' 2>/dev/null)
         while IFS=' ' read -r pid old new; do
             [ -z "$pid" ] && continue
-            if timeout 60 command claude plugin update "$pid" >/dev/null 2>&1; then
+            if timeout 60 claude plugin update "$pid" </dev/null >/dev/null 2>&1; then
                 echo -e "${D_PURPLE}[cca]${D_RESET} plugin ${pid%%@*} ${old} -> ${D_GREEN}${new}${D_RESET}"
             else
                 falha=1
