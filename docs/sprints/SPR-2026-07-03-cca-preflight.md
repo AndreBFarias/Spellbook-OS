@@ -140,7 +140,9 @@ Duas armadilhas encontradas pelo proof-of-work (passo 3.2 falhou na primeira rod
 1. **`timeout` + builtin `command`**: `timeout 30 command claude ...` falha com exit 127 — `timeout` é binário coreutils e tenta `exec("command")`, que é builtin do shell e não existe no PATH. Dentro de `timeout`, chamar `claude` direto (resolução via PATH nunca vê funções/aliases do shell).
 2. **`jq -e` com input vazio retorna 0 no jq 1.6**: o check de login dava falso-OK quando o pipe anterior falhava (stdout vazio). Corrigido com comparação de string: `[ "$(... | jq -r '.loggedIn')" = "true" ]`.
 
-Ambas registradas também no `VALIDATOR_BRIEF.md` (Pegadinhas).
+3. **CLI claude bloqueia em `$()` com stdin TTY** (reportado pelo usuário: "cca nem abre"): `claude auth status` dentro de command substitution, com stdin sendo um TTY real e stdout capturado, trava indefinidamente — o cca congelava antes de imprimir qualquer coisa. Não reproduzível com stdin em pipe (por isso o proof-of-work inicial via `zsh -ic` passou); reproduzido e verificado com pty via `script -qec`. Fix: `</dev/null` em TODA chamada claude dentro de `$()` (auth status x2, plugin list). O `claude auth login` fica SEM redirect — precisa do TTY. Verificação pós-fix sob pty: cache 1.1s, sem cache 3.4s, RC=0.
+
+Todas registradas também no `VALIDATOR_BRIEF.md` (Pegadinhas).
 
 ## Riscos e não-objetivos
 
@@ -210,15 +212,19 @@ __cca_preflight() {
     local seg_login seg_design seg_consent seg_plugins
 
     # 1. Login principal (local, ~0.3s)
-    # Nota: NUNCA "timeout command claude" — timeout é binário e não executa o
-    # builtin command (exit 127). E jq -e com input vazio retorna 0 (falso-OK
-    # no jq 1.6): por isso comparação de string, não exit code.
-    if [ "$(timeout 10 claude auth status --json 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
+    # Notas de campo (não simplificar):
+    # - NUNCA "timeout command claude" — timeout é binário e não executa o
+    #   builtin command (exit 127).
+    # - jq -e com input vazio retorna 0 (falso-OK no jq 1.6): por isso
+    #   comparação de string, não exit code.
+    # - TODA chamada claude dentro de $() precisa de </dev/null: com stdin
+    #   TTY e stdout capturado, o CLI bloqueia (travava o cca inteiro).
+    if [ "$(timeout 10 claude auth status --json </dev/null 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
         seg_login="login ${D_GREEN}OK${D_RESET}"
     elif [ -t 0 ]; then
         echo -e "${D_PURPLE}[cca]${D_RESET} deslogado — abrindo login antes da sessão..."
         command claude auth login
-        if [ "$(timeout 10 claude auth status --json 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
+        if [ "$(timeout 10 claude auth status --json </dev/null 2>/dev/null | jq -r '.loggedIn' 2>/dev/null)" = "true" ]; then
             seg_login="login ${D_GREEN}OK${D_RESET}"
         else
             __err "login falhou ou foi abortado — sessão não aberta"
@@ -265,7 +271,7 @@ __cca_preflight() {
         seg_plugins="plugins ${D_GREEN}OK${D_RESET} ${D_COMMENT}(cache)${D_RESET}"
     elif timeout 60 claude plugin marketplace update </dev/null >/dev/null 2>&1; then
         local desatualizados pid old new falha=""
-        desatualizados=$(command claude plugin list --json --available 2>/dev/null | jq -r '
+        desatualizados=$(command claude plugin list --json --available </dev/null 2>/dev/null | jq -r '
             (.available | map({key: .pluginId, value: .version}) | from_entries) as $av
             | .installed[]
             | select(.version != null and .version != "unknown")
