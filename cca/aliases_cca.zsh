@@ -174,6 +174,7 @@ cca-preflight() {
 # Uso: claude <args>
 claude-safe() {
     __cca_unlock_secrets  # falha-soft: continua mesmo se vault não destravou
+    __cca_preflight || return 1
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
     __cca_export_contexto
 
@@ -288,6 +289,7 @@ __cca_node_opts() { printf '%s' "${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-
 # Aurora 2.0 - helper interno: executa Claude com slice + token tracking real
 # Não chamar direto. Use 'cca'.
 __cca_run() {
+    __cca_preflight || return 1
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
     __cca_export_contexto
 
@@ -491,6 +493,7 @@ cca-resume() {
         echo "[ERRO] Claude Code não instalado."
         return 1
     fi
+    __cca_preflight || return 1
     bash "$HOME/.config/zsh/cca/cca_guard.sh" before || return 1
     __cca_export_contexto
     local rc
