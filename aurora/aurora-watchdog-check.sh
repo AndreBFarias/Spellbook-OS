@@ -6,6 +6,14 @@ set -u
 log() { printf '[aurora-watchdog] %s\n' "$*"; }
 
 ALVO_GOVERNOR="performance"   # mantido em performance (escolha do usuário)
+ALVO_S76="performance"
+# Aurora 2.8 - respeita o modo COOL (sentinela /etc/aurora/allow-powersave). Sob ele,
+# o esperado passa a ser powersave/balanced, entao o watchdog NÃO trata a escolha do
+# usuário como desvio (nem a reverte a cada 15min). Ver DOSSIE-2026-07-09 / comando `cool`.
+if [ -e /etc/aurora/allow-powersave ]; then
+  ALVO_GOVERNOR="powersave"
+  ALVO_S76="balanced"
+fi
 desviou=0
 
 # Verifica governor
@@ -18,8 +26,8 @@ fi
 # Verifica system76-power profile
 if command -v system76-power >/dev/null 2>&1; then
   prof=$(system76-power profile 2>/dev/null | awk -F': ' '/Power Profile/ {print tolower($2)}')
-  if [ "$prof" != "performance" ]; then
-    log "DESVIO: system76-power=$prof (esperado: performance)"
+  if [ "$prof" != "$ALVO_S76" ]; then
+    log "DESVIO: system76-power=$prof (esperado: $ALVO_S76)"
     desviou=1
   fi
 fi
@@ -66,9 +74,23 @@ if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ]; then
   desviou=1
 fi
 
+# Aurora 2.8 - guarda de divergencia: o watchdog roda do repo, mas re-aplica a copia
+# instalada em /usr/local/sbin (so atualizada por aurora-bootstrap.sh). Se divergirem,
+# uma edicao de politica no repo não teria efeito -> torna o drift visivel no journal.
+REPO_APPLY="/home/andrefarias/.config/zsh/aurora/aurora-root-apply"
+if [ -f "$REPO_APPLY" ] && ! cmp -s "$REPO_APPLY" /usr/local/sbin/aurora-root-apply; then
+  log "AVISO: /usr/local/sbin/aurora-root-apply difere do repo -- rode aurora/aurora-bootstrap.sh"
+fi
+
 if [ $desviou -eq 1 ]; then
   log "Re-aplicando aurora-root-apply..."
-  /usr/local/sbin/aurora-root-apply
+  if /usr/local/sbin/aurora-root-apply; then
+    log "re-apply OK"
+  else
+    rc=$?
+    log "ERRO: aurora-root-apply falhou (rc=$rc)"
+    exit 1
+  fi
 else
   log "OK - sem desvio"
 fi
