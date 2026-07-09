@@ -74,7 +74,7 @@ temp() {
   echo ""
   if [ -n "$fan1" ]; then
     __item "fans CPU/GPU" "${fan1} / ${fan2} RPM"
-    __item "perfil fan" "${pp:-?} (agressivo = balanced-performance)"
+    __item "perfil fan" "${pp:-?}"
   elif [ -n "$tctl" ] && [ "${tctl%%.*}" -lt 90 ]; then
     __ok "fans OK (inferido): CPU ${tctl} C sob controle. RPM só com acer_wmi predator_v4=1."
   else
