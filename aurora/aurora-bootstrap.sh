@@ -105,6 +105,10 @@ copia_se_diff "$AURORA_REPO/aurora-root-apply" /usr/local/sbin/aurora-root-apply
 # sysctl
 copia_se_diff "$AURORA_REPO/99-aurora.conf" /etc/sysctl.d/99-aurora.conf root:root 0644
 
+# Aurora 2.8: destrava acer_wmi predator_v4 (expoe platform_profile p/ curva de fan
+# agressiva + RPM das fans via hwmon no Nitro). Vale no próximo boot (modprobe.d).
+copia_se_diff "$AURORA_REPO/acer_wmi-predator.conf" /etc/modprobe.d/acer_wmi-predator.conf root:root 0644
+
 # earlyoom default
 copia_se_diff "$AURORA_REPO/earlyoom.default" /etc/default/earlyoom root:root 0644
 
