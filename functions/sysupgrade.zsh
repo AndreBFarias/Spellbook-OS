@@ -21,7 +21,7 @@ aurora-reapply-all() {
 }
 
 sysupgrade() {
-  set -o pipefail
+  setopt local_options pipefail   # escopo local (zsh restaura ao retornar): não vaza pro shell interativo
   printf '\033[36m[sysupgrade]\033[0m apt update + upgrade...\n'
   sudo apt update && sudo apt upgrade -y || { printf '[sysupgrade] apt falhou\n' >&2; return 1; }
 
