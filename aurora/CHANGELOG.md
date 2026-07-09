@@ -38,7 +38,7 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 | 2026-04 | 2.0 | Chrome --load-extension | `~/.local/share/applications/google-chrome.desktop` | aurora-chrome-extensions-apply.sh | OK |
 | 2026-04 | 2.0 | Ctrl+C Ilimitado userscript | `~/.local/bin/control-c-ilimitado-ext` | aurora-userscripts-apply.sh | OK (info) |
 | 2026-04 | 2.1 | gradia-autosave daemon | `~/.config/systemd/user/gradia-autosave.service` | aurora-user-services-apply.sh | OK |
-| 2026-05-16 | 2.3-ULTRA | Anti-suspend persistente | `/etc/systemd/logind.conf.d/99-no-suspend.conf` | bootstrap | (pendente) |
+| 2026-05-16 | 2.3-ULTRA | ~~Anti-suspend persistente~~ REVERTIDA pela 2.6-thermal (2026-06-22): suspend reabilitado | `/etc/systemd/logind.conf.d/99-no-suspend.conf` | NENHUM (bootstrap não instala mais) | revertida |
 | 2026-05-16 | 2.3-ULTRA | NVIDIA persistence-mode | systemd unit | bootstrap | (pendente) |
 | 2026-05-16 | 2.3-ULTRA | Wi-Fi powersave OFF | `/etc/NetworkManager/conf.d/99-aurora-ultra-wifi.conf` + remoção do `default-wifi-powersave-on.conf` | bootstrap (com .bak guard) | OK |
 | 2026-05-16 | 2.3-ULTRA | kernel cmdline params (pcie_aspm, nvme PS0) | `kernelstub --add-options` | bootstrap (--first-install) | (pendente; check via `/proc/cmdline`) |
@@ -47,6 +47,8 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 | 2026-05-20 | 2.5 | self-heal ampliado (13 checks) | -- | -- | -- |
 | 2026-06-03 | 2.6 | systemd-coredump (diagnostica crash silencioso de terminal/app -- ghostty não deixava rastro) | pacote do sistema + `coredumpctl` | `sudo apt install systemd-coredump` (aguarda dono) | (pendente) |
 | 2026-06-16 | 2.7 | spellbook-autosync timer (commit+push periodico a cada 10min; independe de fechar terminal -- o hook zshexit mascarou parada de ~1 mes) | `~/.config/systemd/user/spellbook-autosync.{service,timer}` | aurora-user-services-apply.sh | OK |
+| 2026-06-22 | 2.6-thermal | Flexibilizacao termica laptop-friendly (scaling_min despinado; suspend REABILITADO; processor.max_cstate=1 removido do cmdline) | governor/suspend/unpin/max_cstate | aurora-root-apply (seções 2/6/7) + aurora-watchdog | OK |
+| 2026-07-09 | 2.8 | Toggle termico `cool`/`perf` (sentinela `/etc/aurora/allow-powersave`; EPP amarrado ao governor) + comando `temp` + heartbeat de liveness do compositor (auto-recupera hang silencioso que o watchdog de erro não pega) | `functions/termico.zsh`, `aurora/aurora-compositor-heartbeat.sh` | aurora-root-apply + aurora-gpu-shortcut-apply.sh | OK |
 
 ## Para validar o sistema todo
 

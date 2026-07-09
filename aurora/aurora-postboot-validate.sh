@@ -279,7 +279,7 @@ Todos os checks pos-boot passaram. Pode apagar este arquivo a qualquer momento.
 ## Estado verificado
 
 \`\`\`
-$(cat /proc/cmdline | tr ' ' '\n' | grep -E "mitigations|max_cstate|amd_pstate|transparent_hugepage|NVreg_Preserve")
+$(cat /proc/cmdline | tr ' ' '\n' | grep -E "mitigations|amd_pstate|transparent_hugepage|NVreg_Preserve|pcie_aspm|nvme_core")
 \`\`\`
 
 \`\`\`

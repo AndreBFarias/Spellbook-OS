@@ -56,15 +56,21 @@ Para resfriar também a frequência em idle, trocar o governor para `powersave`
 
 ## Alternar governor (performance ↔ powersave)
 
-Editar `ALVO_GOVERNOR` em **dois** arquivos e reaplicar:
+**A partir da 2.8 use os comandos `cool` / `perf`** (`functions/termico.zsh`) — não edite
+mais os scripts à mão. O gatilho é o sentinela `/etc/aurora/allow-powersave`, que o
+`aurora-root-apply` e o `aurora-watchdog-check.sh` consultam para NÃO re-pinar performance.
+
 ```bash
-# trocar para dinâmico (idle mais frio, turbo sob carga via EPP+boost):
-sed -i 's/^ALVO_GOVERNOR="performance"/ALVO_GOVERNOR="powersave"/' \
-  ~/.config/zsh/aurora/aurora-root-apply ~/.config/zsh/aurora/aurora-watchdog-check.sh
-sudo install -m0755 ~/.config/zsh/aurora/aurora-root-apply /usr/local/sbin/aurora-root-apply
-sudo /usr/local/sbin/aurora-root-apply         # aplica na hora
-# (reverter: trocar "powersave" de volta para "performance" e repetir)
+cool    # governor powersave + EPP balance_performance: esfria idle/carga-leve, turbo intacto
+perf    # volta ao governor performance pinado (postura historica)
+temp    # readout de todos os sensores + modo atual
 ```
+
+Por que não bastava o antigo `sed` (nem `cpupower -g powersave`): (1) o watchdog revertia
+em <=15min; (2) `ALVO_EPP` seguia `performance` — sob `amd_pstate=active` o EPP é a alavanca
+real de frequência, então o idle não esfriava; (3) `system76-power profile performance`
+reafirmava tudo por fora. O sentinela + a amarração EPP←governor no `aurora-root-apply`
+resolvem os três. Detalhes em `DOSSIE-2026-07-09-termico-e-freeze.md`.
 
 ## Reverter tudo (voltar à postura ≤2.5)
 
