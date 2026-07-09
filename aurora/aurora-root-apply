@@ -10,16 +10,30 @@ ALVO_GOVERNOR="performance"   # mantido em performance (escolha do usuário); su
 ALVO_EPP="performance"
 SYSCTL_FILE="/etc/sysctl.d/99-aurora.conf"
 
+# Aurora 2.8 - modo termico via sentinela /etc/aurora/allow-powersave.
+# Se existir, o usuario escolheu "cool" (comando `cool`): governor dinamico que
+# esfria idle/carga-leve preservando turbo total sob carga (EPP=balance_performance).
+# Sem o sentinela, mantem a postura "performance" historica. Ver DOSSIE-2026-07-09.
+MODO_COOL=0
+ALVO_S76="performance"
+if [ -e /etc/aurora/allow-powersave ]; then
+  MODO_COOL=1
+  ALVO_GOVERNOR="powersave"
+  ALVO_EPP="balance_performance"
+  ALVO_S76="balanced"
+  log "modo COOL ativo (sentinela) -> governor=$ALVO_GOVERNOR EPP=$ALVO_EPP system76=$ALVO_S76"
+fi
+
 # 1. system76-power profile performance (idempotente)
 if command -v system76-power >/dev/null 2>&1; then
   atual=$(system76-power profile 2>/dev/null | awk -F': ' '/Power Profile/ {print tolower($2)}')
-  if [ "$atual" = "performance" ]; then
-    log "system76-power ja em performance"
+  if [ "$atual" = "$ALVO_S76" ]; then
+    log "system76-power ja em $ALVO_S76"
   else
-    if system76-power profile performance 2>&1; then
-      log "system76-power -> performance (era: ${atual:-?})"
+    if system76-power profile "$ALVO_S76" 2>&1; then
+      log "system76-power -> $ALVO_S76 (era: ${atual:-?})"
     else
-      warn "system76-power profile performance falhou"
+      warn "system76-power profile $ALVO_S76 falhou"
     fi
   fi
 else
@@ -48,6 +62,8 @@ for epp in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; d
   if [ "$cur" != "$ALVO_EPP" ]; then
     if echo "$ALVO_EPP" > "$epp" 2>/dev/null; then
       desviou=$((desviou + 1))
+    else
+      warn "falha escrevendo $epp (alvo=$ALVO_EPP; disponiveis: $(cat "${epp%_preference}_available_preferences" 2>/dev/null))"
     fi
   fi
 done
@@ -120,6 +136,19 @@ if command -v nvidia-smi >/dev/null 2>&1; then
     nvidia-smi -pm 1 >/dev/null 2>&1 && log "NVIDIA persistence-mode -> Enabled" || warn "nvidia-smi -pm 1 falhou"
   else
     log "NVIDIA persistence-mode ja Enabled"
+  fi
+fi
+
+# 9b. Aurora 2.8 - self-heal do 99-aurora-ultra-wifi.conf (o watchdog checa este
+# arquivo; sem esta secao, se ele sumir o watchdog entra em desvio permanente).
+WIFI_DROPIN=/etc/NetworkManager/conf.d/99-aurora-ultra-wifi.conf
+if [ ! -f "$WIFI_DROPIN" ] || ! grep -q '^wifi.powersave *= *2' "$WIFI_DROPIN" 2>/dev/null; then
+  if printf '[connection]\nwifi.powersave = 2\n' > "$WIFI_DROPIN" 2>/dev/null; then
+    chmod 0644 "$WIFI_DROPIN" 2>/dev/null
+    systemctl reload NetworkManager 2>/dev/null || true
+    log "99-aurora-ultra-wifi.conf restaurado (powersave=2)"
+  else
+    warn "falha restaurando $WIFI_DROPIN"
   fi
 fi
 
