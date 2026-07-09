@@ -49,6 +49,7 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 | 2026-06-16 | 2.7 | spellbook-autosync timer (commit+push periodico a cada 10min; independe de fechar terminal -- o hook zshexit mascarou parada de ~1 mes) | `~/.config/systemd/user/spellbook-autosync.{service,timer}` | aurora-user-services-apply.sh | OK |
 | 2026-06-22 | 2.6-thermal | Flexibilizacao termica laptop-friendly (scaling_min despinado; suspend REABILITADO; processor.max_cstate=1 removido do cmdline) | governor/suspend/unpin/max_cstate | aurora-root-apply (seções 2/6/7) + aurora-watchdog | OK |
 | 2026-07-09 | 2.8 | Toggle termico `cool`/`perf` (sentinela `/etc/aurora/allow-powersave`; EPP amarrado ao governor) + comando `temp` + heartbeat de liveness do compositor (auto-recupera hang silencioso que o watchdog de erro não pega) | `functions/termico.zsh`, `aurora/aurora-compositor-heartbeat.sh` | aurora-root-apply + aurora-gpu-shortcut-apply.sh | OK |
+| 2026-07-09 | 2.8 | Fans agressivas: `acer_wmi predator_v4=1` destrava `platform_profile` (aplica `balanced-performance`; `performance` e rejeitado pelo EC do Nitro) + RPM das fans legivel via hwmon | `/etc/modprobe.d/acer_wmi-predator.conf` + `platform_profile` | aurora-bootstrap.sh + aurora-root-apply (sec 11, idempotente/tolera I/O error) + watchdog (re-assere apos resume) | OK |
 
 ## Para validar o sistema todo
 

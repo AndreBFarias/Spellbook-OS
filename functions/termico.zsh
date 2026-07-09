@@ -66,10 +66,17 @@ temp() {
   done
   [ "$nmax" -gt 0 ] && __item "NVMe (max)" "$(__mC2C "$nmax") C"
 
-  # Fans: o Nitro não expõe RPM via hwmon/acpi -> inferência
+  # Fans: RPM real via acer-wmi (predator_v4). Fallback: inferência se ausente.
+  local fan1 fan2 pp
+  fan1=$(cat /sys/devices/platform/acer-wmi/hwmon/hwmon*/fan1_input 2>/dev/null | head -1)
+  fan2=$(cat /sys/devices/platform/acer-wmi/hwmon/hwmon*/fan2_input 2>/dev/null | head -1)
+  pp=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null)
   echo ""
-  if [ -n "$tctl" ] && [ "${tctl%%.*}" -lt 90 ]; then
-    __ok "fans OK (inferido): CPU ${tctl} C sob controle. RPM não é exposto pelo hardware Acer (EC/BIOS)."
+  if [ -n "$fan1" ]; then
+    __item "fans CPU/GPU" "${fan1} / ${fan2} RPM"
+    __item "perfil fan" "${pp:-?} (agressivo = balanced-performance)"
+  elif [ -n "$tctl" ] && [ "${tctl%%.*}" -lt 90 ]; then
+    __ok "fans OK (inferido): CPU ${tctl} C sob controle. RPM só com acer_wmi predator_v4=1."
   else
     __warn "CPU alta (${tctl} C) e sem readout de RPM — verifique refrigeração/dust."
   fi
