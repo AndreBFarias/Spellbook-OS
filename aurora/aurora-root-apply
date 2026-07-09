@@ -165,5 +165,29 @@ if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ]; then
   log "default-wifi-powersave-on.conf removido (sobrescrevia powersave=2)"
 fi
 
+# 11. Aurora 2.8 - perfil de plataforma agressivo (fans mais fortes -> temp mais baixa).
+# Requer acer_wmi predator_v4=1 (persistido em /etc/modprobe.d/acer_wmi-predator.conf).
+# 'performance' e REJEITADO pelo EC deste Nitro (I/O error, cai p/ balanced-performance);
+# 'balanced-performance' e o maximo que aplica. O write pode devolver I/O error mas colar
+# mesmo assim -> confirma pela leitura, nao pelo rc (mesmo padrao do system76-power).
+ALVO_PROFILE="balanced-performance"
+PP=/sys/firmware/acpi/platform_profile
+if [ -e "$PP" ]; then
+  atual_pp=$(cat "$PP" 2>/dev/null)
+  if [ "$atual_pp" != "$ALVO_PROFILE" ]; then
+    echo "$ALVO_PROFILE" > "$PP" 2>/dev/null
+    novo_pp=$(cat "$PP" 2>/dev/null)
+    if [ "$novo_pp" = "$ALVO_PROFILE" ]; then
+      log "platform_profile -> $ALVO_PROFILE (fans agressivas; era ${atual_pp:-?})"
+    else
+      warn "platform_profile nao aplicou (alvo=$ALVO_PROFILE ficou=${novo_pp:-?})"
+    fi
+  else
+    log "platform_profile ja em $ALVO_PROFILE"
+  fi
+else
+  log "platform_profile ausente (acer_wmi predator_v4 carregado? precisa reboot pos modprobe.d)"
+fi
+
 log "aurora-root-apply concluido"
 exit 0

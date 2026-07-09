@@ -74,6 +74,14 @@ if [ -f /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf ]; then
   desviou=1
 fi
 
+# Aurora 2.8 - platform_profile agressivo (fans). Re-assere apos resume/drift (o EC
+# costuma resetar o perfil ao voltar do suspend). Requer acer_wmi predator_v4=1.
+PP=/sys/firmware/acpi/platform_profile
+if [ -e "$PP" ] && [ "$(cat "$PP" 2>/dev/null)" != "balanced-performance" ]; then
+  log "DESVIO: platform_profile=$(cat "$PP" 2>/dev/null) (esperado: balanced-performance)"
+  desviou=1
+fi
+
 # Aurora 2.8 - guarda de divergencia: o watchdog roda do repo, mas re-aplica a copia
 # instalada em /usr/local/sbin (so atualizada por aurora-bootstrap.sh). Se divergirem,
 # uma edicao de politica no repo não teria efeito -> torna o drift visivel no journal.
