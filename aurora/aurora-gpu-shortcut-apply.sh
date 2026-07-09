@@ -8,7 +8,7 @@ set -u
 AURORA_REPO="/home/andrefarias/.config/zsh/aurora"
 TRIGGER="$AURORA_REPO/aurora-gpu-revive-trigger"
 RC="$HOME/.xbindkeysrc"
-MARK="# Aurora 2.3 - botao de panico GPU (Ctrl+Alt+0)"
+MARK="# Aurora 2.3 - botao de pânico GPU (Ctrl+Alt+0)"
 
 log() { printf '[gpu-shortcut] %s\n' "$*"; }
 
@@ -57,6 +57,31 @@ if [ -n "${DISPLAY:-}" ]; then
     log "xbindkeys (re)carregado (Ctrl+Alt+0 ativo)"
   else
     log "WARN: não consegui iniciar o xbindkeys agora"
+  fi
+fi
+
+# 5. Aurora 2.8 - heartbeat de liveness do compositor (auto-recupera o hang
+#    SILENCIOSO que o watchdog de erro DMCUB não pega). Autostart + lança agora.
+HB="$AURORA_REPO/aurora-compositor-heartbeat.sh"
+HB_AUTOSTART="$HOME/.config/autostart/aurora-compositor-hb.desktop"
+if [ -f "$HB" ]; then
+  chmod +x "$HB" 2>/dev/null
+  if [ ! -f "$HB_AUTOSTART" ]; then
+    mkdir -p "$(dirname "$HB_AUTOSTART")"
+    cat > "$HB_AUTOSTART" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Aurora compositor heartbeat
+Exec=$HB
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
+Comment=Auto-recupera o display travado (hang silencioso do compositor)
+EOF
+    log "autostart do heartbeat criado: $HB_AUTOSTART"
+  fi
+  if [ -n "${DISPLAY:-}" ] && ! pgrep -f "aurora-compositor-heartbeat.sh" >/dev/null 2>&1; then
+    nohup "$HB" >/dev/null 2>&1 & disown 2>/dev/null || true
+    log "heartbeat do compositor iniciado"
   fi
 fi
 
