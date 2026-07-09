@@ -323,7 +323,7 @@ _tui_sim_nao() {
 _step_deps() {
     _step "Verificando dependências"
 
-    local pkgs=(zsh fzf git python3-pip rsync tree jq pv tmux)
+    local pkgs=(zsh fzf git python3-pip rsync tree jq pv tmux qrencode)
 
     local mgr
     mgr=$(_detect_pkg_manager)
