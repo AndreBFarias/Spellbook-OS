@@ -30,10 +30,14 @@ if command -v system76-power >/dev/null 2>&1; then
   if [ "$atual" = "$ALVO_S76" ]; then
     log "system76-power ja em $ALVO_S76"
   else
-    if system76-power profile "$ALVO_S76" 2>&1; then
+    # system76-power pode retornar erro nao-fatal (ex.: ALPM de host SCSI inexistente)
+    # mas ainda assim trocar o perfil. Re-checa o estado real em vez de confiar no rc.
+    system76-power profile "$ALVO_S76" >/dev/null 2>&1
+    novo=$(system76-power profile 2>/dev/null | awk -F': ' '/Power Profile/ {print tolower($2)}')
+    if [ "$novo" = "$ALVO_S76" ]; then
       log "system76-power -> $ALVO_S76 (era: ${atual:-?})"
     else
-      warn "system76-power profile $ALVO_S76 falhou"
+      warn "system76-power profile $ALVO_S76 falhou (atual: ${novo:-?})"
     fi
   fi
 else
