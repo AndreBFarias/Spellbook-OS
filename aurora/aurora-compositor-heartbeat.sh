@@ -45,14 +45,15 @@ if [ "${XDG_SESSION_TYPE:-x11}" != "x11" ]; then
   exit 0
 fi
 
-# --- singleton (evita instancias duplicadas de logins repetidos) -----------
-me="$(basename "$0")"
-others=$(pgrep -fc "$me" 2>/dev/null || echo 1)
-[ "${others:-1}" -gt 1 ] && { log "outra instancia ja roda -> saindo"; exit 0; }
-
 command -v gdbus >/dev/null 2>&1 || { log "gdbus ausente -> heartbeat não pode rodar"; exit 0; }
 mkdir -p "$STATE_DIR" 2>/dev/null
 touch "$HIST" 2>/dev/null
+
+# --- singleton via flock (robusto; pgrep -f casaria ate o shell que lanca) --
+exec 9>"$STATE_DIR/hb.lock" 2>/dev/null || true
+if command -v flock >/dev/null 2>&1; then
+  flock -n 9 || { log "outra instancia ja roda (flock) -> saindo"; exit 0; }
+fi
 
 ping_shell() {
   timeout "$PING_TIMEOUT" gdbus call --session \
