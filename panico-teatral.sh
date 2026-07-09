@@ -33,11 +33,20 @@ GPU_F="$(field 'GPU 1')";    : "${GPU_F:=GPU}"
 UP_F="$(field 'Tempo Ativo')"; : "${UP_F:=?}"
 MEM_F="$(field 'Memória')";  : "${MEM_F:=?}"
 
-# ---- QR real e escaneável -> system76.com (SVG, sem PIL) -------------------
-# grava em arquivo (evita heredoc no stdin + shim do pyenv, que zerava o SVG)
-python3 -c "import qrcode, qrcode.image.svg as s; qrcode.make('https://system76.com', image_factory=s.SvgPathImage, border=1).save('$WORK/qr.svg')" 2>/dev/null
-# tira a declaração XML e as dimensões em mm para o CSS controlar o tamanho
-QR="$(sed 's/<?xml[^>]*?>//; s/ width="[0-9]*mm"//; s/ height="[0-9]*mm"//' "$WORK/qr.svg" 2>/dev/null)"
+# ---- QR real e escaneável -> system76.com (SVG) ---------------------------
+# qrencode (binário do sistema) primeiro: imune ao shim do pyenv que zerava o SVG.
+# Fallback: módulo python qrcode. Deps: requirements.txt (pip) + install.sh (apt qrencode).
+QR_URL="https://system76.com"
+: > "$WORK/qr.svg"
+if command -v qrencode >/dev/null 2>&1; then
+  qrencode -t SVG -o "$WORK/qr.svg" --foreground=3a2f66 --background=ffffff -m 2 "$QR_URL" 2>/dev/null
+fi
+if [ ! -s "$WORK/qr.svg" ]; then
+  python3 -c "import qrcode, qrcode.image.svg as s; qrcode.make('$QR_URL', image_factory=s.SvgPathImage, border=2).save('$WORK/qr.svg')" 2>/dev/null
+fi
+# remove a declaração XML e só as dimensões COM unidade (cm/mm) do <svg> raiz;
+# os <rect> internos usam width="1" sem unidade, então não são tocados. CSS controla o tamanho.
+QR="$(sed -E 's/<\?xml[^>]*\?>//; s/ (width|height)="[0-9.]+(cm|mm)"//g' "$WORK/qr.svg" 2>/dev/null)"
 [ -z "$QR" ] && QR='<div style="font:12px monospace">system76.com</div>'
 
 # ---- logo Pop!_OS em ASCII -------------------------------------------------
