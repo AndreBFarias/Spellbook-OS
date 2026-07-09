@@ -59,12 +59,17 @@ fi
 # Pega samples do boot anterior (timestamps anteriores ao tail boot atual).
 # Critério: psi_some_avg10 > 5.0 indica thrashing.
 if [ -r "$MEM_LOG" ]; then
-  # boot atual começou em
-  boot_start_ts=$(journalctl --list-boots 2>/dev/null | awk '/^ 0 / {print $4"T"$5}' | head -1)
+  # janela do boot ANTERIOR: [inicio do boot -1, inicio do boot 0). Antes o filtro era
+  # so "< boot0", que varria o historico INTEIRO -- um PSI alto de dias atras disparava
+  # S2 falso (o freeze de 2026-07-09 nao foi OOM, mas o S2 acusava amostras de 05-07/jul).
+  boot_start_ts=$(journalctl --list-boots 2>/dev/null | awk '/^ *0 / {print $4"T"$5}' | head -1)
+  boot_prev_ts=$(journalctl --list-boots 2>/dev/null | awk '/^ *-1 / {print $4"T"$5}' | head -1)
   if [ -n "$boot_start_ts" ]; then
-    psi_alto=$(awk -F, -v cutoff="$boot_start_ts" '
-      NR>1 && $1 < cutoff && ($6+0) > 5 {print}
-    ' "$MEM_LOG" | tail -10)
+    # dentro da janela do boot anterior, so os ULTIMOS ~30min antes do reboot (tail 60),
+    # como o cabecalho ja documentava -- pressao transitoria horas antes nao indica OOM no crash.
+    psi_alto=$(awk -F, -v lo="${boot_prev_ts:-}" -v hi="$boot_start_ts" '
+      NR>1 && $1 < hi && (lo=="" || $1 >= lo) {print}
+    ' "$MEM_LOG" | tail -60 | awk -F, '($6+0) > 5 {print}' | tail -10)
     if [ -n "$psi_alto" ]; then
       count=$(printf '%s\n' "$psi_alto" | wc -l)
       sinais+=("S2: pressão de memória (PSI some avg10 > 5%) em ${count}+ amostras")

@@ -68,6 +68,26 @@ if command -v nvidia-smi >/dev/null 2>&1; then
   esac
 fi
 
+# --- Thermal iGPU AMD (>90°C) via sysfs — não aparecia no grep de CPU acima ---
+for h in /sys/class/hwmon/hwmon*; do
+  [ "$(cat "$h/name" 2>/dev/null)" = "amdgpu" ] || continue
+  igpu_mc=$(cat "$h/temp1_input" 2>/dev/null)
+  case "${igpu_mc:-}" in ''|*[!0-9]*) ;; *)
+    [ "$igpu_mc" -gt 90000 ] && falhas+=("iGPU AMD térmica: $((igpu_mc/1000))°C")
+  ;; esac
+  break
+done
+
+# --- Thermal chassi (acpitz, >90°C) — sensor de placa, costuma ser o pico ---
+for z in /sys/class/thermal/thermal_zone*; do
+  [ "$(cat "$z/type" 2>/dev/null)" = "acpitz" ] || continue
+  acpi_mc=$(cat "$z/temp" 2>/dev/null)
+  case "${acpi_mc:-}" in ''|*[!0-9]*) ;; *)
+    [ "$acpi_mc" -gt 90000 ] && falhas+=("Chassi (acpitz) térmico: $((acpi_mc/1000))°C")
+  ;; esac
+  break
+done
+
 # --- Resultado ---
 if [ ${#falhas[@]} -eq 0 ]; then
   if [ -f "$WARN_FILE" ]; then
