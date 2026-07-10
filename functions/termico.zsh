@@ -67,9 +67,13 @@ temp() {
   [ "$nmax" -gt 0 ] && __item "NVMe (max)" "$(__mC2C "$nmax") C"
 
   # Fans: RPM real via acer-wmi (predator_v4). Fallback: inferência se ausente.
+  # (N) = null_glob: array vazio sem erro se predator_v4 não estiver carregado.
   local fan1 fan2 pp
-  fan1=$(cat /sys/devices/platform/acer-wmi/hwmon/hwmon*/fan1_input 2>/dev/null | head -1)
-  fan2=$(cat /sys/devices/platform/acer-wmi/hwmon/hwmon*/fan2_input 2>/dev/null | head -1)
+  local -a _f1 _f2
+  _f1=(/sys/devices/platform/acer-wmi/hwmon/hwmon*/fan1_input(N))
+  _f2=(/sys/devices/platform/acer-wmi/hwmon/hwmon*/fan2_input(N))
+  [ ${#_f1[@]} -gt 0 ] && fan1=$(cat "${_f1[1]}" 2>/dev/null)
+  [ ${#_f2[@]} -gt 0 ] && fan2=$(cat "${_f2[1]}" 2>/dev/null)
   pp=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null)
   echo ""
   if [ -n "$fan1" ]; then
