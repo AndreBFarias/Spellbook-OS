@@ -113,10 +113,36 @@ Correção incluída no lote de fixes do repo (nenhum remove função):
 
 ---
 
-## 6. Estado / decisões pendentes
+## 6. Decisões (resolvidas nesta sessão)
 
-- Nível de resfriamento (`balance_performance` vs `balance_power` vs `power`) — decisão do usuário.
-- Aplicar cooling ao vivo agora vs só preparar o toggle — decisão do usuário.
-- B2 (desligar PSR, requer reboot) — decisão do usuário.
+- Resfriamento: **cool = powersave + balance_performance** — APLICADO AO VIVO (73 -> 66 C, turbo intacto).
+- Freeze: **essencial sem reboot** — heartbeat + Ctrl+Alt+0. PSR (B2) NÃO aplicado (fica de reserva se reincidir).
+- Cooler: **certificado saudável** — stress-ng 60s: platô 92-93 C, sem throttle, segurou ~3.5 GHz all-core, recuperou 22 C em 10s. 93 C só em tortura; uso real 66-84 C. (O THM LIMIT do EC é 94 C, by design.)
 
-*Relacionado: `AURORA-2.6-THERMAL.md` (flexibilização anterior), `amdgpu-dmcub-watchdog` (recuperação de display), `aurora-gpu-revive` (Ctrl+Alt+0).*
+## 7. Controle de fan (2.8) — o que foi destravado e onde parou
+
+**Destrave:** `acer_wmi predator_v4=1` (persistido em `/etc/modprobe.d/acer_wmi-predator.conf`, instalado pelo `aurora-bootstrap.sh`) expõe `/sys/firmware/acpi/platform_profile` + RPM das fans em `/sys/devices/platform/acer-wmi/hwmon/hwmon*/fan{1,2}_input`. Antes eu achava que o Nitro não expunha RPM — expõe COM predator_v4.
+
+**Perfis:** low-power / quiet / balanced / balanced-performance / performance. **`performance` é REJEITADO pelo EC** (write dá `Input/output error` e cai p/ balanced-performance; precisa da tecla física NitroSense). **`balanced-performance` é o máximo por software** — aplicado no boot (`aurora-root-apply` seção 11: idempotente, tolera o I/O error, confirma por leitura, igual system76) + re-asserido pelo `aurora-watchdog` após resume. Fans ~3000-6400 RPM conforme o calor.
+
+**Undervolt:** BLOQUEADO no BIOS (`ryzenadj: set_coall is rejected by SMU`). Unlock exigiria editar NVRAM do BIOS (AMD CBS / Curve Optimizer via `setup_var`) — risco de soft-brick, NÃO recomendado.
+
+**linuwu_sense:** NÃO suporta o AN515-47 (2023) — carrega mas não cria a interface `nitro_sense` e ainda zera o `platform_profile`. Revertido por completo (`make uninstall`), zero resíduo. O caminho mainline `predator_v4` é o correto p/ este modelo.
+
+**Fan-100%-travado (NÃO concluído — como retomar):** engenharia reversa do EC (via `ec_sys`) achou os registradores de duty das duas fans em **`0xb0`/`0xb1`** (escala 0-100 = 0x00-0x64, isolados comparando `quiet` vs `balanced-performance`). MAS o EC está em modo automático e **sobrescreve** a escrita em ~3s — a curva vence. O "modo manual" que a NitroSense usa quase certamente é acionado pelo **método WMI `WMBH`** (GUID `7A4DDFE7-5B5D-40B4-8595-4408E0CC7F56`, a interface gaming/GZFD), não por um registrador óbvio de EC. Para retomar: `acpidump` + `iasl -d` de TODOS os SSDTs (o `WMBH` não está no DSDT), achar a codificação do "set gaming fan behavior = manual + duty", chamar via `/proc/acpi/call` (`acpi-call-dkms` no apt). Nota: a tecla física NitroSense **não emite keycode** no Linux (é um notify WMI que nada mapeia). Ganho prático do lock é marginal — o `balanced-performance` já vai a 100% sob calor; o lock só muda o idle (barulho constante).
+
+## 8. Comandos e estado final
+
+```bash
+temp     # readout: modo, governor/EPP, CPU/iGPU/dGPU/NVMe, RPM das fans, perfil de fan
+cool     # governor powersave + EPP balance_performance (idle frio, turbo sob carga)
+perf     # volta ao governor performance pinado (postura historica)
+travou   # fallback do Ctrl+Alt+0 (recupera display AMD travado sem reboot)
+kernel_panic         # tela de kernel panic cosmetica em fullscreen (kernel_panic --stop encerra)
+```
+
+Estado persistente: **cool** (sentinela `/etc/aurora/allow-powersave`) + **`balanced-performance`** (fans) + **`predator_v4=1`**. Tudo re-aplicado no boot por `aurora-root.service` e re-asserido pelo `aurora-watchdog` a cada 15min; `install.sh` -> `aurora-bootstrap.sh` cria o modprobe.d. Freeze coberto por `aurora-compositor-heartbeat.sh` (autostart) + Ctrl+Alt+0.
+
+Pacotes instalados na investigação (documentado): `stress-ng` (stress test), `acpica-tools` (acpidump/iasl), `evtest` (captura de tecla), `qrencode` (QR do panico-teatral), `libpci-dev`/`build-essential`/`cmake` (build do ryzenadj e linuwu_sense — ambos descartados). `ec_sys` foi usado só na RE e descarregado (não persiste).
+
+*Relacionado: `AURORA-2.6-THERMAL.md` (flexibilização anterior), `CHANGELOG.md` (linhas 2.8), `amdgpu-dmcub-watchdog` (recuperação de display com erro), `aurora-gpu-revive` (Ctrl+Alt+0), `aurora-compositor-heartbeat.sh` (recuperação de hang silencioso).*
