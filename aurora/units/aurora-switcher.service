@@ -1,0 +1,9 @@
+[Unit]
+Description=Aurora 2.9 - Auto-switcher termico/performance (CPU inteligente: EPP+PPT por carga/temp)
+After=aurora-root.service
+Documentation=file:/home/andrefarias/.config/zsh/aurora/aurora-switcher
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/aurora-switcher
+Nice=5

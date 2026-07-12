@@ -1,0 +1,10 @@
+[Unit]
+Description=Aurora 2.9 - Timer do auto-switcher (avalia carga/temp a cada 10s)
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=10s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,106 @@
+#!/bin/bash
+# Aurora 2.9 - Auto-switcher termico/performance (a "CPU inteligente").
+# Rodado pelo aurora-switcher.timer a cada ~10s (oneshot, idempotente, crash-safe).
+#
+# Filosofia (dono, 2026-07-11): fan SEMPRE agressiva -> quem cuida disso e o NBFC
+# (ortogonal, config "Acer Nitro AN515-47 Aurora"). A CPU e que e inteligente:
+#   BASE (ocioso): EPP=balance_performance + PPT baixo  -> eficiente, nao pina clock a toa
+#   PERF (carga) : EPP=performance        + PPT alto    -> gasta o headroom sob trabalho real
+#   TETO termico : se Tctl>=CAP_TEMP, degrada PPT em passos (segura sem throttle-crash;
+#                  as fans ja estao no maximo, entao temp alta = reduzir potencia)
+#
+# governor fica SEMPRE powersave (setado pelo aurora-root-apply); sob governor=performance
+# o amd-pstate TRAVA o EPP. Por isso o switcher NAO chama system76-power (que trocaria o
+# governor) -- mexe so no EPP direto + ryzenadj (PPT/tctl-temp). CO nao existe (SMU rejeita).
+#
+# Sensing: carga = busy% por delta de /proc/stat (nao loadavg, que e laggy e conta D-state);
+#          temp = k10temp Tctl. Historese anti-flap (N amostras + min-hold).
+# Fonte-de-verdade do EPP: /run/aurora/target -> lido por root-apply e watchdog (sem guerra).
+set -u
+
+# ---- knobs calibraveis (starting points; ajustar pelo CSV/load test) -------------
+BUSY_UP=70; BUSY_DOWN=40      # % busy p/ carga / ocioso
+TEMP_UP=85                    # Tctl(C) que tambem dispara PERF (gatilho OR com carga)
+N_UP=2; N_DOWN=6              # amostras consecutivas p/ escalar (~20s) / desescalar (~60s)
+MIN_HOLD=30                   # segundos minimos numa postura antes de desescalar
+CAP_TEMP=90                   # teto termico: acima disso degrada PPT
+PPT_BASE=45000               # mW no idle (stock STAPM e 71.5W -> cozinha; capamos)
+PPT_PERF=68000               # mW sob carga (burst; o teto termico degrada se preciso)
+PPT_FLOOR=38000              # piso quando o teto termico atua
+TCTL_CAP=95                  # tctl-temp (C): cap de seguranca abaixo do 100 stock
+# ----------------------------------------------------------------------------------
+
+RUN=/run/aurora; STATE="$RUN/switcher.state"
+mkdir -p "$RUN" 2>/dev/null
+exec 9>"$RUN/switcher.lock"; flock -n 9 || exit 0   # nao concorre com cool/perf/outra inst
+
+log(){ printf '[aurora-switcher] %s\n' "$*"; }
+
+# Master-switch: so opera com a sentinela (modo dinamico). Sem ela (modo 'perf' estatico), sai.
+[ -e /etc/aurora/allow-powersave ] || { rm -f "$STATE" "$RUN/target" 2>/dev/null; exit 0; }
+
+# ---- estado anterior ----
+POSTURE=BASE; PREV_TOTAL=0; PREV_IDLE=0; UP_CNT=0; DOWN_CNT=0; LAST_SWITCH=0; PPT_CUR=-1
+[ -f "$STATE" ] && . "$STATE" 2>/dev/null
+now=$(cut -d. -f1 /proc/uptime)
+
+# ---- busy% via delta /proc/stat ----
+read -r _ u n s idle iow irq sirq steal _ < /proc/stat
+total=$((u+n+s+idle+iow+irq+sirq+steal)); idlev=$((idle+iow))
+dt=$((total-PREV_TOTAL)); di=$((idlev-PREV_IDLE))
+busy=0; [ "$dt" -gt 0 ] && busy=$(( (100*(dt-di))/dt ))
+
+# ---- Tctl via k10temp ----
+tctl=0
+for h in /sys/class/hwmon/hwmon*; do
+  [ "$(cat "$h/name" 2>/dev/null)" = "k10temp" ] || continue
+  t=$(cat "$h/temp1_input" 2>/dev/null); [ -n "$t" ] && tctl=$((t/1000)); break
+done
+
+# ---- decisao com historese ----
+high=0; { [ "$busy" -ge "$BUSY_UP" ] || [ "$tctl" -ge "$TEMP_UP" ]; } && high=1
+low=0;  { [ "$busy" -le "$BUSY_DOWN" ] && [ "$tctl" -lt "$TEMP_UP" ]; } && low=1
+if [ "$high" -eq 1 ]; then UP_CNT=$((UP_CNT+1)); else UP_CNT=0; fi
+if [ "$low"  -eq 1 ]; then DOWN_CNT=$((DOWN_CNT+1)); else DOWN_CNT=0; fi
+
+held=$((now-LAST_SWITCH)); target="$POSTURE"
+[ "$POSTURE" = BASE ] && [ "$UP_CNT"   -ge "$N_UP" ]   && target=PERF
+[ "$POSTURE" = PERF ] && [ "$DOWN_CNT" -ge "$N_DOWN" ] && [ "$held" -ge "$MIN_HOLD" ] && target=BASE
+
+# ---- aplica EPP (diff-write, todos os cores) na troca de postura ----
+transitioned=0
+if [ "$target" != "$POSTURE" ]; then
+  epp=balance_performance; [ "$target" = PERF ] && epp=performance
+  for f in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
+    [ -w "$f" ] && { [ "$(cat "$f" 2>/dev/null)" = "$epp" ] || echo "$epp" > "$f" 2>/dev/null; }
+  done
+  log "$POSTURE->$target busy=${busy}% tctl=${tctl}C"
+  POSTURE="$target"; LAST_SWITCH=$now; UP_CNT=0; DOWN_CNT=0; transitioned=1
+fi
+
+# ---- PPT alvo (postura) + degrade termico; so chama ryzenadj se mudou ----
+ppt=$PPT_BASE; [ "$POSTURE" = PERF ] && ppt=$PPT_PERF
+if [ "$tctl" -ge "$CAP_TEMP" ]; then
+  ppt=$(( ppt - 8000 )); [ "$ppt" -lt "$PPT_FLOOR" ] && ppt=$PPT_FLOOR
+fi
+if command -v ryzenadj >/dev/null 2>&1 && [ "$ppt" != "$PPT_CUR" ]; then
+  ryzenadj --stapm-limit="$ppt" --fast-limit="$((ppt+8000))" --slow-limit="$ppt" --tctl-temp="$TCTL_CAP" >/dev/null 2>&1
+  PPT_CUR=$ppt
+fi
+
+# ---- fonte-de-verdade p/ root-apply/watchdog ----
+epp_alvo=balance_performance; [ "$POSTURE" = PERF ] && epp_alvo=performance
+printf 'epp=%s\nposture=%s\n' "$epp_alvo" "$POSTURE" > "$RUN/target" 2>/dev/null
+
+# ---- persiste estado + CSV de tuning ----
+cat > "$STATE" <<EOF
+POSTURE=$POSTURE
+PREV_TOTAL=$total
+PREV_IDLE=$idlev
+UP_CNT=$UP_CNT
+DOWN_CNT=$DOWN_CNT
+LAST_SWITCH=$LAST_SWITCH
+PPT_CUR=$PPT_CUR
+EOF
+printf '%s,%s,%s,%s,%s,%s\n' "$now" "$POSTURE" "$busy" "$tctl" "$ppt" "$transitioned" >> /var/log/aurora-switcher.log 2>/dev/null
+exit 0
