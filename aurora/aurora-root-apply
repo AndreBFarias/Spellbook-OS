@@ -24,6 +24,18 @@ if [ -e /etc/aurora/allow-powersave ]; then
   log "modo COOL ativo (sentinela) -> governor=$ALVO_GOVERNOR EPP=$ALVO_EPP system76=$ALVO_S76"
 fi
 
+# Aurora 2.9 - se o auto-switcher esta ativo, ELE e dono do EPP (via /run/aurora/target).
+# Le o alvo dinamico e o adota como ALVO_EPP -> re-aplicacoes (watchdog/boot) NAO revertem
+# a escalada do switcher (fim da guerra de escrita). Sem o arquivo, mantem o default da sentinela.
+if [ "$MODO_COOL" -eq 1 ] && [ -r /run/aurora/target ]; then
+  _sw_epp=$(sed -n 's/^epp=//p' /run/aurora/target 2>/dev/null)
+  case "$_sw_epp" in
+    performance|balance_performance|balance_power|power|default)
+      ALVO_EPP="$_sw_epp"
+      log "EPP dinamico do auto-switcher: $ALVO_EPP" ;;
+  esac
+fi
+
 # 1. system76-power profile performance (idempotente)
 if command -v system76-power >/dev/null 2>&1; then
   atual=$(system76-power profile 2>/dev/null | awk -F': ' '/Power Profile/ {print tolower($2)}')

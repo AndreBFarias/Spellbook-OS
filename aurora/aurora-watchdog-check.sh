@@ -82,6 +82,18 @@ if [ -e "$PP" ] && [ "$(cat "$PP" 2>/dev/null)" != "balanced-performance" ]; the
   desviou=1
 fi
 
+# Aurora 2.9 - garante NBFC (fan agressiva) e auto-switcher vivos. Restart DIRETO
+# (não via desviou/root-apply, que não gerencia esses services). NBFC morto = fan volta
+# pro EC preguicoso (perigo termico); switcher morto = EPP não escala mais.
+if ! systemctl is-active --quiet nbfc_service.service 2>/dev/null; then
+  log "nbfc_service (fan agressiva) inativo -> restart"
+  systemctl start nbfc_service.service 2>/dev/null || true
+fi
+if [ -e /etc/aurora/allow-powersave ] && ! systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
+  log "aurora-switcher.timer inativo -> restart"
+  systemctl start aurora-switcher.timer 2>/dev/null || true
+fi
+
 # Aurora 2.8 - guarda de divergencia: o watchdog roda do repo, mas re-aplica a copia
 # instalada em /usr/local/sbin (so atualizada por aurora-bootstrap.sh). Se divergirem,
 # uma edicao de politica no repo não teria efeito -> torna o drift visivel no journal.
