@@ -19,8 +19,7 @@
 set -u
 
 # ---- knobs calibraveis (starting points; ajustar pelo CSV/load test) -------------
-BUSY_UP=70; BUSY_DOWN=40      # % busy p/ carga / ocioso
-TEMP_UP=85                    # Tctl(C) que tambem dispara PERF (gatilho OR com carga)
+BUSY_UP=70; BUSY_DOWN=40      # % busy p/ carga / ocioso (gatilho de postura = SO carga)
 N_UP=2; N_DOWN=6              # amostras consecutivas p/ escalar (~20s) / desescalar (~60s)
 MIN_HOLD=30                   # segundos minimos numa postura antes de desescalar
 CAP_TEMP=90                   # teto termico: acima disso degrada PPT
@@ -58,8 +57,10 @@ for h in /sys/class/hwmon/hwmon*; do
 done
 
 # ---- decisao com historese ----
-high=0; { [ "$busy" -ge "$BUSY_UP" ] || [ "$tctl" -ge "$TEMP_UP" ]; } && high=1
-low=0;  { [ "$busy" -le "$BUSY_DOWN" ] && [ "$tctl" -lt "$TEMP_UP" ]; } && low=1
+# escalada de postura = SO por carga (busy%). Temperatura NAO escala (as fans no maximo ja
+# cuidam do calor); temp so DEGRADA o PPT via CAP_TEMP -> "quente mas ocioso" nao gasta potencia.
+high=0; [ "$busy" -ge "$BUSY_UP" ] && high=1
+low=0;  [ "$busy" -le "$BUSY_DOWN" ] && low=1
 if [ "$high" -eq 1 ]; then UP_CNT=$((UP_CNT+1)); else UP_CNT=0; fi
 if [ "$low"  -eq 1 ]; then DOWN_CNT=$((DOWN_CNT+1)); else DOWN_CNT=0; fi
 
