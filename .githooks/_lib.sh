@@ -67,7 +67,7 @@ _hook_detect_context() {
         fi
     done
 
-    # Fallback: identidade padrao
+    # Fallback: identidade padrão
     EXPECTED_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name)}"
     EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
     EXPECTED_SSH_ALIAS="${ZSH_SSH_ALIAS_PESSOAL:-github.com}"
