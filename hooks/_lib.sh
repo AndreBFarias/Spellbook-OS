@@ -1,7 +1,7 @@
 #!/bin/bash
 # _lib.sh — Biblioteca compartilhada para hooks git
-# Regexes centralizados + funcoes de logging
-# Identidades lidas de config.local.zsh (variaveis ZSH_IDENTITY_*)
+# Regexes centralizados + funções de logging
+# Identidades lidas de config.local.zsh (variáveis ZSH_IDENTITY_*)
 # Fonte: source "$HOME/.config/git/hooks/_lib.sh" 2>/dev/null || true
 
 # --- Diretorio de logs ---
@@ -67,7 +67,7 @@ _hook_detect_context() {
         fi
     done
 
-    # Fallback: identidade padrao
+    # Fallback: identidade padrão
     EXPECTED_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name)}"
     EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
     EXPECTED_SSH_ALIAS="${ZSH_SSH_ALIAS_PESSOAL:-github.com}"
