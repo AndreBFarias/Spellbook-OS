@@ -84,7 +84,8 @@ ppt=$PPT_BASE; [ "$POSTURE" = PERF ] && ppt=$PPT_PERF
 if [ "$tctl" -ge "$CAP_TEMP" ]; then
   ppt=$(( ppt - 8000 )); [ "$ppt" -lt "$PPT_FLOOR" ] && ppt=$PPT_FLOOR
 fi
-if command -v ryzenadj >/dev/null 2>&1 && [ "$ppt" != "$PPT_CUR" ]; then
+# ryzenadj todo run: garante PPT + tctl-cap corretos (idempotente, barato, auto-cura mudanca externa)
+if command -v ryzenadj >/dev/null 2>&1; then
   ryzenadj --stapm-limit="$ppt" --fast-limit="$((ppt+8000))" --slow-limit="$ppt" --tctl-temp="$TCTL_CAP" >/dev/null 2>&1
   PPT_CUR=$ppt
 fi
