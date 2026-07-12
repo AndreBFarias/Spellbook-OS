@@ -50,11 +50,16 @@ Coluna "Self-heal check" indica se `aurora-self-heal` consegue detectar drift de
 | 2026-06-22 | 2.6-thermal | Flexibilizacao termica laptop-friendly (scaling_min despinado; suspend REABILITADO; processor.max_cstate=1 removido do cmdline) | governor/suspend/unpin/max_cstate | aurora-root-apply (seções 2/6/7) + aurora-watchdog | OK |
 | 2026-07-09 | 2.8 | Toggle termico `cool`/`perf` (sentinela `/etc/aurora/allow-powersave`; EPP amarrado ao governor) + comando `temp` + heartbeat de liveness do compositor (auto-recupera hang silencioso que o watchdog de erro não pega) | `functions/termico.zsh`, `aurora/aurora-compositor-heartbeat.sh` | aurora-root-apply + aurora-gpu-shortcut-apply.sh | OK |
 | 2026-07-09 | 2.8 | Fans agressivas: `acer_wmi predator_v4=1` destrava `platform_profile` (aplica `balanced-performance`; `performance` e rejeitado pelo EC do Nitro) + RPM das fans legivel via hwmon | `/etc/modprobe.d/acer_wmi-predator.conf` + `platform_profile` | aurora-bootstrap.sh + aurora-root-apply (sec 11, idempotente/tolera I/O error) + watchdog (re-assere apos resume) | OK |
+| 2026-07-11 | 2.9 | NBFC-Linux fan SEMPRE agressiva (curva própria piso 40%/100%@78C, 7692 RPM vs 5555 do EC; resolve o 97C-em-3s) | `nbfc_service.service` + `Acer Nitro AN515-47 Aurora.json` + `ec_sys write_support` | aurora-thermal-apply.sh (via bootstrap §6g) | OK |
+| 2026-07-11 | 2.9 | auto-switcher de CPU (BASE idle / PERF sob carga por busy%; governor powersave fixo; EPP+PPT dinamicos; tctl-cap 90C; `/run/aurora/target` = fonte-de-verdade, sem guerra com watchdog) | `aurora-switcher` + `units/aurora-switcher.{service,timer}` | aurora-thermal-apply.sh (via bootstrap §6g) | OK |
+| 2026-07-11 | 2.9 | ryzenadj (PPT/tctl-temp; CO `--set-coall` rejeitado pelo SMU) build-if-missing do source | `/usr/local/bin/ryzenadj` | aurora-thermal-apply.sh | OK |
+| 2026-07-11 | 2.9 | Higiene termica: thermald mascarado (no-op AMD) + timers 30s de-alinhados + `vm.page-cluster=0` persistido | `mask thermald` + `RandomizedDelaySec` + `99-aurora.conf` | aurora-thermal-apply.sh + bootstrap + 99-aurora.conf | OK |
+| 2026-07-11 | 2.9 | loglevel 0->3 (0 cegava warnings de throttle termico/HW no journal) | `kernelstub --add-options loglevel=3` | aurora-bootstrap.sh §1 (migra) | (apos reboot; check /proc/cmdline) |
 
 ## Para validar o sistema todo
 
 ```bash
-aurora-self-heal           # 17 checks, mostra drift e propoe fix
+aurora-self-heal           # 21 checks (inclui stack termico 2.9), mostra drift e propoe fix
 bash aurora-reapply-all.sh # reaplica tudo idempotente; loga em ~/.local/state/aurora-reapply.log
 sysupgrade                 # apt + topgrade + reapply em sequencia
 ```
