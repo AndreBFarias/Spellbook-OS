@@ -74,7 +74,10 @@ for u in nbfc_service.service nbfc.service; do
 done
 if [ -n "$_nbfc_unit" ]; then
   systemctl is-enabled --quiet "$_nbfc_unit" 2>/dev/null || sudo -n systemctl enable "$_nbfc_unit" >/dev/null 2>&1
-  systemctl is-active  --quiet "$_nbfc_unit" 2>/dev/null || { sudo -n systemctl start "$_nbfc_unit" >/dev/null 2>&1 && log "$_nbfc_unit iniciado"; }
+  if ! systemctl is-active --quiet "$_nbfc_unit" 2>/dev/null; then
+    sudo -n nbfc stop >/dev/null 2>&1   # mata daemon manual (nbfc start) se houver -> evita 2 daemons
+    sudo -n systemctl start "$_nbfc_unit" >/dev/null 2>&1 && log "$_nbfc_unit iniciado"
+  fi
 elif _have nbfc; then
   nbfc status >/dev/null 2>&1 || { sudo -n nbfc start >/dev/null 2>&1 && log "nbfc start (sem unit systemd)"; }
 fi
