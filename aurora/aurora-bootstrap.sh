@@ -77,6 +77,17 @@ if command -v kernelstub >/dev/null 2>&1; then
   else
     log "Kernelstub: todos os params ja presentes"
   fi
+
+  # Aurora 2.9 - loglevel=3: loglevel=0 cegava warnings de throttle termico/HW no journal.
+  # Migra 0->3 (aplica no próximo boot). Idempotente. Ver aurora_termico projeto 2026-07-11.
+  if echo "$cmdline_atual" | grep -qw "loglevel=0"; then
+    log "kernelstub: loglevel 0 -> 3 (diagnostico de throttle no journal; vale no próximo boot)"
+    sudo -n kernelstub --delete-options "loglevel=0" 2>&1 | grep -v "^kernelstub" || true
+    sudo -n kernelstub --add-options "loglevel=3"    2>&1 | grep -v "^kernelstub" || true
+  elif ! echo "$cmdline_atual" | grep -qw "loglevel=3"; then
+    sudo -n kernelstub --add-options "loglevel=3" 2>&1 | grep -v "^kernelstub" || true
+    log "kernelstub: +loglevel=3"
+  fi
 else
   warn "kernelstub não instalado - pulando args persistidos"
 fi
