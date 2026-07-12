@@ -22,11 +22,11 @@ set -u
 BUSY_UP=70; BUSY_DOWN=40      # % busy p/ carga / ocioso (gatilho de postura = SO carga)
 N_UP=2; N_DOWN=6              # amostras consecutivas p/ escalar (~20s) / desescalar (~60s)
 MIN_HOLD=30                   # segundos minimos numa postura antes de desescalar
-CAP_TEMP=90                   # teto termico: acima disso degrada PPT
+CAP_TEMP=85                   # teto termico: acima disso degrada PPT (mira banda saudavel ~85-90C)
 PPT_BASE=45000               # mW no idle (stock STAPM e 71.5W -> cozinha; capamos)
-PPT_PERF=68000               # mW sob carga (burst; o teto termico degrada se preciso)
+PPT_PERF=68000               # mW sob carga (burst; o teto termico degrada p/ segurar a banda)
 PPT_FLOOR=38000              # piso quando o teto termico atua
-TCTL_CAP=95                  # tctl-temp (C): cap de seguranca abaixo do 100 stock
+TCTL_CAP=90                  # tctl-temp (C): AMD throttla aqui (banda saudavel c/ fan sempre no max)
 # ----------------------------------------------------------------------------------
 
 RUN=/run/aurora; STATE="$RUN/switcher.state"
