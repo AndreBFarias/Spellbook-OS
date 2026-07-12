@@ -30,11 +30,21 @@ __col_temp() {  # colore por faixa: <75 verde, 75-90 amarelo, >90 vermelho
 temp() {
   __header "Estado térmico — $(hostname)" "$D_CYAN"
 
-  # modo/governor
-  local gov epp modo
+  # modo/governor/switcher
+  local gov epp modo posture sw
   gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo '?')
   epp=$(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference 2>/dev/null || echo '?')
-  if [ -e "$AURORA_SENTINEL" ]; then modo="${D_GREEN}COOL${D_RESET} (dinâmico)"; else modo="${D_ORANGE}PERF${D_RESET} (performance)"; fi
+  posture=$(sed -n 's/posture=//p' /run/aurora/target 2>/dev/null)
+  if [ -e "$AURORA_SENTINEL" ]; then
+    if systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
+      sw="${D_GREEN}auto${D_RESET} · switcher: ${D_BOLD}${posture:-?}${D_RESET}"
+    else
+      sw="${D_YELLOW}switcher PARADO${D_RESET}"
+    fi
+    modo="${D_GREEN}AUTO${D_RESET} (dinâmico) — $(echo -e "$sw")"
+  else
+    modo="${D_ORANGE}PERF${D_RESET} (estático, switcher off)"
+  fi
   __item "modo" "$(echo -e "$modo")"
   __item "governor" "$gov / EPP $epp"
 
@@ -84,7 +94,16 @@ temp() {
   else
     __warn "CPU alta (${tctl} C) e sem readout de RPM — verifique refrigeração/dust."
   fi
-  echo -e "  ${D_COMMENT}alternar:  cool  (frio) | perf (turbo pinado) | travou (display travado)${D_RESET}"
+  # NBFC (fan agressiva) + auto-switcher (PPT dinâmico via ryzenadj)
+  local nbfc_st pptmw
+  nbfc_st=$(systemctl is-active nbfc_service.service 2>/dev/null)
+  pptmw=$(sed -n 's/PPT_CUR=//p' /run/aurora/switcher.state 2>/dev/null)
+  echo ""
+  __item "NBFC fan" "${nbfc_st:-?} (curva agressiva, piso 40%)"
+  if [ -n "$pptmw" ] && [ "$pptmw" -gt 0 ] 2>/dev/null; then
+    __item "ryzenadj PPT" "$((pptmw/1000))W  (tctl-cap 95°C · CO indisp. no SMU)"
+  fi
+  echo -e "  ${D_COMMENT}alternar:  cool (auto dinâmico) | perf (estático pinado) | travou (display travado)${D_RESET}"
   echo ""
 }
 
@@ -93,8 +112,8 @@ cool() {
   __header "Aplicando modo COOL (dinâmico, frio)" "$D_GREEN"
   sudo mkdir -p /etc/aurora && sudo touch "$AURORA_SENTINEL" || { __err "falha criando sentinela"; return 1; }
   if sudo "$AURORA_APPLY"; then
-    __ok "modo COOL ativo — governor powersave + EPP balance_performance (turbo sob carga intacto)."
-    __ok "o watchdog agora respeita esta escolha (não reverte)."
+    __ok "modo AUTO (dinâmico) ativo — switcher decide EPP/PPT por carga (BASE idle / PERF carga)."
+    __ok "fan SEMPRE agressiva (NBFC); governor powersave fixo; watchdog ressuscita switcher/NBFC se caírem."
   else
     __err "aurora-root-apply falhou"; return 1
   fi
@@ -105,7 +124,7 @@ perf() {
   __header "Voltando ao modo PERFORMANCE" "$D_ORANGE"
   sudo rm -f "$AURORA_SENTINEL" || { __err "falha removendo sentinela"; return 1; }
   if sudo "$AURORA_APPLY"; then
-    __ok "modo PERFORMANCE ativo — governor performance pinado (postura Aurora histórica)."
+    __ok "modo PERF estático — governor performance pinado, switcher OFF (fan segue agressiva)."
   else
     __err "aurora-root-apply falhou"; return 1
   fi
