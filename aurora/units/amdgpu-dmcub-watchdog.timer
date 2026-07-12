@@ -4,6 +4,7 @@ Description=Aurora 2.3 - amdgpu DMCUB watchdog timer (a cada 30s)
 [Timer]
 OnBootSec=1min
 OnUnitActiveSec=30s
+RandomizedDelaySec=8s
 Persistent=true
 Unit=amdgpu-dmcub-watchdog.service
 
