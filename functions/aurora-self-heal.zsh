@@ -154,6 +154,24 @@ aurora-self-heal() {
     fixes_user+=("$aurora/aurora-desktop-guards-apply.sh")
   fi
 
+  # Aurora 2.9 - stack térmico (ryzenadj + NBFC fan agressiva + auto-switcher + thermald)
+  if ! command -v ryzenadj >/dev/null 2>&1; then
+    issues+=("ryzenadj ausente (lever de PPT/tctl do térmico)")
+    fixes_root+=("$aurora/aurora-thermal-apply.sh")
+  fi
+  if ! systemctl is-active --quiet nbfc_service.service 2>/dev/null; then
+    issues+=("nbfc_service inativo (fan agressiva anti-calor caiu)")
+    fixes_root+=("$aurora/aurora-thermal-apply.sh")
+  fi
+  if [ -e /etc/aurora/allow-powersave ] && ! systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
+    issues+=("aurora-switcher.timer inativo (CPU inteligente parada)")
+    fixes_root+=("$aurora/aurora-thermal-apply.sh")
+  fi
+  if [ "$(systemctl is-enabled thermald 2>/dev/null)" != "masked" ]; then
+    issues+=("thermald não mascarado (no-op em AMD, pode reativar por apt)")
+    fixes_root+=("$aurora/aurora-thermal-apply.sh")
+  fi
+
   if [ ${#issues[@]} -eq 0 ]; then
     return 0
   fi

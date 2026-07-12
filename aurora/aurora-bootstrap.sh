@@ -416,6 +416,13 @@ if [ -x "$AURORA_REPO/aurora-editor-apply.sh" ]; then
   "$AURORA_REPO/aurora-editor-apply.sh" | sed 's/^/[bootstrap] /' || warn "editor-apply retornou erro (não bloqueia)"
 fi
 
+# 6g. Aurora 2.9 - Térmico: ryzenadj (PPT/tctl) + NBFC (fan SEMPRE agressiva) + auto-switcher
+# (CPU inteligente) + higiene (thermald mascarado). Builda ferramentas do source se faltarem,
+# deploya a curva agressiva e liga o switcher. Roda por DEFAULT (sem flag). Ver aurora-thermal-apply.sh.
+if [ -x "$AURORA_REPO/aurora-thermal-apply.sh" ]; then
+  "$AURORA_REPO/aurora-thermal-apply.sh" | sed 's/^/[bootstrap] /' || warn "thermal-apply retornou erro (não bloqueia)"
+fi
+
 # 7. Sunset do ritual antigo (so se ainda ativo)
 if [ -f /etc/systemd/system/ritual-aurora-root.service ]; then
   sudo -n systemctl disable ritual-aurora-root.service 2>/dev/null || true

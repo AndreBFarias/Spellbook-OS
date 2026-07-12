@@ -82,6 +82,22 @@ elif _have nbfc; then
   nbfc status >/dev/null 2>&1 || { sudo -n nbfc start >/dev/null 2>&1 && log "nbfc start (sem unit systemd)"; }
 fi
 
+# --- 5b. Auto-switcher (CPU inteligente): script + units + timer (idempotente) ---
+if [ -f "$AURORA_REPO/aurora-switcher" ]; then
+  if ! sudo -n cmp -s "$AURORA_REPO/aurora-switcher" /usr/local/sbin/aurora-switcher 2>/dev/null; then
+    sudo -n install -m 0755 "$AURORA_REPO/aurora-switcher" /usr/local/sbin/aurora-switcher && log "aurora-switcher instalado"
+  fi
+  _changed=0
+  for u in aurora-switcher.service aurora-switcher.timer; do
+    if ! sudo -n cmp -s "$AURORA_REPO/units/$u" "/etc/systemd/system/$u" 2>/dev/null; then
+      sudo -n install -m 0644 "$AURORA_REPO/units/$u" "/etc/systemd/system/$u" && { log "unit $u instalada"; _changed=1; }
+    fi
+  done
+  [ "$_changed" -eq 1 ] && sudo -n systemctl daemon-reload
+  systemctl is-enabled --quiet aurora-switcher.timer 2>/dev/null || sudo -n systemctl enable aurora-switcher.timer >/dev/null 2>&1
+  systemctl is-active  --quiet aurora-switcher.timer 2>/dev/null || { sudo -n systemctl start aurora-switcher.timer >/dev/null 2>&1 && log "aurora-switcher.timer iniciado"; }
+fi
+
 # --- 6. Higiene: thermald e no-op em AMD -> mascara (blinda contra reativacao por apt) ---
 if [ "$(systemctl is-enabled thermald 2>/dev/null)" != "masked" ]; then
   sudo -n systemctl disable --now thermald >/dev/null 2>&1
