@@ -1,0 +1,81 @@
+{
+ "NotebookModel": "Acer Nitro AN515-47 Aurora",
+ "Author": "Aurora (base: Josesk Volpe) - curva agressiva anti-calor: piso 40%, 100% aos 78C. Nitro ventila mal + dono nao liga p/ ruido -> resfriar sempre, rampar cedo, matar o transiente de 97C.",
+ "EcPollInterval": 2000,
+ "ReadWriteWords": true,
+ "CriticalTemperature": 88,
+ "FanConfigurations": [
+  {
+   "ReadRegister": 19,
+   "WriteRegister": 55,
+   "MinSpeedValue": 0,
+   "MaxSpeedValue": 100,
+   "IndependentReadMinMaxValues": true,
+   "MinSpeedValueRead": 0,
+   "MaxSpeedValueRead": 7317,
+   "ResetRequired": true,
+   "FanSpeedResetValue": 0,
+   "FanDisplayName": "CPU fan",
+   "TemperatureThresholds": [
+    { "UpThreshold": 0,  "DownThreshold": 0,  "FanSpeed": 40.0 },
+    { "UpThreshold": 50, "DownThreshold": 44, "FanSpeed": 55.0 },
+    { "UpThreshold": 58, "DownThreshold": 51, "FanSpeed": 68.0 },
+    { "UpThreshold": 65, "DownThreshold": 57, "FanSpeed": 80.0 },
+    { "UpThreshold": 72, "DownThreshold": 63, "FanSpeed": 92.0 },
+    { "UpThreshold": 78, "DownThreshold": 69, "FanSpeed": 100.0 }
+   ],
+   "FanSpeedPercentageOverrides": []
+  },
+  {
+   "ReadRegister": 21,
+   "WriteRegister": 58,
+   "MinSpeedValue": 0,
+   "MaxSpeedValue": 100,
+   "IndependentReadMinMaxValues": true,
+   "MinSpeedValueRead": 0,
+   "MaxSpeedValueRead": 7317,
+   "ResetRequired": true,
+   "FanSpeedResetValue": 0,
+   "FanDisplayName": "GPU fan",
+   "TemperatureThresholds": [
+    { "UpThreshold": 0,  "DownThreshold": 0,  "FanSpeed": 40.0 },
+    { "UpThreshold": 52, "DownThreshold": 46, "FanSpeed": 55.0 },
+    { "UpThreshold": 60, "DownThreshold": 53, "FanSpeed": 68.0 },
+    { "UpThreshold": 68, "DownThreshold": 59, "FanSpeed": 82.0 },
+    { "UpThreshold": 74, "DownThreshold": 65, "FanSpeed": 92.0 },
+    { "UpThreshold": 80, "DownThreshold": 70, "FanSpeed": 100.0 }
+   ],
+   "FanSpeedPercentageOverrides": []
+  }
+ ],
+ "RegisterWriteConfigurations": [
+  {
+   "WriteMode": "Set",
+   "WriteOccasion": "OnInitialization",
+   "Register": 34,
+   "Value": 12,
+   "ResetRequired": true,
+   "ResetValue": 4,
+   "ResetWriteMode": "Set",
+   "Description": "CPU fan manual mode"
+  },
+  {
+   "WriteMode": "Set",
+   "WriteOccasion": "OnInitialization",
+   "Register": 33,
+   "Value": 48,
+   "ResetRequired": true,
+   "ResetValue": 16,
+   "ResetWriteMode": "Set",
+   "Description": "GPU fan manual mode"
+  },
+  {
+   "WriteMode": "Set",
+   "WriteOccasion": "OnInitialization",
+   "Register": 3,
+   "Value": 17,
+   "ResetRequired": false,
+   "Description": "Enables fan control in Linux for some reason"
+  }
+ ]
+}
