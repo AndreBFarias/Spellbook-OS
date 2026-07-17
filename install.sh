@@ -891,7 +891,7 @@ _step_encoding_tools() {
 _step_hooks() {
     _step "Configurando hooks git e commit template"
 
-    local hooks_source="$ZDOTDIR_TARGET/hooks"
+    local hooks_source="$ZDOTDIR_TARGET/.githooks"
     local hooks_dest="$HOME/.config/git/hooks"
     local template_dest="$HOME/.config/git/commit-template"
     local log_dir="$HOME/.local/share/spellbook"
@@ -901,7 +901,7 @@ _step_hooks() {
     _run mkdir -p "$log_dir"
 
     # Copiar hooks + _lib.sh
-    local hook_files=(_lib.sh pre-commit commit-msg pre-push)
+    local hook_files=(_lib.sh pre-commit commit-msg pre-push post-commit)
     for hook in "${hook_files[@]}"; do
         if [[ -f "$hooks_source/$hook" ]]; then
             _run cp "$hooks_source/$hook" "$hooks_dest/$hook"
