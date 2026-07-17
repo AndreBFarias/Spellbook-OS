@@ -1070,6 +1070,38 @@ _post_ghostty_settings_revert() {
     fi
 }
 
+# Suprime a atribuição de IA em commits/PRs no ~/.claude/settings.json
+# (attribution.commit/pr vazios + sessionUrl false). Idempotente; o jq só
+# ajusta o campo attribution e preserva o resto do arquivo. Assim o fix se
+# propaga a qualquer máquina que rode ./install.sh após o git pull.
+_step_claude_attribution() {
+    _step "Suprimindo atribuição de IA em commits/PRs (Claude Code)"
+    local settings="$HOME/.claude/settings.json"
+    [[ -f "$settings" ]] || { _warn "~/.claude/settings.json ausente — pulado"; return 0; }
+    if ! command -v jq &>/dev/null; then
+        _warn "jq ausente — attribution não aplicado. Adicione manualmente em settings.json:"
+        _warn '  "attribution": { "commit": "", "pr": "", "sessionUrl": false }'
+        return 0
+    fi
+    if jq -e '.attribution.commit == "" and .attribution.pr == "" and .attribution.sessionUrl == false' "$settings" &>/dev/null; then
+        _ok "attribution já suprimido (commit/pr vazios, sessionUrl false)"
+        return 0
+    fi
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] jq settings.json: attribution.commit/pr='' + sessionUrl=false"
+        return 0
+    fi
+    local tmp
+    tmp=$(mktemp)
+    if jq '.attribution = {commit:"", pr:"", sessionUrl:false}' "$settings" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$settings"
+        _ok "attribution suprimido em settings.json (commit/pr vazios, sessionUrl false)"
+    else
+        rm -f "$tmp"
+        _warn "Falha ao aplicar attribution via jq"
+    fi
+}
+
 # Nota: Kitty NÃO está no Snap store (verificado 2026-05-21). O apt do
 # Pop!_OS 22.04 entrega Kitty 0.21.2 (jun/2021) que JÁ suporta OSC 9 —
 # basta pra evitar o vazamento. Quem quiser versão recente: build manual
@@ -1388,6 +1420,7 @@ main() {
     _step_templates
     _step_secrets_vault
     _step_hooks
+    _step_claude_attribution
     _step_ritual
     _step_zshenv
     _step_fastfetch_symlink
