@@ -147,7 +147,6 @@ for file in $FILES; do
 done
 [ $EMOJI_COUNT -gt 0 ] && { FIXES=$((FIXES + EMOJI_COUNT)); FIX_DETAILS="$FIX_DETAILS emojis($EMOJI_COUNT)"; }
 
-# [2/6] Co-Authored-By em arquivos staged (auto-fix + re-stage)
 _COAUTHOR="${COAUTHOR_RE:-[Cc]o-[Aa]uthored-[Bb]y|[Pp]aired-[Ww]ith|[Aa]ssisted-[Bb]y}"
 COAUTHOR_COUNT=0
 for file in $FILES; do
