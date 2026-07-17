@@ -1,74 +1,374 @@
 #!/bin/bash
-# Hook pre-commit do Spellbook-OS / ~/.config/zsh
-#
-# Politica (desde 2026-06-01): APLICA as correções e INFORMA o que mudou, em vez
-# de bloquear. Remove emojis (preservando os glyphs canonicos da fonte unica) e
-# corrige acentuação PT-BR (--fix) nos arquivos staged, re-adiciona o que mudou e
-# segue. NAO mexe em identidade/secrets aqui (isso fica no `ga`/sanitizer); o
-# pre-push continua como ultima linha de defesa -- as proteções de rede permanecem.
-#
-# Instalação (uma vez): git config core.hooksPath .githooks
-# Pular em commit urgente: SKIP_HOOKS=1 git commit -m "..."
+# Hook Universal Pre-Commit - Auto-fix com relatorio
+# Camada 1 de defesa: auto-fix em arquivos staged
+# Instalado via aplicar_hooks_globais()
 
-set -e
-
-if [[ "$SKIP_HOOKS" == "1" ]]; then
-    echo "[pre-commit] pulado (SKIP_HOOKS=1)"
-    exit 0
+# INFRA-HOOK-LOCAL-WIRING-01 (sprint 199, 2026-05-22): delega para hook
+# local do Nyx-Code quando o commit esta dentro daquele repo. Fecha
+# defense-in-depth do invariante #14 (anti-sanitizer guard, sprint 196).
+# Outros projetos do usuario passam direto (zero impacto).
+_nyx_root="/home/andrefarias/Desenvolvimento/Nyx-Code"
+_repo_root_wiring=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ "$_repo_root_wiring" = "$_nyx_root" ]; then
+    _local_hook="$_nyx_root/scripts/hooks/pre-commit"
+    if [ -x "$_local_hook" ]; then
+        "$_local_hook" || exit $?
+    fi
 fi
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(py|zsh|sh|md)$' || true)
-if [[ -z "$STAGED_FILES" ]]; then
-    exit 0
+# AUDIT-PRECOMMIT-INERTE-REATIVAR (sprint do protocolo-ouroboros, 2026-06-11,
+# autorizado pelo dono): delega para o framework pre-commit do repo quando o
+# commit acontece dentro dele. Mesmo formato do wiring do Nyx-Code acima.
+# Outros projetos passam direto (zero impacto). Backup do hook anterior em
+# pre-commit.bak-AUDIT-PRECOMMIT-20260611.
+_ouro_root="/home/andrefarias/Desenvolvimento/protocolo-ouroboros"
+if [ "$_repo_root_wiring" = "$_ouro_root" ]; then
+    if [ -f "$_ouro_root/hooks/run_framework.sh" ]; then
+        bash "$_ouro_root/hooks/run_framework.sh" || exit $?
+    fi
 fi
 
-STAGED_ARR=()
-while IFS= read -r f; do
-    [[ -n "$f" && -f "$f" ]] && STAGED_ARR+=("$f")
-done <<< "$STAGED_FILES"
-[[ ${#STAGED_ARR[@]} -eq 0 ]] && exit 0
+source "$HOME/.config/git/hooks/_lib.sh" 2>/dev/null || true
 
-# 1. Emoji: remove aplicando (preserva os 11 glyphs canonicos via fonte unica).
-#    Os glyphs vivem em U+25xx/U+219x, fora do range de emoji -- dupla garantia.
-echo "[pre-commit] Removendo emojis (preserva glyphs canonicos)..."
-python3 - "${STAGED_ARR[@]}" <<'PY' || true
-import sys, re
-sys.path.insert(0, "scripts")
-try:
-    from glyphs_canonicos import ALLOWED_GLYPHS
-except Exception:
-    ALLOWED_GLYPHS = frozenset()
-EMOJI_RE = re.compile(r"[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F900-\U0001F9FF]")
-for path in sys.argv[1:]:
-    try:
-        s = open(path, encoding="utf-8").read()
-    except Exception:
-        continue
-    c = [0]
-    def repl(m):
-        if m.group() in ALLOWED_GLYPHS:
-            return m.group()
-        c[0] += 1
-        return ""
-    new = EMOJI_RE.sub(repl, s)
-    if new != s:
-        open(path, "w", encoding="utf-8").write(new)
-        print(f"  emoji removido: {path} ({c[0]})")
-PY
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+cd "$REPO_ROOT" || exit 0
 
-# 2. Acentuação PT-BR: aplica --fix e informa (corrigidos + os que precisam de revisão)
-if [[ -f "scripts/validar-acentuacao.py" ]]; then
-    echo "[pre-commit] Corrigindo acentuação PT-BR..."
-    python3 scripts/validar-acentuacao.py --fix --paths "${STAGED_ARR[@]}" || true
+# [0] Validacao de identidade por contexto (SEMPRE roda)
+# Graceful degradation: se _lib.sh nao carregou, usar logica inline
+if type _hook_detect_context &>/dev/null; then
+    _hook_detect_context "$REPO_ROOT"
+    _hook_validate_identity || exit 1
+else
+    CURRENT_NAME=$(git config --get user.name)
+    CURRENT_EMAIL=$(git config --get user.email)
+
+    # Fallback: resolver identidade via variaveis de config.local.zsh
+    EXPECTED_NAME=""
+    CONTEXT="Pessoal"
+    for tag in $ZSH_IDENTITY_TAGS; do
+        local path_var="ZSH_IDENTITY_${tag}_PATH"
+        local path_pattern="${!path_var}"
+        if [[ -n "$path_pattern" && ("$REPO_ROOT" == *"/${path_pattern}/"* || "$REPO_ROOT" == *"/${path_pattern}") ]]; then
+            local name_var="ZSH_IDENTITY_${tag}_NAME"
+            local email_var="ZSH_IDENTITY_${tag}_EMAIL"
+            EXPECTED_NAME="${!name_var}"
+            EXPECTED_EMAIL="${!email_var}"
+            CONTEXT="$tag"
+            break
+        fi
+    done
+    if [[ -z "$EXPECTED_NAME" ]]; then
+        EXPECTED_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name)}"
+        EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
+    fi
+
+    if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" || "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
+        echo "  [BLOQUEIO] Identidade incorreta para contexto $CONTEXT"
+        echo "    Esperado: $EXPECTED_NAME <$EXPECTED_EMAIL>"
+        echo "    Atual:    $CURRENT_NAME <$CURRENT_EMAIL>"
+        echo "    Corrija com: santuario <projeto>"
+        exit 1
+    fi
 fi
 
-# 3. Re-adiciona ao stage o que foi corrigido (mantém o commit consistente)
-git add "${STAGED_ARR[@]}" 2>/dev/null || true
+# Detectar se projeto usa framework pre-commit
+HAS_FRAMEWORK=false
+[ -f ".pre-commit-config.yaml" ] && HAS_FRAMEWORK=true
 
-# 4. Nao bloqueia (Caminho A). Ressalva: o dicionário de acentuação é parcial --
-#    palavras fora dele nao sao detectadas; o pre-push segue como rede final.
-echo "[pre-commit] OK -- correções aplicadas e re-adicionadas ao commit."
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+[ -z "$STAGED" ] && exit 0
+
+# Filtrar binarios, venv, lock files, etc.
+filter_files() {
+    local result=""
+    for file in $1; do
+        case "$file" in
+            venv/*|.venv/*|node_modules/*|__pycache__/*) continue ;;
+            .git/*|.mypy_cache/*|.pytest_cache/*|.ruff_cache/*) continue ;;
+            hooks/*|.git/hooks/*) continue ;;
+            dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
+            *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
+            *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;
+            *.zip|*.tar|*.gz|*.bz2|*.xz|*.7z|*.rar) continue ;;
+            *.woff|*.woff2|*.ttf|*.eot|*.otf) continue ;;
+            *.pdf|*.doc|*.docx|*.xls|*.xlsx) continue ;;
+            *.pyc|*.pyo|*.so|*.dylib|*.dll|*.class) continue ;;
+            *.pt|*.onnx|*.safetensors|*.gguf) continue ;;
+            *.lock|package-lock.json|yarn.lock|poetry.lock|Pipfile.lock) continue ;;
+            *.min.js|*.min.css|*.map) continue ;;
+            my-mailmap|.mailmap|.env|.env.*) continue ;;
+            *)
+                # PFL7560-FIX-EXCEPTION (2026-07-06, autorizado pelo dono):
+                # nao aplicar auto-fix (whitespace/sanitizer) em arquivos de
+                # config binarios/legacy nao-UTF-8 (ex.: ZYCustom.ini da
+                # HiSilicon usa ASCII-estendido/NEL 0x85; o auto-fix cortava
+                # ~2.5KB e corrompia o arquivo). Escopo: repo pfl7560, no
+                # mesmo estilo dos wirings Nyx-Code/ouroboros/Luna acima.
+                if [ "$REPO_ROOT" = "/home/andrefarias/Desktop/pfl7560" ] && [ -f "$file" ]; then
+                    # (a) config legacy nao-UTF-8 (ex.: ZYCustom.ini HiSilicon, NEL 0x85)
+                    if ! iconv -f UTF-8 -t UTF-8 "$file" >/dev/null 2>&1; then
+                        continue
+                    fi
+                    # (b) artefatos byte-exatos com md5 travado por 'make check': o
+                    # whitespace/NBSP e significativo (build.prop.STOCK tem NBSP+espaco na
+                    # linha 62; o 'sed s/[[:space:]]*$//' cortava e quebrava o md5 fd8406c4
+                    # do backup anti-envenenamento do pfl7560-fix.sh). Idem newline final
+                    # em init.bigfish.rc.MOD (byte-exato do device).
+                    case "$file" in
+                        */artefatos/*.STOCK|*/artefatos/*.MOD|*/artefatos/*.ORIGINAL) continue ;;
+                        */artefatos/ZYCustom*|*/artefatos/build.prop*|*/artefatos/perfis/*) continue ;;
+                        pendrive-autorun/ZYCustom.ini) continue ;;
+                    esac
+                fi
+                result="$result $file" ;;
+        esac
+    done
+    echo "$result" | xargs 2>/dev/null
+}
+
+FILES=$(filter_files "$STAGED")
+[ -z "$FILES" ] && exit 0
+
+FIXES=0
+BLOCKS=0
+FIX_DETAILS=""
+
+# === VERIFICACOES DE ANONIMATO (rodam SEMPRE, mesmo com framework) ===
+
+# [1/6] Anti-emoji (auto-fix + re-stage)
+_EMOJI="${EMOJI_RE:-[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}]}"
+EMOJI_COUNT=0
+for file in $FILES; do
+    if [ -f "$file" ] && grep -qP "$_EMOJI" "$file" 2>/dev/null; then
+        perl -i -CSD -pe "s/$_EMOJI//g" "$file" 2>/dev/null
+        git add "$file" 2>/dev/null
+        EMOJI_COUNT=$((EMOJI_COUNT + 1))
+    fi
+done
+[ $EMOJI_COUNT -gt 0 ] && { FIXES=$((FIXES + EMOJI_COUNT)); FIX_DETAILS="$FIX_DETAILS emojis($EMOJI_COUNT)"; }
+
+# [2/6] Co-Authored-By em arquivos staged (auto-fix + re-stage)
+_COAUTHOR="${COAUTHOR_RE:-[Cc]o-[Aa]uthored-[Bb]y|[Pp]aired-[Ww]ith|[Aa]ssisted-[Bb]y}"
+COAUTHOR_COUNT=0
+for file in $FILES; do
+    if [ -f "$file" ] && grep -qiE "$_COAUTHOR" "$file" 2>/dev/null; then
+        grep -viE "$_COAUTHOR" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+        git add "$file" 2>/dev/null
+        COAUTHOR_COUNT=$((COAUTHOR_COUNT + 1))
+        _hook_log "pre-commit" "auto-fix co-autoria: $file" 2>/dev/null
+    fi
+done
+[ $COAUTHOR_COUNT -gt 0 ] && { FIXES=$((FIXES + COAUTHOR_COUNT)); FIX_DETAILS="$FIX_DETAILS co-author($COAUTHOR_COUNT)"; }
+
+# [3/6] Mencoes a IA em arquivos staged (auto-fix + re-stage)
+AI_COMMENT_RE='^\s*[#/]+\s*.*(Generated by|Gerado por|Created by|Criado por)\s+(ChatGPT|Claude|GPT|Copilot|DeepSeek|Gemini|Cursor|Windsurf|Codeium|Tabnine)'
+AI_COUNT=0
+for file in $FILES; do
+    if [ -f "$file" ] && grep -qiE "$AI_COMMENT_RE" "$file" 2>/dev/null; then
+        grep -viE "$AI_COMMENT_RE" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+        git add "$file" 2>/dev/null
+        AI_COUNT=$((AI_COUNT + 1))
+        _hook_log "pre-commit" "auto-fix mencao IA: $file" 2>/dev/null
+    fi
+done
+[ $AI_COUNT -gt 0 ] && { FIXES=$((FIXES + AI_COUNT)); FIX_DETAILS="$FIX_DETAILS ia-artifact($AI_COUNT)"; }
+
+# [3.5/6] Anti-blacklist filenames: bloqueia ADICAO ao tracking de
+# arquivos de instrucao para IA (CLAUDE.md, HANDOFF, .cursorrules, etc).
+# Lista canonica em ~/.config/git/anonymity-blacklist.txt.
+BLACKLIST="$HOME/.config/git/anonymity-blacklist.txt"
+if [ -f "$BLACKLIST" ]; then
+    ADDED=$(git diff --cached --name-only --diff-filter=A 2>/dev/null)
+    if [ -n "$ADDED" ]; then
+        BLOCKED_FILES=""
+        while IFS= read -r pattern; do
+            [ -z "$pattern" ] && continue
+            [[ "$pattern" =~ ^# ]] && continue
+            clean="${pattern%/}"
+            for f in $ADDED; do
+                case "$f" in
+                    $clean|$clean/*) BLOCKED_FILES="$BLOCKED_FILES $f" ;;
+                esac
+            done
+        done < "$BLACKLIST"
+        if [ -n "$BLOCKED_FILES" ]; then
+            echo "  [BLOQUEIO] Arquivos da blacklist anonimato no diff:"
+            for f in $BLOCKED_FILES; do echo "    $f"; done
+            echo ""
+            echo "    Estes arquivos sao instrucao para IA e nao devem"
+            echo "    ser versionados (Regra -1, anonimato absoluto)."
+            echo ""
+            echo "    Para remover do staging mantendo no filesystem:"
+            echo "      git rm --cached$BLOCKED_FILES"
+            echo "      printf '%s\n'$BLOCKED_FILES >> .gitignore"
+            _hook_log "pre-commit" "BLOQUEADO: blacklist filename ($BLOCKED_FILES)" 2>/dev/null
+            exit 1
+        fi
+    fi
+fi
+
+# === VERIFICACOES ADICIONAIS (puladas se framework pre-commit existe) ===
+
+if [[ "$HAS_FRAMEWORK" == false ]]; then
+
+    # [4/6] Whitespace: trailing spaces + newline final (auto-fix + re-stage)
+    WS_COUNT=0
+    for file in $FILES; do
+        if [ -f "$file" ]; then
+            CHANGED=0
+            if grep -qP '[\t ]+$' "$file" 2>/dev/null; then
+                sed -i 's/[[:space:]]*$//' "$file"
+                CHANGED=1
+            fi
+            if [ -n "$(tail -c 1 "$file" 2>/dev/null)" ]; then
+                echo "" >> "$file"
+                CHANGED=1
+            fi
+            if [ $CHANGED -eq 1 ]; then
+                git add "$file" 2>/dev/null
+                WS_COUNT=$((WS_COUNT + 1))
+            fi
+        fi
+    done
+    [ $WS_COUNT -gt 0 ] && { FIXES=$((FIXES + WS_COUNT)); FIX_DETAILS="$FIX_DETAILS whitespace($WS_COUNT)"; }
+
+    # [5/6] Secrets (BLOQUEIA - nao tem auto-fix seguro)
+    _SECRET="${SECRET_RE:-sk-[a-zA-Z0-9]{20,}}"
+    for file in $FILES; do
+        case "$file" in
+            .env|.env.*|*.key|*.pem|*.cert|*.crt) continue ;;
+        esac
+        if [ -f "$file" ] && grep -qP "$_SECRET" "$file" 2>/dev/null; then
+            echo "  [BLOQUEIO] Secret detectado: $file"
+            BLOCKS=$((BLOCKS + 1))
+        fi
+    done
+
+    # [6/6] Python: syntax check (BLOQUEIA)
+    for file in $FILES; do
+        case "$file" in
+            *.py)
+                if [ -f "$file" ] && ! python3 -m py_compile "$file" 2>/dev/null; then
+                    echo "  [BLOQUEIO] Sintaxe invalida: $file"
+                    BLOCKS=$((BLOCKS + 1))
+                fi
+                ;;
+        esac
+    done
+
+fi
+
+# === VERIFICACOES UNIVERSAIS (avisos, rodam SEMPRE, mesmo com framework) ===
+
+WARNINGS=0
+
+# [7] Acentuacao PT-BR em .md e .py (AVISO - inspirado ADR-17 Luna)
+ACCENT_PATTERNS='(^|[^a-zA-Zà-ú])(funcao|validacao|descricao|comunicacao|configuracao|informacao|aplicacao|execucao|operacao|conexao|excecao|solucao|interacao|producao|instalacao|documentacao|integracao|autenticacao|atualizacao|migracao|padronizacao)($|[^a-zA-Zà-ú])'
+ACCENT_COUNT=0
+for file in $FILES; do
+    case "$file" in
+        *.md|*.py|*.txt|*.rst)
+            if [ -f "$file" ] && grep -qiE "$ACCENT_PATTERNS" "$file" 2>/dev/null; then
+                ACCENT_COUNT=$((ACCENT_COUNT + 1))
+                if [ $ACCENT_COUNT -le 3 ]; then
+                    echo "  [aviso] Possivel falta de acentuacao: $file"
+                fi
+            fi
+            ;;
+    esac
+done
+if [ $ACCENT_COUNT -gt 3 ]; then
+    echo "  [aviso] ... e mais $((ACCENT_COUNT - 3)) arquivo(s) com possivel falta de acentuacao"
+fi
+[ $ACCENT_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + ACCENT_COUNT))
+
+# [8] Hardcoded paths absolutos (AVISO)
+HARDCODED_COUNT=0
+for file in $FILES; do
+    case "$file" in
+        *.py|*.sh|*.bash|*.zsh|*.js|*.ts)
+            if [ -f "$file" ] && grep -qE '(/home/[a-zA-Z0-9_-]+/|/Users/[a-zA-Z0-9_-]+/)' "$file" 2>/dev/null; then
+                HARDCODED_COUNT=$((HARDCODED_COUNT + 1))
+                if [ $HARDCODED_COUNT -le 3 ]; then
+                    echo "  [aviso] Path absoluto hardcoded: $file"
+                fi
+            fi
+            ;;
+    esac
+done
+[ $HARDCODED_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + HARDCODED_COUNT))
+
+# [9] Debug statements: print() / console.log() (AVISO)
+DEBUG_COUNT=0
+for file in $FILES; do
+    case "$file" in
+        *.py)
+            if [ -f "$file" ] && grep -qE '^\s*print\(' "$file" 2>/dev/null; then
+                DEBUG_COUNT=$((DEBUG_COUNT + 1))
+                if [ $DEBUG_COUNT -le 3 ]; then
+                    echo "  [aviso] print() detectado: $file (usar logging)"
+                fi
+            fi
+            ;;
+        *.js|*.ts|*.jsx|*.tsx)
+            if [ -f "$file" ] && grep -qE '^\s*console\.(log|debug|info|warn)\(' "$file" 2>/dev/null; then
+                DEBUG_COUNT=$((DEBUG_COUNT + 1))
+                if [ $DEBUG_COUNT -le 3 ]; then
+                    echo "  [aviso] console.log detectado: $file"
+                fi
+            fi
+            ;;
+    esac
+done
+[ $DEBUG_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + DEBUG_COUNT))
+
+# [10] Arquivo grande >5MB staged (AVISO)
+for file in $STAGED; do
+    if [ -f "$file" ]; then
+        SIZE=$(stat --format="%s" "$file" 2>/dev/null || stat -f "%z" "$file" 2>/dev/null)
+        if [ -n "$SIZE" ] && [ "$SIZE" -gt 5242880 ] 2>/dev/null; then
+            SIZE_MB=$((SIZE / 1048576))
+            echo "  [aviso] Arquivo grande (${SIZE_MB}MB): $file"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    fi
+done
+
+# Chamar universal-sanitizer.py como camada adicional (se Python disponivel)
+if command -v python3 &>/dev/null; then
+    SANITIZER="$HOME/.config/zsh/scripts/universal-sanitizer.py"
+    if [ -f "$SANITIZER" ]; then
+        python3 "$SANITIZER" $FILES 2>/dev/null
+        # Re-stage arquivos que o sanitizer pode ter modificado
+        for file in $FILES; do
+            [ -f "$file" ] && git add "$file" 2>/dev/null
+        done
+    fi
+fi
+
+# Relatorio
+if [ $FIXES -gt 0 ]; then
+    echo "  [auto-fix]$FIX_DETAILS -> re-staged"
+    _hook_log "pre-commit" "auto-fix:$FIX_DETAILS" 2>/dev/null
+fi
+
+if [ $BLOCKS -gt 0 ]; then
+    echo "  [pre-commit] $BLOCKS problemas bloqueantes. Corrija antes de commitar."
+    _hook_log "pre-commit" "BLOQUEADO ($BLOCKS problemas)" 2>/dev/null
+    exit 1
+fi
+
+# HOOK-POSTCOMMIT-CHAIN-01 (Leva 4.1 Luna, 2026-06-12, autorizado pelo dono):
+# delega ao framework pre-commit do repo Luna (66 hooks T1-T4) DEPOIS dos
+# auto-fixes globais de anonimato -- o framework valida o resultado ja
+# corrigido. Mesmo formato dos wirings Nyx-Code/ouroboros acima. Outros
+# repos: zero impacto.
+_luna_root_wiring="/home/andrefarias/Desenvolvimento/Luna"
+if [ "$REPO_ROOT" = "$_luna_root_wiring" ] && [ -x "$_luna_root_wiring/.git/hooks/pre-commit" ]; then
+    bash "$_luna_root_wiring/.git/hooks/pre-commit" || exit $?
+fi
+
+_hook_log "pre-commit" "OK (fixes=$FIXES)" 2>/dev/null
 exit 0
+
+# "Quem vigia os vigilantes?" — Juvenal

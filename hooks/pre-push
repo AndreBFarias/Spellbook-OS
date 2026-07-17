@@ -64,6 +64,19 @@ REMOTE="$1"
 URL="$2"
 REMOTE_URL="${URL:-$REMOTE_URL}"
 
+# HOOK-POSTCOMMIT-CHAIN-01 (Leva 4.1 Luna, 2026-06-12, autorizado pelo dono):
+# delega ao framework pre-commit do repo Luna (protect-main, dashboard-refresh,
+# gauntlet-seletivo vivem no estagio pre-push de la). O git entrega as refs
+# UMA vez via stdin: captura aqui, alimenta o framework e o loop abaixo le da
+# variavel (done <<< no fim). Mesmo formato dos wirings Nyx-Code/ouroboros do
+# pre-commit global. Outros repos: zero impacto alem da captura transparente.
+_PREPUSH_REFS=$(cat)
+_luna_root_wiring="/home/andrefarias/Desenvolvimento/Luna"
+_repo_root_prepush=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ "$_repo_root_prepush" = "$_luna_root_wiring" ] && [ -x "$_luna_root_wiring/.git/hooks/pre-push" ]; then
+    printf '%s\n' "$_PREPUSH_REFS" | bash "$_luna_root_wiring/.git/hooks/pre-push" "$@" || exit $?
+fi
+
 # Regexes para escaneamento de mensagens
 _COAUTHOR="${COAUTHOR_RE:-[Cc]o-[Aa]uthored-[Bb]y|[Pp]aired-[Ww]ith|[Aa]ssisted-[Bb]y}"
 _AI="${AI_MENTION_RE:-claude|anthropic|openai|chatgpt|copilot|gemini|gpt-[34]|deepseek|cursor|aider|windsurf|codeium|tabnine|noreply@anthropic}"
@@ -138,17 +151,51 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
 
     # [5/5] Anti-blacklist: arquivos da blacklist anonimato presentes
     # em qualquer commit do range pushado.
+    # Sintaxe da blacklist: paths simples sao proibidos; linhas iniciadas
+    # com '!' marcam excecoes (path canonico que pode passar mesmo se casar
+    # outro padrao). Ex: `.claude/` proibido + `!.claude/hooks/X.py` libera X.py.
     BLACKLIST="$HOME/.config/git/anonymity-blacklist.txt"
     if [ -f "$BLACKLIST" ]; then
+        # Carrega excecoes primeiro (linhas com prefix '!').
+        EXCEPTIONS=""
         while IFS= read -r pattern; do
             [ -z "$pattern" ] && continue
             [[ "$pattern" =~ ^# ]] && continue
+            if [[ "$pattern" =~ ^! ]]; then
+                EXCEPTIONS="${EXCEPTIONS}${pattern#!}\n"
+            fi
+        done < "$BLACKLIST"
+
+        while IFS= read -r pattern; do
+            [ -z "$pattern" ] && continue
+            [[ "$pattern" =~ ^# ]] && continue
+            [[ "$pattern" =~ ^! ]] && continue
             clean="${pattern%/}"
             HITS=$(git log --first-parent --name-only --pretty=format:"COMMIT %H" "$RANGE" 2>/dev/null \
                 | awk -v p="$clean" '
                     /^COMMIT / { sha=$2; next }
                     $0 ~ "^"p"$" || $0 ~ "^"p"/" { print substr(sha,1,8)" "$0 }
                 ' | sort -u)
+            # Filtra excecoes: se o path do hit casa exatamente uma excecao, descarta.
+            if [ -n "$HITS" ] && [ -n "$EXCEPTIONS" ]; then
+                FILTERED=""
+                while IFS= read -r hit_line; do
+                    [ -z "$hit_line" ] && continue
+                    hit_path="${hit_line#* }"  # remove SHA8 prefix
+                    skip=0
+                    while IFS= read -r exc; do
+                        [ -z "$exc" ] && continue
+                        if [ "$hit_path" = "$exc" ]; then
+                            skip=1
+                            break
+                        fi
+                    done < <(printf "%b" "$EXCEPTIONS")
+                    if [ "$skip" -eq 0 ]; then
+                        FILTERED="${FILTERED}${hit_line}\n"
+                    fi
+                done <<< "$HITS"
+                HITS=$(printf "%b" "$FILTERED" | sed '/^$/d')
+            fi
             if [ -n "$HITS" ]; then
                 COUNT=$(echo "$HITS" | wc -l)
                 VIOLATIONS="${VIOLATIONS}  [blacklist=$pattern] $COUNT ocorrencia(s)\n"
@@ -157,7 +204,7 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
         done < "$BLACKLIST"
     fi
 
-done
+done <<< "$_PREPUSH_REFS"
 
 # Relatorio e bloqueio
 if [[ $VIOLATION_COUNT -gt 0 ]]; then

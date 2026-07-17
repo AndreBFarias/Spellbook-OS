@@ -78,6 +78,16 @@ if [ $BLOCKED -gt 0 ]; then
     exit 1
 fi
 
+# HOOK-POSTCOMMIT-CHAIN-01 (Leva 4.1 Luna, 2026-06-12, autorizado pelo dono):
+# delega ao framework do repo Luna (gates M03 fechamento + M04 colateral +
+# commit-msg-format) DEPOIS dos auto-fixes globais -- valida a mensagem ja
+# limpa. Outros repos: zero impacto.
+_luna_root_wiring="/home/andrefarias/Desenvolvimento/Luna"
+_repo_root_msgwiring=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ "$_repo_root_msgwiring" = "$_luna_root_wiring" ] && [ -x "$_luna_root_wiring/.git/hooks/commit-msg" ]; then
+    bash "$_luna_root_wiring/.git/hooks/commit-msg" "$MSG_FILE" || exit $?
+fi
+
 _hook_log "commit-msg" "OK (fixes=$FIXES)" 2>/dev/null
 exit 0
 

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Hook post-commit GLOBAL — delegacao por-repo.
+#
+# HOOK-POSTCOMMIT-CHAIN-01 (Leva 4.1 Luna, 2026-06-12, autorizado pelo dono):
+# o hooksPath global fazia o git procurar hooks SOMENTE neste diretorio, e
+# como nao havia post-commit aqui, o .git/hooks/post-commit do repo Luna
+# (SBOM reconcile + backlinks + sprint-move, INFRA-95E + M05 + D3) NUNCA
+# disparou (zero 'chore(sprint-move)' em toda a historia do repo).
+# Este arquivo delega ao post-commit local do repo quando ele existir.
+# Mesmo padrao de delegacao do pre-commit global (Nyx-Code/ouroboros).
+# Outros repos sem post-commit local: zero impacto.
+
+_repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+_luna_root_wiring="/home/andrefarias/Desenvolvimento/Luna"
+
+if [ "$_repo_root" = "$_luna_root_wiring" ] && [ -x "$_repo_root/.git/hooks/post-commit" ]; then
+    bash "$_repo_root/.git/hooks/post-commit" || true
+fi
+
+exit 0
