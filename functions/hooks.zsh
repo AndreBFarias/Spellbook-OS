@@ -1,58 +1,43 @@
 #!/bin/zsh
 
-# Propósito: Copiar hooks git (pre-commit + commit-msg + pre-push + _lib.sh) para todos os repos
-# Uso: aplicar_hooks_globais [diretório_base]
+# Propósito: Reaplicar os git hooks versionados (.githooks/) no diretório do
+#            core.hooksPath global (~/.config/git/hooks) -- o único que roda em
+#            TODOS os repos. NÃO espalha mais para o .git/hooks/ de cada repo:
+#            com core.hooksPath global setado (via install.sh), esses hooks
+#            locais são ignorados pelo git (era trabalho morto que só gerava
+#            cópias divergentes). O hooksPath em si é configurado pelo install.sh.
+# Uso: aplicar_hooks_globais
 aplicar_hooks_globais() {
     __verificar_dependencias "git" || return 1
 
-    local base_dir="${1:-$DEV_DIR}"
-    # Fonte canônica versionada (.githooks/ do repo); fallback ao mirror legado local
-    local hooks_source="${ZDOTDIR:-$HOME/.config/zsh}/.githooks"
-    [ -d "$hooks_source" ] || hooks_source="$HOME/.config/git/hooks"
+    # Fonte canônica versionada
+    local source_dir="${ZDOTDIR:-$HOME/.config/zsh}/.githooks"
+    local dest_dir="$HOME/.config/git/hooks"
 
-    if [ ! -d "$hooks_source" ]; then
-        __err "Diretório de hooks não encontrado em $hooks_source"
+    if [ ! -d "$source_dir" ]; then
+        __err "Fonte de hooks não encontrada em $source_dir"
         return 1
     fi
 
     __header "HOOKS GLOBAIS" "$D_PINK"
+    mkdir -p "$dest_dir"
 
-    local repos=$(find "$base_dir" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
-    local total=$(echo "$repos" | wc -l | xargs)
-
-    if [ -z "$repos" ]; then
-        __warn "Nenhum repositório encontrado."
-        return 0
-    fi
-
-    echo -e "  ${D_COMMENT}${total} repositórios encontrados.${D_RESET}"
-    echo ""
-
+    local -a hook_files=(_lib.sh pre-commit commit-msg pre-push post-commit)
     local count=0
-    while read -r repo_path; do
-        ((count++))
-        local repo_name=$(basename "$repo_path")
+    for hook in "${hook_files[@]}"; do
+        if [ -f "$source_dir/$hook" ]; then
+            cp "$source_dir/$hook" "$dest_dir/$hook"
+            chmod +x "$dest_dir/$hook"
+            ((count++))
+            __item "$hook"
+        fi
+    done
 
-        [ ! -d "$repo_path/.git/hooks" ] && mkdir -p "$repo_path/.git/hooks"
-
-        # Copiar biblioteca compartilhada
-        cp "$hooks_source/_lib.sh" "$repo_path/.git/hooks/_lib.sh" 2>/dev/null
-
-        # Copiar hooks
-        cp "$hooks_source/pre-commit" "$repo_path/.git/hooks/pre-commit" 2>/dev/null
-        cp "$hooks_source/pre-push" "$repo_path/.git/hooks/pre-push" 2>/dev/null
-        cp "$hooks_source/commit-msg" "$repo_path/.git/hooks/commit-msg" 2>/dev/null
-
-        # Garantir permissões de execução
-        chmod +x "$repo_path/.git/hooks/_lib.sh" 2>/dev/null
-        chmod +x "$repo_path/.git/hooks/pre-commit" 2>/dev/null
-        chmod +x "$repo_path/.git/hooks/pre-push" 2>/dev/null
-        chmod +x "$repo_path/.git/hooks/commit-msg" 2>/dev/null
-
-        printf "  ${D_GREEN}[%02d/%02d]${D_RESET} %s\n" "$count" "$total" "$repo_name"
-    done <<< "$repos"
+    # Commit template (fora do dir de hooks, apontado por commit.template)
+    [ -f "$source_dir/commit-template" ] && \
+        cp "$source_dir/commit-template" "$HOME/.config/git/commit-template"
 
     echo ""
-    __ok "Hooks aplicados: _lib.sh + pre-commit (sanitizer + anonimato) + commit-msg (auto-fix) + pre-push (bloqueio final)"
+    __ok "$count hook(s) reaplicado(s) em $dest_dir (core.hooksPath global)"
     echo ""
 }
