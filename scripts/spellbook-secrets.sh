@@ -36,10 +36,12 @@ export_secrets() {
     trap "rm -rf '$tmpdir'" EXIT
 
     local count=0
+    local -a packed=()
     for file in "${SECRETS_FILES[@]}"; do
         local src="$ZDOTDIR_TARGET/$file"
         if [[ -f "$src" ]]; then
             cp "$src" "$tmpdir/$file"
+            packed+=("$file")
             count=$((count + 1))
             _info "Empacotando: $file"
         else
@@ -52,8 +54,8 @@ export_secrets() {
         return 1
     fi
 
-    tar -cf "$tmpdir/secrets.tar" -C "$tmpdir" "${SECRETS_FILES[@]}" 2>/dev/null || \
-        tar -cf "$tmpdir/secrets.tar" -C "$tmpdir" $(ls "$tmpdir" | grep -v secrets.tar)
+    # Empacota apenas os arquivos efetivamente copiados (inclui ocultos como .zsh_secrets).
+    tar -cf "$tmpdir/secrets.tar" -C "$tmpdir" "${packed[@]}"
 
     gpg --batch --yes --symmetric --cipher-algo AES256 \
         --passphrase "$passphrase" \
