@@ -65,7 +65,7 @@ export_secrets() {
         --output "$VAULT_FILE" \
         "$tmpdir/secrets.tar"
 
-    _ok "$count arquivo(s) criptografado(s) em vault/secrets.gpg"
+    _ok "$count arquivo(s) criptografado(s) em vault/secrets-files.tar.gpg"
 }
 
 import_secrets() {
