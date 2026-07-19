@@ -6,7 +6,10 @@ set -euo pipefail
 
 ZDOTDIR_TARGET="${ZDOTDIR:-$HOME/.config/zsh}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VAULT_FILE="$SCRIPT_DIR/vault/secrets.gpg"
+# Arquivo DEDICADO ao backup-tar de arquivos. NÃO usar vault/secrets.gpg: aquele é
+# o cofre do shim .zsh_secrets (shell evalável). Formatos incompatíveis — colidir os
+# dois no mesmo arquivo quebra o terminal (parse error no eval do tar).
+VAULT_FILE="$SCRIPT_DIR/vault/secrets-files.tar.gpg"
 
 # Arquivos de credentials (relativos ao ZDOTDIR)
 SECRETS_FILES=(
