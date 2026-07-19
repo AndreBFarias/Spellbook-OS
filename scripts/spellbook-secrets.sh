@@ -170,8 +170,8 @@ case "${1:-}" in
     *)
         echo "Uso: $0 {export|import} [senha]"
         echo ""
-        echo "  export [senha]  — criptografa credentials para vault/secrets.gpg"
-        echo "  import [senha]  — restaura credentials de vault/secrets.gpg"
+        echo "  export [senha]  — criptografa credentials para vault/secrets-files.tar.gpg"
+        echo "  import [senha]  — restaura credentials de vault/secrets-files.tar.gpg"
         exit 1
         ;;
 esac

@@ -668,7 +668,9 @@ _step_templates() {
 _step_secrets_vault() {
     _step "Restaurando credentials do vault"
 
-    local vault_file="$SCRIPT_DIR/vault/secrets.gpg"
+    # Backup-tar dos gitignored (config.local.zsh, profiles.yml, segape-andre.json...).
+    # NÃO é vault/secrets.gpg — aquele é o cofre shell do shim .zsh_secrets.
+    local vault_file="$SCRIPT_DIR/vault/secrets-files.tar.gpg"
 
     if [[ ! -f "$vault_file" ]]; then
         _info "Nenhum vault encontrado — pule e configure manualmente"
