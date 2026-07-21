@@ -4,6 +4,12 @@
 # Identidades lidas de config.local.zsh (variáveis ZSH_IDENTITY_*)
 # Fonte: source "$HOME/.config/git/hooks/_lib.sh" 2>/dev/null || true
 
+# Auto-carrega o config.local.zsh: sem isto, hooks em contexto NAO-interativo
+# (git de GUI, ssh remoto, cron) rodavam com as variaveis vazias e o pre-push
+# falhava mudo exigindo alias github.com. [mediacao Andromeda 2026-07-21]
+# shellcheck source=/dev/null
+source "${ZDOTDIR:-$HOME/.config/zsh}/config.local.zsh" 2>/dev/null || true
+
 # --- Diretorio de logs ---
 HOOK_LOG_DIR="$HOME/.local/share/spellbook"
 HOOK_LOG_FILE="$HOOK_LOG_DIR/hooks.log"
