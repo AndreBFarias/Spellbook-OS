@@ -600,6 +600,32 @@ vhelp() {
     echo -e "  ${D_FG}vinbox${D_RESET}                    ${D_COMMENT}Listar Inbox com preview${D_RESET}"
     echo ""
 
+    echo -e "${D_PURPLE}Criação rápida (do Andromeda):${D_RESET}"
+    echo -e "  ${D_FG}vdaily${D_RESET}                    ${D_COMMENT}Nova daily note${D_RESET}"
+    echo -e "  ${D_FG}vproj/vwork/vconc/vpess${D_RESET}   ${D_COMMENT}Projeto / trabalho / conceito / pessoal${D_RESET}"
+    echo ""
+
+    echo -e "${D_PURPLE}Automação (do Andromeda):${D_RESET}"
+    echo -e "  ${D_FG}vauto${D_RESET}                     ${D_COMMENT}Auto-tags e relações${D_RESET}"
+    echo -e "  ${D_FG}vpad${D_RESET}                      ${D_COMMENT}Padronizar documentos${D_RESET}"
+    echo -e "  ${D_FG}vcheck${D_RESET}                    ${D_COMMENT}Verificar consistência${D_RESET}"
+    echo -e "  ${D_FG}vhealth${D_RESET}                   ${D_COMMENT}Health check do vault${D_RESET}"
+    echo -e "  ${D_FG}vmaint${D_RESET}                    ${D_COMMENT}Manutenção completa${D_RESET}"
+    echo -e "  ${D_FG}controle_de_bordo / cbordo${D_RESET} ${D_COMMENT}Pipeline completo (--dry-run, --no-open)${D_RESET}"
+    echo ""
+
+    echo -e "${D_PURPLE}Sync e exportação (do Andromeda):${D_RESET}"
+    echo -e "  ${D_FG}vsync / vquick${D_RESET}            ${D_COMMENT}Sync completo / rápido (com lock)${D_RESET}"
+    echo -e "  ${D_FG}vexport <device>${D_RESET}          ${D_COMMENT}Exportar para dispositivo${D_RESET}"
+    echo -e "  ${D_FG}vmobile${D_RESET}                   ${D_COMMENT}Preparar pacote mobile${D_RESET}"
+    echo -e "  ${D_FG}vinbox_clean${D_RESET}              ${D_COMMENT}Mover imagens para _Attachments${D_RESET}"
+    echo ""
+
+    echo -e "${D_PURPLE}Emojis (do Andromeda):${D_RESET}"
+    echo -e "  ${D_FG}vcheck_emoji / vclean_emoji${D_RESET} ${D_COMMENT}Detectar / limpar emojis no vault${D_RESET}"
+    echo -e "  ${D_FG}vinstall_emoji_hook${D_RESET}       ${D_COMMENT}Hook pre-commit anti-emoji${D_RESET}"
+    echo ""
+
     echo -e "${D_PURPLE}Sistema:${D_RESET}"
     echo -e "  ${D_FG}vbackups [filtro]${D_RESET}         ${D_COMMENT}Listar backups disponíveis${D_RESET}"
     echo -e "  ${D_FG}vrestore <caminho>${D_RESET}        ${D_COMMENT}Restaurar arquivo do backup${D_RESET}"
