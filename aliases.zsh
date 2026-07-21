@@ -137,7 +137,7 @@ alias processo_especifico='ps aux | grep -v grep | grep'
 alias logs='journalctl -f'
 # Propósito: Abrir monitor de sistema grafico
 # Uso: tarefas
-alias tarefas='gnome-system-monitor'
+alias tarefas='if command -v cosmic-monitor &>/dev/null; then cosmic-monitor; elif command -v gnome-system-monitor &>/dev/null; then gnome-system-monitor; else htop; fi'
 # Propósito: Monitor de sistema no terminal (htop)
 # Uso: tarefas_terminal
 alias tarefas_terminal='htop'

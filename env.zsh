@@ -124,13 +124,22 @@ if [ -f "$HOME/.env" ]; then
     source "$HOME/.env"
 fi
 
-# --- 6. SSH AGENT AUTO-START ---
+# --- 6. SSH AGENT + CHAVES ---
+# Dedup do PATH: entradas re-somadas por shells aninhados/sessao grafica
+typeset -U path PATH
+# GNOME Keyring seta SSH_AUTH_SOCK na sessao grafica, mas nao carrega as
+# chaves; o bloco antigo so rodava ssh-add quando NAO havia agent — com
+# keyring ativo as chaves nunca eram carregadas. Agora: checa cada chave no
+# agent antes de adicionar (idempotente, sem prompt duplo). [do Andromeda-OS]
 if [ -z "$SSH_AUTH_SOCK" ]; then
     eval "$(ssh-agent -s)" > /dev/null 2>&1
-    ssh-add ~/.ssh/id_ed25519_personal 2>/dev/null
-    ssh-add ~/.ssh/id_ed25519_mec 2>/dev/null
-    ssh-add ~/.ssh/id_ed25519_vit 2>/dev/null
 fi
+ssh-add -l 2>/dev/null | grep -qF "id_ed25519_personal" || \
+    ssh-add ~/.ssh/id_ed25519_personal 2>/dev/null || true
+ssh-add -l 2>/dev/null | grep -qF "id_ed25519_mec" || \
+    ssh-add ~/.ssh/id_ed25519_mec 2>/dev/null || true
+ssh-add -l 2>/dev/null | grep -qF "id_ed25519_vit" || \
+    ssh-add ~/.ssh/id_ed25519_vit 2>/dev/null || true
 
 # --- 7. GITHUB CLI ---
 if command -v gh &>/dev/null; then
@@ -162,6 +171,5 @@ export ANDROID_HOME="$HOME/Android/sdk"
 __add_to_path_once "$ANDROID_HOME/emulator"
 __add_to_path_once "$ANDROID_HOME/platform-tools"
 __add_to_path_once "$ANDROID_HOME/cmdline-tools/latest/bin"
-
 
 
