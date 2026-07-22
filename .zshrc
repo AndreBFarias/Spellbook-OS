@@ -43,7 +43,7 @@ autoload -U bashcompinit && bashcompinit
 # --- 7. SPELLBOOK SYNC (background, status cacheado p/ fastfetch) ---
 if [[ -o interactive && -z "${SPELLBOOK_SYNC_DONE:-}" ]]; then
     export SPELLBOOK_SYNC_DONE=1
-    ( spellbook_sync_pull >/dev/null 2>&1 ) &!
+    typeset -f spellbook_sync_pull > /dev/null && ( spellbook_sync_pull >/dev/null 2>&1 ) &!
 fi
 
 # --- 7.1. SYNC CLAUDE.md SYMLINKS (silencioso, ao abrir terminal) ---
