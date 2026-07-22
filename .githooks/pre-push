@@ -112,7 +112,7 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
     fi
 
     # [3/4] Validacao de author email (existente)
-    BAD_COMMITS=$(git log --first-parent --format="%H %ae" "$RANGE" 2>/dev/null | grep -v "$EXPECTED_EMAIL" || true)
+    BAD_COMMITS=$(git log --first-parent --format="%H %ae" $RANGE_LIMIT "$RANGE" 2>/dev/null | grep -v "$EXPECTED_EMAIL" || true)
     if [[ -n "$BAD_COMMITS" ]]; then
         echo "[pre-push] BLOQUEADO: Commits com author email incorreto para contexto $CONTEXT"
         echo "  Esperado: $EXPECTED_EMAIL"
@@ -155,7 +155,7 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
             VIOLATION_COUNT=$((VIOLATION_COUNT + 1))
         fi
 
-    done < <(git log --first-parent --format="%H" "$RANGE" 2>/dev/null)
+    done < <(git log --first-parent --format="%H" $RANGE_LIMIT "$RANGE" 2>/dev/null)
 
     # [5/5] Anti-blacklist: arquivos da blacklist anonimato presentes
     # em qualquer commit do range pushado.
@@ -179,7 +179,7 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
             [[ "$pattern" =~ ^# ]] && continue
             [[ "$pattern" =~ ^! ]] && continue
             clean="${pattern%/}"
-            HITS=$(git log --first-parent --name-only --pretty=format:"COMMIT %H" "$RANGE" 2>/dev/null \
+            HITS=$(git log --first-parent --name-only --pretty=format:"COMMIT %H" $RANGE_LIMIT "$RANGE" 2>/dev/null \
                 | awk -v p="$clean" '
                     /^COMMIT / { sha=$2; next }
                     $0 ~ "^"p"$" || $0 ~ "^"p"/" { print substr(sha,1,8)" "$0 }
