@@ -120,7 +120,7 @@
 
     walkBlock(container, out, buf, flush);
     flush();
-    return mergeAdjacent(out);
+    return attachmentize(mergeAdjacent(out));
   }
 
   // Caminha um container em nivel de bloco. Empurra blocos especiais em `out` e
@@ -273,7 +273,36 @@
     const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')) || '';
     // Teams fragmenta a mencao em varios divs, cada um com aria "X mencionado".
     if (/mencionad|mentioned/i.test(aria)) return true;
-    return el.matches('[class*="mention" i], [data-mention], [itemtype*="Person" i]');
+    return el.matches('[class*="mention" i], [data-mention], [data-itemtype*="mention" i], [itemtype*="Person" i]');
+  }
+
+  // Texto do nome da mencao: innerText; se vazio, tira "mencionado" da aria.
+  function mentionText(el) {
+    const t = cleanLine(el.innerText || '');
+    if (t) return t;
+    const aria = (el.getAttribute && el.getAttribute('aria-label')) || '';
+    return aria.replace(/\s*(mencionad[oa]|mentioned)\s*$/i, '').trim();
+  }
+
+  // Extensoes de arquivo que marcam um anexo (PDF, Excel, Word, etc.).
+  const FILE_RE = /\.(pdf|xlsx?|docx?|pptx?|csv|txt|zip|rar|7z|odt|ods|odp)$/i;
+
+  // Um paragrafo que e SO um nome de arquivo vira bloco de anexo (para marcar com
+  // clipe e, no modo Baixar, tentar baixar via href do link, quando houver).
+  function attachmentize(blocks) {
+    return blocks.map(b => {
+      if (b.type !== 'p') return b;
+      const text = inlineText(b.inlines).trim();
+      if (text && text.length < 200 && FILE_RE.test(text) && !/\s{2,}/.test(text)) {
+        const link = b.inlines.find(i => i.t === 'link' && i.href);
+        return { type: 'attachment', name: text, href: link ? link.href : null };
+      }
+      return b;
+    });
+  }
+
+  function inlineText(inlines) {
+    return (inlines || []).map(i => i.v || '').join('');
   }
 
   // Elemento contem alguma imagem de CONTEUDO (nao avatar/emoji) na descendencia?

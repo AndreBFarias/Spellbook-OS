@@ -3,18 +3,24 @@
   'use strict';
   const CCI = (root.CCI = root.CCI || {});
 
+  const CLIP = '\u{1F4CE}';   // clipe de anexo
+  const REPLY = '\u{21A9}';   // seta de resposta
+
   // opts.imageMode: 'embed' | 'download' | 'link'
   function renderMd(model, opts) {
     opts = opts || {};
-    const parts = [];
+    const msgs = [];
     for (const msg of model.messages) {
-      if (msg.kind === 'system') { parts.push('*' + esc(msg.text) + '*'); continue; }
+      if (msg.kind === 'system') { msgs.push('*' + esc(msg.text) + '*'); continue; }
+      const lines = [];
       const head = header(msg);
-      if (head) parts.push('### ' + head);
+      if (head) lines.push('### ' + head);
       const body = blocks(msg.blocks, opts, 0);
-      if (body) parts.push(body);
+      if (body) lines.push(body);
+      if (lines.length) msgs.push(lines.join('\n\n'));
     }
-    return parts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    // divisoria entre mensagens: separa claramente quem falou o que
+    return msgs.join('\n\n---\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
 
   function header(msg) {
