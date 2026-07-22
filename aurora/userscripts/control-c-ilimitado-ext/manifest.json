@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ctrl+C Ilimitado",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Desbloqueia copy/paste/selecao em qualquer site. Salva selecao como .md ou .pdf (texto, formatado, screenshot). Em claude.ai, exporta conversa inteira.",
   "permissions": [
     "activeTab",
@@ -48,6 +48,11 @@
         "<all_urls>"
       ],
       "js": [
+        "lib/images.js",
+        "lib/teams-extract.js",
+        "lib/render-md.js",
+        "lib/render-html.js",
+        "lib/render-txt.js",
         "content.js"
       ],
       "run_at": "document_idle",
