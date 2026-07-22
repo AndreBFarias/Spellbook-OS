@@ -182,6 +182,17 @@
         continue;
       }
 
+      // Link no nivel de bloco: capturar o href AQUI. Sem isto, cairia no
+      // inlineInto abaixo, que processa os filhos do <a> como texto e perde a URL.
+      if (tag === 'A' && !hasContentImage(el)) {
+        const t = cleanLine(el.innerText || '');
+        const href = (el.getAttribute && el.getAttribute('href')) || '';
+        if (t && href) buf.push({ t: 'link', v: t, href });
+        else if (t) buf.push({ t: 'text', v: t });
+        else inlineInto(el, buf);
+        continue;
+      }
+
       // Inline conhecido -> acumula no paragrafo. Excecao: se embrulha uma imagem
       // de conteudo, trata como bloco pra a imagem virar bloco de verdade.
       if (INLINE_TAGS.has(tag)) {
