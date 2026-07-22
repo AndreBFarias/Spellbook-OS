@@ -302,16 +302,22 @@
         break;
       }
       for (const n of toRemove) { if (n.remove) n.remove(); }
+      const full = '@' + names.filter(Boolean).join(' ');
       const doc = first.ownerDocument || document;
       const marker = doc.createElement('span');
-      marker.setAttribute('data-cci-mention', '1');
-      marker.textContent = '@' + names.filter(Boolean).join(' ');
+      marker.setAttribute('data-cci-mention', full); // nome no atributo (a prova de layout)
+      marker.textContent = full;
       if (first.replaceWith) first.replaceWith(marker);
     }
   }
 
-  // Texto do nome da mencao: innerText; se vazio, tira "mencionado" da aria.
+  // Texto do nome da mencao. Marcador do coalesce guarda o nome no atributo
+  // (a prova de layout); senao usa innerText; senao tira "mencionado" da aria.
   function mentionText(el) {
+    if (el.getAttribute) {
+      const stored = el.getAttribute('data-cci-mention');
+      if (stored && stored !== '1') return stored;
+    }
     const t = cleanLine(el.innerText || '');
     if (t) return t;
     const aria = (el.getAttribute && el.getAttribute('aria-label')) || '';
