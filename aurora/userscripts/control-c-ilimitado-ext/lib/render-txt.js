@@ -4,17 +4,22 @@
   'use strict';
   const CCI = (root.CCI = root.CCI || {});
 
+  const CLIP = '\u{1F4CE}';
+  const DIV = '─'.repeat(40);   // linha divisoria entre mensagens
+
   function renderTxt(model, opts) {
     opts = opts || {};
-    const parts = [];
+    const msgs = [];
     for (const msg of model.messages) {
-      if (msg.kind === 'system') { parts.push('— ' + msg.text + ' —'); continue; }
+      if (msg.kind === 'system') { msgs.push('— ' + msg.text + ' —'); continue; }
+      const lines = [];
       const head = header(msg);
-      if (head) parts.push(head);
+      if (head) lines.push(head);
       const body = blocks(msg.blocks, opts);
-      if (body) parts.push(body);
+      if (body) lines.push(body);
+      if (lines.length) msgs.push(lines.join('\n\n'));
     }
-    return parts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    return msgs.join('\n\n' + DIV + '\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
 
   function header(msg) {

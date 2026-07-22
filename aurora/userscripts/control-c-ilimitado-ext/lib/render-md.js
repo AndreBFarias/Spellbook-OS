@@ -37,15 +37,22 @@
       else if (b.type === 'quote') out.push(quote(b, opts, depth));
       else if (b.type === 'code') out.push('```' + (b.lang || '') + '\n' + b.text + '\n```');
       else if (b.type === 'image') out.push(image(b, opts));
+      else if (b.type === 'attachment') out.push(attachment(b));
       else if (b.type === 'list') out.push(listMd(b));
     }
     return out.filter(Boolean).join('\n\n');
   }
 
+  function attachment(b) {
+    const name = esc(b.name || 'arquivo');
+    if (b.href) return CLIP + ' [**' + name + '**](' + b.href + ')';
+    return CLIP + ' **' + name + '**';
+  }
+
   function quote(b, opts, depth) {
     const lines = [];
-    const attrib = [b.author, b.timestamp].filter(Boolean).join(', ');
-    lines.push('**Citação' + (attrib ? ' — ' + esc(attrib) : '') + '**');
+    const attrib = [b.author, b.timestamp].filter(Boolean).join(' · ');
+    lines.push(REPLY + ' **Em resposta a' + (attrib ? ' ' + esc(attrib) : '') + '**');
     const inner = blocks(b.blocks, opts, depth + 1);
     if (inner) lines.push(inner);
     let text = lines.join('\n\n');
