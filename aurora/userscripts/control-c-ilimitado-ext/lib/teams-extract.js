@@ -399,6 +399,8 @@
       }
       out.push(Object.assign({}, inl));
     }
+    // colapsa espacos multiplos (sobra da remocao de chips de mencao)
+    for (const inl of out) { if (inl.t === 'text') inl.v = inl.v.replace(/ {2,}/g, ' '); }
     // apara espaco nas pontas
     if (out.length && out[0].t === 'text') out[0].v = out[0].v.replace(/^\s+/, '');
     if (out.length && out[out.length - 1].t === 'text') out[out.length - 1].v = out[out.length - 1].v.replace(/\s+$/, '');
