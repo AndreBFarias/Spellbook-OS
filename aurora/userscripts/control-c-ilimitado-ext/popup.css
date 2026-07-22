@@ -117,6 +117,27 @@ button.primary:hover:not(:disabled) {
   box-shadow: 0 4px 12px rgba(189, 147, 249, .4);
 }
 
+.img-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+  font-size: 11px;
+  color: var(--fg);
+}
+
+.img-group .label {
+  color: var(--muted);
+  min-width: 48px;
+}
+
+.img-group label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
 .pdf-group {
   display: flex;
   align-items: center;
