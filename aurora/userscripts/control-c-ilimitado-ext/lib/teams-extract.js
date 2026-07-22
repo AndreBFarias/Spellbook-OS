@@ -24,6 +24,7 @@
 
   // ── Entrada ──
   function extract(fragment) {
+    coalesceMentions(fragment);
     const messages = [];
     const items = topLevelItems(fragment);
 
@@ -270,10 +271,43 @@
 
   function isMention(el) {
     if (!el.matches) return false;
+    if (el.hasAttribute && el.hasAttribute('data-cci-mention')) return true;
     const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')) || '';
     // Teams fragmenta a mencao em varios divs, cada um com aria "X mencionado".
     if (/mencionad|mentioned/i.test(aria)) return true;
     return el.matches('[class*="mention" i], [data-mention], [data-itemtype*="mention" i], [itemtype*="Person" i]');
+  }
+
+  function isMentionChip(el) {
+    return el && el.nodeType === Node.ELEMENT_NODE &&
+      /mencionad|mentioned/i.test((el.getAttribute && el.getAttribute('aria-label')) || '');
+  }
+
+  // Pre-passo: o Teams quebra "@Nome Sobrenome (SETOR)" em varios divs irmaos,
+  // cada um com aria "X mencionado". Aqui, ANTES de caminhar o DOM, junto cada
+  // sequencia de chips irmaos num unico <span data-cci-mention>@Nome Completo</span>.
+  // Robusto a espacos entre chips e independe da ordem/estrutura do resto.
+  function coalesceMentions(root) {
+    if (!root.querySelectorAll) return;
+    const chips = Array.prototype.slice.call(root.querySelectorAll('*'))
+      .filter(el => isMentionChip(el) && !isMentionChip(el.parentElement));
+    for (const first of chips) {
+      if (!first.parentNode) continue; // ja consumido por um grupo anterior
+      const names = [mentionText(first)];
+      const toRemove = [];
+      let sib = first.nextSibling;
+      while (sib) {
+        if (sib.nodeType === Node.TEXT_NODE && !sib.nodeValue.trim()) { sib = sib.nextSibling; continue; }
+        if (isMentionChip(sib)) { names.push(mentionText(sib)); toRemove.push(sib); sib = sib.nextSibling; continue; }
+        break;
+      }
+      for (const n of toRemove) { if (n.remove) n.remove(); }
+      const doc = first.ownerDocument || document;
+      const marker = doc.createElement('span');
+      marker.setAttribute('data-cci-mention', '1');
+      marker.textContent = '@' + names.filter(Boolean).join(' ');
+      if (first.replaceWith) first.replaceWith(marker);
+    }
   }
 
   // Texto do nome da mencao: innerText; se vazio, tira "mencionado" da aria.
