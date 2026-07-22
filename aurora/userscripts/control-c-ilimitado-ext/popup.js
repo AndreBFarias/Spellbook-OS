@@ -58,28 +58,44 @@ async function init() {
   }
 }
 
+function imageMode() {
+  const r = document.querySelector('input[name="imgmode"]:checked');
+  return r ? r.value : 'embed';
+}
+
 async function dispatch(action) {
   setButtonsBusy(true);
   setStatus('processando...', '');
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) throw new Error('sem aba ativa');
-    const reply = await chrome.tabs.sendMessage(tab.id, { action });
+    const reply = await chrome.tabs.sendMessage(tab.id, { action, imageMode: imageMode() });
     if (!reply) throw new Error('sem resposta do content script (recarregue a aba)');
+    if (!reply.ok) { setStatus(reply.msg || 'falhou', 'err'); return; }
 
-    // Copia: se o content script nao conseguiu escrever (pagina sem foco), o popup
-    // — que esta focado enquanto aberto — faz a escrita no clipboard.
-    if (reply.ok && reply.data && reply.data.clipboardText != null && !reply.data.wrote) {
-      await navigator.clipboard.writeText(reply.data.clipboardText);
+    const d = reply.data;
+
+    // Formatado (Word/Docs): escreve html + txt juntos no clipboard, a partir do
+    // popup (que esta focado). Word/Docs colam o text/html; imagens embutidas vem junto.
+    if (d && d.html != null) {
+      const item = new ClipboardItem({
+        'text/html': new Blob([d.html], { type: 'text/html' }),
+        'text/plain': new Blob([d.txt || ''], { type: 'text/plain' })
+      });
+      await navigator.clipboard.write([item]);
+    } else if (d && d.clipboardText != null && !d.wrote) {
+      // Copia de texto puro/markdown: o content script nao escreve (pagina sem foco);
+      // o popup focado faz a escrita.
+      await navigator.clipboard.writeText(d.clipboardText);
     }
 
-    const okMsg = (reply.data && reply.data.note) ? reply.data.note + ' copiado' : (reply.msg || 'pronto');
-    setStatus(reply.ok ? okMsg : (reply.msg || 'falhou'), reply.ok ? 'ok' : 'err');
+    const okMsg = (d && d.note) ? d.note + ' copiado' : (reply.msg || 'pronto');
+    setStatus(okMsg, 'ok');
   } catch (e) {
     setStatus(e.message, 'err');
   } finally {
     setButtonsBusy(false);
-    setTimeout(() => { if (!statusEl.classList.contains('err')) setStatus(''); }, 4000);
+    setTimeout(() => { if (!statusEl.classList.contains('err')) setStatus(''); }, 5000);
   }
 }
 

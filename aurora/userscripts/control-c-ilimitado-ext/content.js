@@ -267,33 +267,86 @@
     return out.join('\n');
   }
 
+  // ─── 5.5. Conversor Teams-aware (modelo -> md/html/txt via self.CCI) ──
+  // Extrai a selecao para o modelo, busca as imagens de conteudo conforme o modo,
+  // e renderiza os tres formatos. Requer os modulos lib/* (carregados antes deste
+  // content script). Fallback: se o CCI nao estiver disponivel, usa selectionText().
+  async function buildOutputs(imageMode) {
+    imageMode = imageMode || 'embed';
+    if (!self.CCI || typeof self.CCI.extract !== 'function') {
+      const t = selectionText();
+      return { md: t, txt: t, html: '<pre>' + t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])) + '</pre>', imgs: { ok: 0, fail: 0 } };
+    }
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) throw new Error('nada selecionado');
+    const frag = sel.getRangeAt(0).cloneContents();
+    const model = self.CCI.extract(frag);
+    const imgs = await fillImages(model, imageMode);
+    return {
+      md: self.CCI.renderMd(model, { imageMode }),
+      txt: self.CCI.renderTxt(model, { imageMode }),
+      html: self.CCI.renderHtml(model, { imageMode }),
+      imgs
+    };
+  }
+
+  // Preenche dataUri/file das imagens de conteudo (recursivo — cobre citacoes).
+  async function fillImages(model, mode) {
+    const stat = { ok: 0, fail: 0 };
+    if (mode === 'link') return stat;
+    const list = [];
+    const collect = (blocks) => { for (const b of (blocks || [])) { if (b.type === 'image') list.push(b); else if (b.type === 'quote') collect(b.blocks); } };
+    for (const m of model.messages) if (m.blocks) collect(m.blocks);
+    let n = 0;
+    for (const b of list) {
+      if (!b.src) { stat.fail++; continue; }
+      try {
+        if (mode === 'embed') {
+          b.dataUri = await self.CCI.images.toDataUri(b.src);
+          if (b.dataUri) stat.ok++; else stat.fail++;
+        } else if (mode === 'download') {
+          const blob = await self.CCI.images.toBlob(b.src);
+          if (blob) { const fn = 'teams-img-' + (++n) + '.' + self.CCI.images.extFor(blob); self.CCI.images.download(blob, fn); b.file = fn; stat.ok++; }
+          else stat.fail++;
+        }
+      } catch (_) { stat.fail++; }
+    }
+    return stat;
+  }
+
+  function imgNote(imgs) {
+    if (!imgs || (!imgs.ok && !imgs.fail)) return '';
+    let s = ` · ${imgs.ok} img`;
+    if (imgs.fail) s += ` (${imgs.fail} viraram link)`;
+    return s;
+  }
+
   // ─── 6. Acoes ───────────────────────────────────────
   const ACTIONS = {
     'ping': async () => ({ site: recognizeSite(), host: location.hostname, hasSelection: !!window.getSelection()?.toString().trim() }),
 
     'unlock-tier2': async () => applyTier2(),
 
-    'selection-copy-md': async () => {
-      const md = wrapAsMd(selectionText());
-      // Tenta escrever aqui (funciona no menu de contexto, onde a pagina tem foco).
-      // No popup a pagina perde o foco -> writeText lanca NotAllowedError; nesse caso
-      // devolvemos o texto e o popup (que esta focado) faz a escrita.
-      let wrote = false;
-      try { await writeClipboard(md); wrote = true; } catch (_) {}
-      return { clipboardText: md, wrote, note: `${md.length} chars (.md)` };
+    // Copiar formatado (Word/Docs): devolve html+txt; o popup escreve ClipboardItem.
+    'selection-copy-rich': async (msg) => {
+      const o = await buildOutputs((msg && msg.imageMode) || 'embed');
+      return { html: o.html, txt: o.txt, note: 'formatado' + imgNote(o.imgs) };
     },
 
-    'selection-save-md': async () => {
-      const md = wrapAsMd(selectionText());
-      triggerDownload(new Blob([md], { type: 'text/markdown;charset=utf-8' }), fname('selecao', 'md'));
-      return `${md.length} chars baixados`;
+    'selection-copy-md': async (msg) => {
+      const o = await buildOutputs((msg && msg.imageMode) || 'embed');
+      return { clipboardText: o.md, wrote: false, note: `${o.md.length} chars (.md)` + imgNote(o.imgs) };
     },
 
-    'selection-copy-txt': async () => {
-      const t = selectionText();
-      let wrote = false;
-      try { await writeClipboard(t); wrote = true; } catch (_) {}
-      return { clipboardText: t, wrote, note: `${t.length} chars (txt)` };
+    'selection-save-md': async (msg) => {
+      const o = await buildOutputs((msg && msg.imageMode) || 'embed');
+      triggerDownload(new Blob([o.md], { type: 'text/markdown;charset=utf-8' }), fname('conversa', 'md'));
+      return `${o.md.length} chars baixados (.md)` + imgNote(o.imgs);
+    },
+
+    'selection-copy-txt': async (msg) => {
+      const o = await buildOutputs((msg && msg.imageMode) || 'link');
+      return { clipboardText: o.txt, wrote: false, note: `${o.txt.length} chars (txt)` };
     },
 
     'selection-pdf-text': async () => {
@@ -343,7 +396,7 @@
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const fn = ACTIONS[msg?.action];
     if (!fn) { sendResponse({ ok: false, msg: 'acao desconhecida: ' + msg?.action }); return false; }
-    Promise.resolve(fn())
+    Promise.resolve(fn(msg))
       .then(r => sendResponse({ ok: true, msg: typeof r === 'string' ? r : 'ok', data: typeof r === 'object' ? r : null }))
       .catch(e => { err(msg.action, e); sendResponse({ ok: false, msg: e.message }); });
     return true;

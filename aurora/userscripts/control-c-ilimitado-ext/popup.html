@@ -19,11 +19,18 @@
 
   <section>
     <h2>Selecao atual</h2>
-    <button data-action="selection-copy-md">Copiar como .md</button>
-    <button data-action="selection-copy-txt">Copiar texto puro</button>
-    <button data-action="selection-save-md">Baixar .md</button>
+    <button class="primary" data-action="selection-copy-rich" title="Cola formatado no Word/Docs, com imagens embutidas">Copiar formatado (Word/Docs)</button>
+    <button data-action="selection-copy-md" title="Markdown limpo (Obsidian / IA)">Copiar como .md</button>
+    <button data-action="selection-copy-txt" title="Texto puro organizado">Copiar texto puro</button>
+    <button data-action="selection-save-md" title="Baixa arquivo .md">Baixar .md</button>
+    <div class="img-group">
+      <span class="label">Imagens:</span>
+      <label><input type="radio" name="imgmode" value="embed" checked> Embutir</label>
+      <label><input type="radio" name="imgmode" value="download"> Baixar</label>
+      <label><input type="radio" name="imgmode" value="link"> Link</label>
+    </div>
     <div class="pdf-group">
-      <span class="label">PDF:</span>
+      <span class="label">PDF (não funciona no Teams):</span>
       <button data-action="selection-pdf-text" title="Texto puro, leve">texto</button>
       <button data-action="selection-pdf-md" title="Markdown renderizado">formatado</button>
       <button data-action="selection-pdf-snap" title="Screenshot visual fiel">screenshot</button>
