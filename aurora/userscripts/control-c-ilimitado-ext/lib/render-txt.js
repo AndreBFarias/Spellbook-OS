@@ -36,15 +36,16 @@
       else if (b.type === 'quote') out.push(quote(b, opts));
       else if (b.type === 'code') out.push(indent(b.text, '    '));
       else if (b.type === 'image') out.push('[imagem: ' + (b.alt || (b.src || '').slice(0, 60) || 'sem legenda') + ']');
+      else if (b.type === 'attachment') out.push(CLIP + ' ' + (b.name || 'arquivo') + (b.href ? ' (' + b.href + ')' : ''));
       else if (b.type === 'list') out.push(b.items.map(it => '  - ' + inlines(it)).join('\n'));
     }
     return out.filter(Boolean).join('\n\n');
   }
 
   function quote(b, opts) {
-    const attrib = [b.author, b.timestamp].filter(Boolean).join(', ');
+    const attrib = [b.author, b.timestamp].filter(Boolean).join(' · ');
     const lines = [];
-    if (attrib) lines.push('Citação — ' + attrib + ':');
+    if (attrib) lines.push('Em resposta a ' + attrib + ':');
     const inner = blocks(b.blocks, opts);
     if (inner) lines.push(inner);
     if (b.truncated) lines.push('[…truncado pelo Teams]');

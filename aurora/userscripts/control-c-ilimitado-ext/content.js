@@ -290,15 +290,24 @@
     };
   }
 
-  // Preenche dataUri/file das imagens de conteudo (recursivo — cobre citacoes).
+  // Preenche dataUri/file das imagens de conteudo (recursivo — cobre citacoes) e,
+  // no modo Baixar, baixa tambem os anexos (PDF/Excel/etc.) via href.
   async function fillImages(model, mode) {
-    const stat = { ok: 0, fail: 0 };
+    const stat = { ok: 0, fail: 0, att: 0 };
     if (mode === 'link') return stat;
-    const list = [];
-    const collect = (blocks) => { for (const b of (blocks || [])) { if (b.type === 'image') list.push(b); else if (b.type === 'quote') collect(b.blocks); } };
+    const imgs = [];
+    const atts = [];
+    const collect = (blocks) => {
+      for (const b of (blocks || [])) {
+        if (b.type === 'image') imgs.push(b);
+        else if (b.type === 'attachment') atts.push(b);
+        else if (b.type === 'quote') collect(b.blocks);
+      }
+    };
     for (const m of model.messages) if (m.blocks) collect(m.blocks);
+
     let n = 0;
-    for (const b of list) {
+    for (const b of imgs) {
       if (!b.src) { stat.fail++; continue; }
       try {
         if (mode === 'embed') {
@@ -311,13 +320,25 @@
         }
       } catch (_) { stat.fail++; }
     }
+
+    // Anexos: so faz sentido baixar o arquivo real no modo Baixar (e so se houver href).
+    if (mode === 'download') {
+      for (const a of atts) {
+        if (!a.href) continue;
+        try {
+          const blob = await self.CCI.images.toBlob(a.href);
+          if (blob) { self.CCI.images.download(blob, a.name || 'anexo'); a.downloaded = true; stat.att++; }
+        } catch (_) { /* anexo com auth/redirect pode falhar; segue */ }
+      }
+    }
     return stat;
   }
 
   function imgNote(imgs) {
-    if (!imgs || (!imgs.ok && !imgs.fail)) return '';
-    let s = ` · ${imgs.ok} img`;
-    if (imgs.fail) s += ` (${imgs.fail} viraram link)`;
+    if (!imgs) return '';
+    let s = '';
+    if (imgs.ok || imgs.fail) { s += ` · ${imgs.ok} img`; if (imgs.fail) s += ` (${imgs.fail} viraram link)`; }
+    if (imgs.att) s += ` · ${imgs.att} anexo(s)`;
     return s;
   }
 

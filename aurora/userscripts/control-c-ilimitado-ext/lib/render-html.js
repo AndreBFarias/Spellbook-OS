@@ -5,16 +5,23 @@
   'use strict';
   const CCI = (root.CCI = root.CCI || {});
 
+  const CLIP = '\u{1F4CE}';
+  const REPLY = '\u{21A9}';
+
   function renderHtml(model, opts) {
     opts = opts || {};
     const parts = ['<div style="font-family:Segoe UI,system-ui,sans-serif;font-size:14px;line-height:1.5;color:#111;">'];
+    let first = true;
     for (const msg of model.messages) {
       if (msg.kind === 'system') {
         parts.push('<p style="color:#666;font-style:italic;margin:6px 0;">' + esc(msg.text) + '</p>');
         continue;
       }
+      // divisoria entre mensagens
+      if (!first) parts.push('<hr style="border:none;border-top:1px solid #e0e0e0;margin:14px 0;">');
+      first = false;
       const head = header(msg);
-      if (head) parts.push('<p style="margin:14px 0 2px;"><strong>' + head + '</strong></p>');
+      if (head) parts.push('<p style="margin:10px 0 2px;font-size:15px;">' + head + '</p>');
       parts.push(blocks(msg.blocks, opts));
     }
     parts.push('</div>');
@@ -22,10 +29,9 @@
   }
 
   function header(msg) {
-    const a = msg.author ? esc(msg.author) : '';
-    const t = msg.timestamp ? esc(msg.timestamp) : '';
-    if (a && t) return a + ' <span style="color:#888;font-weight:normal;">— ' + t + '</span>';
-    return a || t;
+    const a = msg.author ? '<strong style="color:#4b53bc;">' + esc(msg.author) + '</strong>' : '';
+    const t = msg.timestamp ? '<span style="color:#888;font-size:13px;"> — ' + esc(msg.timestamp) + '</span>' : '';
+    return a + t;
   }
 
   function blocks(list, opts) {
@@ -35,18 +41,26 @@
       else if (b.type === 'quote') out.push(quote(b, opts));
       else if (b.type === 'code') out.push('<pre style="background:#f4f4f4;padding:8px;border-radius:4px;overflow:auto;"><code>' + esc(b.text) + '</code></pre>');
       else if (b.type === 'image') out.push(image(b, opts));
+      else if (b.type === 'attachment') out.push(attachment(b));
       else if (b.type === 'list') out.push(listHtml(b));
     }
     return out.join('\n');
   }
 
+  function attachment(b) {
+    const name = esc(b.name || 'arquivo');
+    const label = CLIP + ' <strong>' + name + '</strong>';
+    const inner = b.href ? '<a href="' + esc(b.href) + '">' + label + '</a>' : label;
+    return '<p style="margin:6px 0;padding:6px 10px;background:#f4f4f6;border-radius:4px;display:inline-block;">' + inner + '</p>';
+  }
+
   function quote(b, opts) {
-    const attrib = [b.author, b.timestamp].filter(Boolean).join(', ');
+    const attrib = [b.author, b.timestamp].filter(Boolean).join(' · ');
     let inner = '';
-    if (attrib) inner += '<p style="margin:0 0 4px;color:#555;font-weight:600;">Citação — ' + esc(attrib) + '</p>';
+    if (attrib) inner += '<p style="margin:0 0 4px;color:#555;font-weight:600;">' + REPLY + ' Em resposta a ' + esc(attrib) + '</p>';
     inner += blocks(b.blocks, opts);
     if (b.truncated) inner += '<p style="color:#999;font-style:italic;margin:4px 0 0;">[…truncado pelo Teams]</p>';
-    return '<blockquote style="border-left:3px solid #ccc;margin:6px 0;padding:2px 0 2px 12px;color:#444;">' + inner + '</blockquote>';
+    return '<blockquote style="border-left:3px solid #bdbdbd;background:#fafafa;margin:6px 0;padding:6px 0 6px 12px;color:#444;">' + inner + '</blockquote>';
   }
 
   function image(b, opts) {
