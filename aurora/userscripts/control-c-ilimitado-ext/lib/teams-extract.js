@@ -178,7 +178,7 @@
       // Mencao (@Fulano) — recolhe o chip inteiro num inline so
       if (isMention(el)) {
         const v = mentionText(el);
-        if (v) buf.push({ t: 'mention', v });
+        if (v) buf.push(mentionInline(el, v));
         continue;
       }
 
@@ -210,7 +210,7 @@
         if (kind === 'emoji') { const a = (c.getAttribute('alt') || '').trim(); if (a) buf.push({ t: 'text', v: a }); }
         continue;
       }
-      if (isMention(c)) { const v = mentionText(c); if (v) buf.push({ t: 'mention', v }); continue; }
+      if (isMention(c)) { const v = mentionText(c); if (v) buf.push(mentionInline(c, v)); continue; }
       const txt = cleanLine(c.innerText || '');
       if (!txt) { inlineInto(c, buf); continue; }
       if (tag === 'A') buf.push({ t: 'link', v: txt, href: c.getAttribute('href') || '' });
@@ -281,6 +281,16 @@
   function isMentionChip(el) {
     return el && el.nodeType === Node.ELEMENT_NODE &&
       /mencionad|mentioned/i.test((el.getAttribute && el.getAttribute('aria-label')) || '');
+  }
+
+  // href do link da mencao (a propria pessoa), se o chip for/tiver/estiver dentro de <a>.
+  function chipHref(el) {
+    if (el.tagName === 'A' && el.getAttribute && el.getAttribute('href')) return el.getAttribute('href');
+    const a = el.querySelector && el.querySelector('a[href]');
+    if (a && a.getAttribute) return a.getAttribute('href');
+    const up = el.closest && el.closest('a[href]');
+    if (up && up.getAttribute) return up.getAttribute('href');
+    return null;
   }
 
   // Pre-passo: o Teams quebra "@Nome Sobrenome (SETOR)" em varios divs irmaos,
