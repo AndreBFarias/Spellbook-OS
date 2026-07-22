@@ -96,11 +96,19 @@ while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
             || git merge-base origin/main "$LOCAL_SHA" 2>/dev/null || echo "")
         if [[ -n "$MERGE_BASE" ]]; then
             RANGE="$MERGE_BASE..$LOCAL_SHA"
+            RANGE_LIMIT=""
         else
+            # Nem develop nem main existem no remoto ainda (primeiro push do repo):
+            # sem range pra excluir, "$LOCAL_SHA" sozinho faria o git log andar por
+            # TODA a ancestralidade -- exatamente o que este bloco existe pra evitar.
+            # Cap arbitrario: cobre o caso real (poucos commits iniciais) sem escanear
+            # historia inteira em repos importados com muitos commits antigos.
             RANGE="$LOCAL_SHA"
+            RANGE_LIMIT="-n 200"
         fi
     else
         RANGE="$REMOTE_SHA..$LOCAL_SHA"
+        RANGE_LIMIT=""
     fi
 
     # [3/4] Validacao de author email (existente)
