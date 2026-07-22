@@ -176,7 +176,8 @@
 
       // Mencao (@Fulano) — recolhe o chip inteiro num inline so
       if (isMention(el)) {
-        buf.push({ t: 'mention', v: cleanLine(el.innerText || '') });
+        const v = mentionText(el);
+        if (v) buf.push({ t: 'mention', v });
         continue;
       }
 
@@ -208,7 +209,7 @@
         if (kind === 'emoji') { const a = (c.getAttribute('alt') || '').trim(); if (a) buf.push({ t: 'text', v: a }); }
         continue;
       }
-      if (isMention(c)) { buf.push({ t: 'mention', v: cleanLine(c.innerText || '') }); continue; }
+      if (isMention(c)) { const v = mentionText(c); if (v) buf.push({ t: 'mention', v }); continue; }
       const txt = cleanLine(c.innerText || '');
       if (!txt) { inlineInto(c, buf); continue; }
       if (tag === 'A') buf.push({ t: 'link', v: txt, href: c.getAttribute('href') || '' });
