@@ -283,6 +283,12 @@
       /mencionad|mentioned/i.test((el.getAttribute && el.getAttribute('aria-label')) || '');
   }
 
+  // Monta o inline de mencao, com href quando o chip/marcador tiver (link da pessoa).
+  function mentionInline(el, v) {
+    const href = (el.getAttribute && el.getAttribute('data-cci-href')) || chipHref(el);
+    return href ? { t: 'mention', v, href } : { t: 'mention', v };
+  }
+
   // href do link da mencao (a propria pessoa), se o chip for/tiver/estiver dentro de <a>.
   function chipHref(el) {
     if (el.tagName === 'A' && el.getAttribute && el.getAttribute('href')) return el.getAttribute('href');
