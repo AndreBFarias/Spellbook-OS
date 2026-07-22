@@ -44,7 +44,7 @@
     {
       "type": "command",
       "key": "Spellbook-OS",
-      "text": "cat /tmp/spellbook_status_$(id -u) 2>/dev/null || printf 'verificando...'"
+      "text": "cat \"${XDG_RUNTIME_DIR:-/tmp}/spellbook_status_$(id -u)\" 2>/dev/null || printf 'verificando...'"
     },
     "break",
     "colors"
