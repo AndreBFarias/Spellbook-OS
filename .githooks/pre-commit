@@ -262,25 +262,22 @@ fi
 
 WARNINGS=0
 
-# [7] Acentuacao PT-BR em .md e .py (AVISO - inspirado ADR-17 Luna)
-ACCENT_PATTERNS='(^|[^a-zA-Zà-ú])(funcao|validacao|descricao|comunicacao|configuracao|informacao|aplicacao|execucao|operacao|conexao|excecao|solucao|interacao|producao|instalacao|documentacao|integracao|autenticacao|atualizacao|migracao|padronizacao)($|[^a-zA-Zà-ú])'
-ACCENT_COUNT=0
+# [7] Acentuacao PT-BR (auto-fix real via validar-acentuacao.py --fix, re-stage)
+VALIDADOR_ACENTO="$HOME/.config/zsh/scripts/validar-acentuacao.py"
+ACCENT_TARGETS=""
 for file in $FILES; do
     case "$file" in
-        *.md|*.py|*.txt|*.rst)
-            if [ -f "$file" ] && grep -qiE "$ACCENT_PATTERNS" "$file" 2>/dev/null; then
-                ACCENT_COUNT=$((ACCENT_COUNT + 1))
-                if [ $ACCENT_COUNT -le 3 ]; then
-                    echo "  [aviso] Possivel falta de acentuacao: $file"
-                fi
-            fi
-            ;;
+        *.md|*.py|*.zsh|*.sh|*.txt|*.rst) [ -f "$file" ] && ACCENT_TARGETS="$ACCENT_TARGETS $file" ;;
     esac
 done
-if [ $ACCENT_COUNT -gt 3 ]; then
-    echo "  [aviso] ... e mais $((ACCENT_COUNT - 3)) arquivo(s) com possivel falta de acentuacao"
+if [ -n "$ACCENT_TARGETS" ] && [ -f "$VALIDADOR_ACENTO" ] && command -v python3 &>/dev/null; then
+    python3 "$VALIDADOR_ACENTO" --fix --paths $ACCENT_TARGETS >/dev/null 2>&1
+    ACCENT_COUNT=0
+    for file in $ACCENT_TARGETS; do
+        git add "$file" 2>/dev/null && ACCENT_COUNT=$((ACCENT_COUNT + 1))
+    done
+    [ $ACCENT_COUNT -gt 0 ] && { FIXES=$((FIXES + ACCENT_COUNT)); FIX_DETAILS="$FIX_DETAILS acentuacao($ACCENT_COUNT)"; }
 fi
-[ $ACCENT_COUNT -gt 0 ] && WARNINGS=$((WARNINGS + ACCENT_COUNT))
 
 # [8] Hardcoded paths absolutos (AVISO)
 HARDCODED_COUNT=0
