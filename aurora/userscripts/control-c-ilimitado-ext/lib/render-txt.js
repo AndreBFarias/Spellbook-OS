@@ -1,0 +1,62 @@
+// lib/render-txt.js — modelo -> texto puro organizado (sem simbolos markdown,
+// mas diferenciando citacao/codigo/imagem).
+(function (root) {
+  'use strict';
+  const CCI = (root.CCI = root.CCI || {});
+
+  function renderTxt(model, opts) {
+    opts = opts || {};
+    const parts = [];
+    for (const msg of model.messages) {
+      if (msg.kind === 'system') { parts.push('— ' + msg.text + ' —'); continue; }
+      const head = header(msg);
+      if (head) parts.push(head);
+      const body = blocks(msg.blocks, opts);
+      if (body) parts.push(body);
+    }
+    return parts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+
+  function header(msg) {
+    const a = msg.author || '';
+    const t = msg.timestamp || '';
+    if (a && t) return a + '  (' + t + ')';
+    return a || t;
+  }
+
+  function blocks(list, opts) {
+    const out = [];
+    for (const b of list) {
+      if (b.type === 'p') out.push(inlines(b.inlines));
+      else if (b.type === 'quote') out.push(quote(b, opts));
+      else if (b.type === 'code') out.push(indent(b.text, '    '));
+      else if (b.type === 'image') out.push('[imagem: ' + (b.alt || (b.src || '').slice(0, 60) || 'sem legenda') + ']');
+      else if (b.type === 'list') out.push(b.items.map(it => '  - ' + inlines(it)).join('\n'));
+    }
+    return out.filter(Boolean).join('\n\n');
+  }
+
+  function quote(b, opts) {
+    const attrib = [b.author, b.timestamp].filter(Boolean).join(', ');
+    const lines = [];
+    if (attrib) lines.push('Citação — ' + attrib + ':');
+    const inner = blocks(b.blocks, opts);
+    if (inner) lines.push(inner);
+    if (b.truncated) lines.push('[…truncado pelo Teams]');
+    return lines.join('\n').split('\n').map(l => '> ' + l).join('\n');
+  }
+
+  function indent(s, pad) {
+    return String(s || '').split('\n').map(l => pad + l).join('\n');
+  }
+
+  function inlines(list) {
+    return (list || []).map(inl => {
+      if (inl.t === 'mention') return '@' + inl.v.replace(/^@/, '');
+      if (inl.t === 'link') return inl.v + (inl.href && inl.href !== inl.v ? ' (' + inl.href + ')' : '');
+      return inl.v;
+    }).join('');
+  }
+
+  CCI.renderTxt = renderTxt;
+})(self);
