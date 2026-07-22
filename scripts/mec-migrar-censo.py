@@ -29,7 +29,7 @@ NEW_SOURCE_ID = f"{{{{source('{DATASET}','{NEW_TABLE}')}}}}"
 SAMPLE_ROWS   = 5
 MAX_DISTINCT  = 1_000_000
 
-MEC_ROOT   = Path(os.environ.get("MEC_ROOT", Path.home() / "Desenvolvimento" / "MEC" / "pipelines-main"))
+MEC_ROOT   = Path(os.environ.get("MEC_ROOT", Path.home() / "Desenvolvimento" / "Projetos_segape" / "pipelines-main"))
 MODELS_REL = "queries/models"
 
 # -- Cores ANSI (inicializadas em _init_colors) --

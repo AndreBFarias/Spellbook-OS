@@ -29,7 +29,7 @@ export ZSH_IDENTITY_TAGS=""
 # === CAMINHOS ===
 
 export DEV_DIR="${HOME}/Desenvolvimento"
-export MEC_ROOT="${DEV_DIR}/MEC/pipelines-main"
+export MEC_ROOT="${DEV_DIR}/Projetos_segape/pipelines-main"
 export CONTROLE_BORDO_DIR="${HOME}/Controle de Bordo"
 export BEHOLDER_DIR="${HOME}/Beholder"
 

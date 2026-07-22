@@ -438,7 +438,7 @@ _step_tui() {
         _TUI_GIT_NAME_MEC=""
         _TUI_GIT_EMAIL_MEC=""
         _TUI_DEV_DIR="\${HOME}/Desenvolvimento"
-        _TUI_MEC_ROOT="\${HOME}/Desenvolvimento/MEC/pipelines-main"
+        _TUI_MEC_ROOT="\${HOME}/Desenvolvimento/Projetos_segape/pipelines-main"
         _TUI_REMOTE_HOST=""
         _TUI_REMOTE_USER=""
         _TUI_FEATURES='"mec_tools"'
@@ -454,7 +454,7 @@ _step_tui() {
         _TUI_GIT_NAME_MEC="${_EXISTING_GIT_NAME_MEC:-}"
         _TUI_GIT_EMAIL_MEC="${_EXISTING_GIT_EMAIL_MEC:-}"
         _TUI_DEV_DIR="${_EXISTING_DEV_DIR:-\${HOME}/Desenvolvimento}"
-        _TUI_MEC_ROOT="${_EXISTING_MEC_ROOT:-\${HOME}/Desenvolvimento/MEC/pipelines-main}"
+        _TUI_MEC_ROOT="${_EXISTING_MEC_ROOT:-\${HOME}/Desenvolvimento/Projetos_segape/pipelines-main}"
         _TUI_REMOTE_HOST="${_EXISTING_REMOTE_HOST:-}"
         _TUI_REMOTE_USER="${_EXISTING_REMOTE_USER:-}"
         _TUI_FEATURES='"mec_tools"'
@@ -521,7 +521,7 @@ Pressione OK para continuar."
     4) # Diretórios
         dev_dir=$(_inputbox "Diretórios" "Diretório de desenvolvimento:" "${DEV_DIR:-${HOME}/Desenvolvimento}") \
             || { tui_step=3; continue; }
-        mec_root=$(_inputbox "Diretórios" "Raiz do projeto MEC (pipelines):" "${MEC_ROOT:-${dev_dir}/MEC/pipelines-main}") \
+        mec_root=$(_inputbox "Diretórios" "Raiz do projeto MEC (pipelines):" "${MEC_ROOT:-${dev_dir}/Projetos_segape/pipelines-main}") \
             || { tui_step=3; continue; }
         tui_step=5 ;;
     5) # Sincronização Remota
@@ -584,7 +584,7 @@ _step_gen_config() {
     local _remote_host="${_TUI_REMOTE_HOST:-}"
     local _remote_user="${_TUI_REMOTE_USER:-}"
     local _dev_dir="${_TUI_DEV_DIR:-${HOME}/Desenvolvimento}"
-    local _mec_root="${_TUI_MEC_ROOT:-${HOME}/Desenvolvimento/MEC/pipelines-main}"
+    local _mec_root="${_TUI_MEC_ROOT:-${HOME}/Desenvolvimento/Projetos_segape/pipelines-main}"
     _dev_dir="${_dev_dir//\$\{HOME\}/$HOME}"
     _mec_root="${_mec_root//\$\{HOME\}/$HOME}"
 

@@ -1,19 +1,19 @@
 #!/bin/zsh
 
-# Propósito: Abrir diretório no Antigravity (file manager)
+# Propósito: Abrir diretório no VS Code — ou fallback no gerenciador de arquivos.
 # Uso: levitar [caminho]
 # Completa:
 #   [caminho]=_path_files -/
 levitar() {
     local alvo="${1:-.}"
 
-    if ! command -v antigravity &> /dev/null; then
-        __err "'antigravity' não encontrado no PATH."
-        return 1
+    if command -v code &> /dev/null; then
+        echo -e "  ${D_COMMENT}Abrindo no VS Code...${D_RESET}"
+        nohup code "$alvo" > /dev/null 2>&1 &
+    else
+        echo -e "  ${D_COMMENT}VS Code ausente — abrindo no gerenciador de arquivos...${D_RESET}"
+        nohup xdg-open "$alvo" > /dev/null 2>&1 &
     fi
-
-    echo -e "  ${D_COMMENT}Abrindo no Antigravity...${D_RESET}"
-    nohup antigravity "$alvo" > /dev/null 2>&1 &
 }
 
 # Propósito: Setup completo de projeto (cd, branch, venv, deps, git context)
@@ -110,7 +110,7 @@ santuario() {
 
     echo ""
 
-    if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
+    if [[ "$(pwd)" == *"/Projetos_segape/pipelines-main"* ]]; then
         echo -e "  ${D_ORANGE}Protocolo MEC${D_RESET}"
         __aplicar_contexto_git_automatico
     elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* ]]; then
@@ -306,7 +306,7 @@ santuario() {
 
     if command -v git_info &> /dev/null; then git_info; fi
 
-    read -k 1 "reply?  Abrir no Antigravity? (s/N) "
+    read -k 1 "reply?  Abrir no VS Code? (s/N) "
     echo ""
     if [[ "$reply" == "s" || "$reply" == "S" ]]; then
         levitar .
@@ -317,7 +317,7 @@ santuario() {
     # Para validar sprint: `cca "/validar-sprint"` ou `sval`.
     # Para ciclo completo: `cca "/sprint-ciclo <ideia>"` ou `sciclo <ideia>`.
 
-    if [[ "$(pwd)" == *"/MEC/pipelines-main"* ]]; then
+    if [[ "$(pwd)" == *"/Projetos_segape/pipelines-main"* ]]; then
         echo -e -n "  ${D_ORANGE}Abrir menu MEC? (s/N)${D_RESET} "
         local mec_reply=""
         read -k 1 mec_reply

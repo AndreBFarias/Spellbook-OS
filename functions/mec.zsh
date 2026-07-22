@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # -- Constantes do projeto MEC --
-__MEC_ROOT="${MEC_ROOT:-${HOME}/Desenvolvimento/MEC/pipelines-main}"
+__MEC_ROOT="${MEC_ROOT:-${HOME}/Desenvolvimento/Projetos_segape/pipelines-main}"
 __MEC_DBT_BIN="${__MEC_ROOT}/.pipelines/bin/dbt"
 __MEC_DBT_DIR="${__MEC_ROOT}/queries"
 __MEC_PROFILES_DIR="${__MEC_ROOT}/dev"
@@ -298,7 +298,7 @@ conjurar_mec() {
         "[GIT]   git stash pop	GIT	Restaurar último stash"
         "[PUSH]  push com checklist	PUSH	4 checks + confirmar + git push"
         "[PUSH]  push direto	PUSH	Git push sem checklist (pede confirmação)"
-        "[AMB]   abrir santuario	AMB	santuario MEC pipelines-main"
+        "[AMB]   abrir santuario	AMB	santuario Projetos_segape pipelines-main"
         "[AMB]   pre-commit run	AMB	Rodar black/isort/flake8 em todos os arquivos"
         "[AMB]   verificar rastros IA	AMB	Scaneia arquivos staged por comentários, emojis ou menções a IA"
         "[AMB]   ver identidade git	AMB	git_info (nome, email, branch, remote)"
@@ -420,7 +420,7 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
             fi
             ;;
         "[AMB]   abrir santuario")
-            santuario MEC pipelines-main
+            santuario Projetos_segape pipelines-main
             ;;
         "[AMB]   pre-commit run")
             if command -v pre-commit &>/dev/null; then

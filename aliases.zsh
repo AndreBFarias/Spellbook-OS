@@ -255,7 +255,7 @@ alias gclean='git clean -fdx'
 # -- Git: Merge / Rebase ------------------------------------------------------
 # Propósito: dá um pull trazendo e sobrescrevendo o que temos localmente
 # Uso: sincronizar_mec
-alias sincronizar_mec='cd ~/Desenvolvimento/MEC/pipelines-main && git pull --rebase origin develop'
+alias sincronizar_mec='cd ~/Desenvolvimento/Projetos_segape/pipelines-main && git pull --rebase origin develop'
 
 # Propósito: Merge de outra branch na atual
 # Uso: gm <branch>
@@ -337,10 +337,10 @@ alias path='echo $PATH | tr ":" "\n" | sort'
 
 # Propósito: Entrar no projeto pipelines-main (branch padrão)
 # Uso: mec
-alias mec='santuario MEC pipelines-main'
+alias mec='santuario Projetos_segape pipelines-main'
 # Propósito: Entrar no projeto pipelines-main na branch develop
 # Uso: mec_dev
-alias mec_dev='santuario MEC pipelines-main develop'
+alias mec_dev='santuario Projetos_segape pipelines-main develop'
 
 # Propósito: dbt run com profiles-dir local (obrigatório no MEC)
 # Uso: dbt_run [args]
