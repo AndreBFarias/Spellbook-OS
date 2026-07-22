@@ -87,24 +87,35 @@
   }
 
   function getTimestamp(it) {
+    // Prefere o texto EXIBIDO ("13:37", "22/07 11:57"); ISO do atributo datetime
+    // fica so como ultimo recurso (2026-07-22T17:53Z e ilegivel pro leitor/IA).
     const t = it.querySelector('time');
     if (t) {
-      const tt = (t.getAttribute('datetime') || t.innerText || '').trim();
-      if (tt) return tt;
+      const disp = cleanLine(t.innerText || '');
+      if (disp) return disp;
     }
     const head = (it.querySelector(AUTHOR_SEL) || it).innerText || '';
     const m = head.match(TIME_RE);
-    return m ? m[0].trim() : null;
+    if (m) return m[0].trim();
+    if (t) {
+      const dt = (t.getAttribute('datetime') || '').trim();
+      if (dt) return dt;
+    }
+    return null;
   }
 
   // ── Corpo -> blocos ──
   function blocksFrom(container) {
     const out = [];
-    let buf = []; // buffer de inlines do paragrafo corrente
+    // buffer de inlines do paragrafo corrente. CRITICO: limpar SEMPRE no lugar
+    // (buf.length = 0), nunca reatribuir (buf = []). walkBlock recebe esta mesma
+    // referencia; um `buf = []` reatribuiria so a variavel externa e a recursao
+    // continuaria empurrando no array antigo -> o corpo das mensagens sumia.
+    const buf = [];
     const flush = () => {
       const inl = trimInlines(buf);
       if (inl.length) out.push({ type: 'p', inlines: inl });
-      buf = [];
+      buf.length = 0;
     };
 
     walkBlock(container, out, buf, flush);
