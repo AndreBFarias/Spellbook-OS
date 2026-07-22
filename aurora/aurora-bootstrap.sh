@@ -232,14 +232,20 @@ copia_se_diff "$AURORA_REPO/99-aurora-ultra-wifi.conf" /etc/NetworkManager/conf.
 _pop_wifi_on="/etc/NetworkManager/conf.d/default-wifi-powersave-on.conf"
 _pop_wifi_bak="${_pop_wifi_on}.bak-aurora-ultra"
 if [ -f "$_pop_wifi_on" ] && [ ! -f "$_pop_wifi_bak" ]; then
-  sudo -n mv "$_pop_wifi_on" "$_pop_wifi_bak"
-  sudo -n systemctl reload NetworkManager 2>/dev/null || true
-  log "Removido (sobrescrevia powersave): default-wifi-powersave-on.conf"
+  if sudo -n mv "$_pop_wifi_on" "$_pop_wifi_bak"; then
+    sudo -n systemctl reload NetworkManager 2>/dev/null || true
+    log "Removido (sobrescrevia powersave): default-wifi-powersave-on.conf"
+  else
+    warn "sudo -n mv falhou, default-wifi-powersave-on.conf NÃO foi removido"
+  fi
 elif [ -f "$_pop_wifi_on" ] && [ -f "$_pop_wifi_bak" ]; then
   # Re-aplicação: bak já existe; apenas remover o arquivo reinstalado pelo apt
-  sudo -n rm -f "$_pop_wifi_on"
-  sudo -n systemctl reload NetworkManager 2>/dev/null || true
-  log "Removido (re-aplicação): default-wifi-powersave-on.conf (bak preservado)"
+  if sudo -n rm -f "$_pop_wifi_on"; then
+    sudo -n systemctl reload NetworkManager 2>/dev/null || true
+    log "Removido (re-aplicação): default-wifi-powersave-on.conf (bak preservado)"
+  else
+    warn "sudo -n rm falhou, default-wifi-powersave-on.conf NÃO foi removido"
+  fi
 fi
 unset _pop_wifi_on _pop_wifi_bak
 
