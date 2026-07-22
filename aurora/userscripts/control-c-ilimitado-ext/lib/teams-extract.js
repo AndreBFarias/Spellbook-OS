@@ -312,11 +312,20 @@
       if (!first.parentNode) continue; // ja consumido por um grupo anterior
       const names = [mentionText(first)];
       const toRemove = [];
+      let pendingWs = [];
       let sib = first.nextSibling;
       while (sib) {
-        if (sib.nodeType === Node.TEXT_NODE && !sib.nodeValue.trim()) { sib = sib.nextSibling; continue; }
-        if (isMentionChip(sib)) { names.push(mentionText(sib)); toRemove.push(sib); sib = sib.nextSibling; continue; }
-        break;
+        if (sib.nodeType === Node.TEXT_NODE && !sib.nodeValue.trim()) { pendingWs.push(sib); sib = sib.nextSibling; continue; }
+        if (isMentionChip(sib)) {
+          names.push(mentionText(sib));
+          // remove tambem o espaco em branco ENTRE os chips (senao vira "@A B , texto")
+          for (const w of pendingWs) toRemove.push(w);
+          pendingWs = [];
+          toRemove.push(sib);
+          sib = sib.nextSibling;
+          continue;
+        }
+        break; // texto real: para (o espaco final separa a mencao do texto seguinte)
       }
       for (const n of toRemove) { if (n.remove) n.remove(); }
       const full = '@' + names.filter(Boolean).join(' ');
