@@ -294,20 +294,10 @@
       /mencionad|mentioned/i.test((el.getAttribute && el.getAttribute('aria-label')) || '');
   }
 
-  // Monta o inline de mencao, com href quando o chip/marcador tiver (link da pessoa).
+  // Mencao e sempre texto puro @Nome: o link da pessoa no Teams (l/mentions/...) e
+  // interno e inutil fora dele, entao NAO viramos a mencao em link.
   function mentionInline(el, v) {
-    const href = (el.getAttribute && el.getAttribute('data-cci-href')) || chipHref(el);
-    return href ? { t: 'mention', v, href } : { t: 'mention', v };
-  }
-
-  // href do link da mencao (a propria pessoa), se o chip for/tiver/estiver dentro de <a>.
-  function chipHref(el) {
-    if (el.tagName === 'A' && el.getAttribute && el.getAttribute('href')) return el.getAttribute('href');
-    const a = el.querySelector && el.querySelector('a[href]');
-    if (a && a.getAttribute) return a.getAttribute('href');
-    const up = el.closest && el.closest('a[href]');
-    if (up && up.getAttribute) return up.getAttribute('href');
-    return null;
+    return { t: 'mention', v };
   }
 
   // Pre-passo: o Teams quebra "@Nome Sobrenome (SETOR)" em varios divs irmaos,
