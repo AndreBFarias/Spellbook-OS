@@ -39,6 +39,7 @@ SUB_APPLIERS=(
     aurora-user-apply.sh
     aurora-user-services-apply.sh
     aurora-userscripts-apply.sh
+    aurora-desktop-guards-apply.sh
 )
 
 for sub in "${SUB_APPLIERS[@]}"; do
