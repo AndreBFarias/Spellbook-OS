@@ -84,10 +84,7 @@
       case 'italic': return '*' + esc(inl.v) + '*';
       case 'code': return '`' + inl.v.replace(/`/g, '​`') + '`';
       case 'link': return '[' + esc(inl.v) + '](' + inl.href + ')';
-      case 'mention': {
-        const nm = '@' + inl.v.replace(/^@/, '');
-        return inl.href ? '[' + nm + '](' + inl.href + ')' : nm;
-      }
+      case 'mention': return '@' + inl.v.replace(/^@/, '');
       default: return esc(inl.v);
     }
   }
