@@ -348,8 +348,13 @@
         if (last && last.t === 'text') { last.v += inl.v; continue; }
       }
       if (inl.t === 'mention') {
-        // Teams quebra "@Nome Sobrenome" em varios chips -> funde os adjacentes.
-        const last = out[out.length - 1];
+        // Teams quebra "@Nome Sobrenome" em varios chips -> funde os adjacentes,
+        // absorvendo um eventual espaco em branco (text node) entre dois chips.
+        let last = out[out.length - 1];
+        if (last && last.t === 'text' && !last.v.trim() && out.length >= 2 && out[out.length - 2].t === 'mention') {
+          out.pop();
+          last = out[out.length - 1];
+        }
         if (last && last.t === 'mention') { last.v += ' ' + inl.v; continue; }
       }
       out.push(Object.assign({}, inl));
