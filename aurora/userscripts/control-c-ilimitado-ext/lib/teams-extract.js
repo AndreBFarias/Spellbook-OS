@@ -318,13 +318,11 @@
         if (isMentionChip(sib)) { names.push(mentionText(sib)); toRemove.push(sib); sib = sib.nextSibling; continue; }
         break;
       }
-      const href = chipHref(first);
       for (const n of toRemove) { if (n.remove) n.remove(); }
       const full = '@' + names.filter(Boolean).join(' ');
       const doc = first.ownerDocument || document;
       const marker = doc.createElement('span');
       marker.setAttribute('data-cci-mention', full); // nome no atributo (a prova de layout)
-      if (href) marker.setAttribute('data-cci-href', href);
       marker.textContent = full;
       if (first.replaceWith) first.replaceWith(marker);
     }
