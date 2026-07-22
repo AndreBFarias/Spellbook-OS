@@ -85,12 +85,7 @@
         case 'italic': return '<em>' + esc(inl.v) + '</em>';
         case 'code': return '<code style="background:#f4f4f4;padding:1px 4px;border-radius:3px;">' + esc(inl.v) + '</code>';
         case 'link': return '<a href="' + esc(inl.href) + '">' + esc(inl.v) + '</a>';
-        case 'mention': {
-          const nm = esc(inl.v.replace(/^@/, ''));
-          return inl.href
-            ? '<a href="' + esc(inl.href) + '" style="color:#4b53bc;font-weight:bold;text-decoration:none;">@' + nm + '</a>'
-            : '<strong style="color:#4b53bc;">@' + nm + '</strong>';
-        }
+        case 'mention': return '<strong style="color:#4b53bc;">@' + esc(inl.v.replace(/^@/, '')) + '</strong>';
         default: return esc(inl.v);
       }
     }).join('');
