@@ -19,6 +19,11 @@ source "$ZDOTDIR/functions/spellbook-sync.zsh" 2>/dev/null || exit 0
 # rc=1 quando não ha mudancas OU quando o guard de secrets bloqueou: nada a empurrar.
 __spellbook_auto_commit || exit 0
 
+# Autosync so cobre main: numa branch/worktree diferente o commit local ja rodou
+# (rede de seguranca acima), mas não ha o que empurrar pra origin/main.
+branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null)
+[[ "$branch" != "main" ]] && exit 0
+
 logf="${XDG_STATE_HOME:-$HOME/.local/state}/spellbook-sync.log"
 mkdir -p "${logf:h}" 2>/dev/null
 if ! timeout 30 git -C "$dir" push origin main --quiet 2>>"$logf"; then
