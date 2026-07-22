@@ -275,8 +275,12 @@
 
     'selection-copy-md': async () => {
       const md = wrapAsMd(selectionText());
-      await writeClipboard(md);
-      return `${md.length} chars no clipboard`;
+      // Tenta escrever aqui (funciona no menu de contexto, onde a pagina tem foco).
+      // No popup a pagina perde o foco -> writeText lanca NotAllowedError; nesse caso
+      // devolvemos o texto e o popup (que esta focado) faz a escrita.
+      let wrote = false;
+      try { await writeClipboard(md); wrote = true; } catch (_) {}
+      return { clipboardText: md, wrote, note: `${md.length} chars (.md)` };
     },
 
     'selection-save-md': async () => {
@@ -287,8 +291,9 @@
 
     'selection-copy-txt': async () => {
       const t = selectionText();
-      await writeClipboard(t);
-      return `${t.length} chars (txt) no clipboard`;
+      let wrote = false;
+      try { await writeClipboard(t); wrote = true; } catch (_) {}
+      return { clipboardText: t, wrote, note: `${t.length} chars (txt)` };
     },
 
     'selection-pdf-text': async () => {

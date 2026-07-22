@@ -4,6 +4,9 @@ const $ = sel => document.querySelector(sel);
 const statusEl = $('#status');
 const hostEl = $('#host');
 
+// Versao real do manifesto (o texto do rodape era fixo e mentia).
+try { $('#ver').textContent = 'v' + chrome.runtime.getManifest().version; } catch (_) {}
+
 function setStatus(msg, cls) {
   statusEl.textContent = msg || '';
   statusEl.className = 'status' + (cls ? ' ' + cls : '');
@@ -63,7 +66,15 @@ async function dispatch(action) {
     if (!tab) throw new Error('sem aba ativa');
     const reply = await chrome.tabs.sendMessage(tab.id, { action });
     if (!reply) throw new Error('sem resposta do content script (recarregue a aba)');
-    setStatus(reply.msg || (reply.ok ? 'pronto' : 'falhou'), reply.ok ? 'ok' : 'err');
+
+    // Copia: se o content script nao conseguiu escrever (pagina sem foco), o popup
+    // — que esta focado enquanto aberto — faz a escrita no clipboard.
+    if (reply.ok && reply.data && reply.data.clipboardText != null && !reply.data.wrote) {
+      await navigator.clipboard.writeText(reply.data.clipboardText);
+    }
+
+    const okMsg = (reply.data && reply.data.note) ? reply.data.note + ' copiado' : (reply.msg || 'pronto');
+    setStatus(reply.ok ? okMsg : (reply.msg || 'falhou'), reply.ok ? 'ok' : 'err');
   } catch (e) {
     setStatus(e.message, 'err');
   } finally {
