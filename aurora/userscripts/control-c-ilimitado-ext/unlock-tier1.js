@@ -7,7 +7,11 @@
   if (window.__ctrlCIlimitadoTier1) return;
   window.__ctrlCIlimitadoTier1 = true;
 
-  const EVENTS = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu', 'dragstart', 'beforecopy'];
+  // NAO bloquear 'paste'/'cut': o app (Teams, editores, campos de texto) e quem
+  // processa colar/recortar; matar esses eventos quebra Ctrl+V/Ctrl+X em QUALQUER
+  // lugar e nao ajuda em nada a desbloquear copia. So bloqueamos o que os sites
+  // usam pra IMPEDIR copia/selecao/menu de contexto.
+  const EVENTS = ['copy', 'selectstart', 'contextmenu', 'dragstart', 'beforecopy'];
   const stop = (e) => e.stopImmediatePropagation();
 
   for (const evt of EVENTS) {

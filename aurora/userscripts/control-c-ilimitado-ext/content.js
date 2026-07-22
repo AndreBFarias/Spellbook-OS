@@ -24,16 +24,18 @@
     if (window.__ctrlCIlimitadoTier2) return 'ja aplicado';
     window.__ctrlCIlimitadoTier2 = true;
 
-    // Override addEventListener pra rejeitar futuros bloqueios em eventos criticos
-    const BLOCKED = new Set(['copy', 'cut', 'paste', 'selectstart', 'contextmenu', 'dragstart', 'beforecopy']);
+    // Override addEventListener pra rejeitar futuros bloqueios em eventos criticos.
+    // NAO inclui 'paste'/'cut': senao o Tier-2 impediria o app de registrar seus
+    // handlers de colar/recortar -> Ctrl+V/Ctrl+X quebrados no editor.
+    const BLOCKED = new Set(['copy', 'selectstart', 'contextmenu', 'dragstart', 'beforecopy']);
     const origAdd = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function (type, listener, opts) {
       if (BLOCKED.has(type)) return; // silenciosamente nega
       return origAdd.call(this, type, listener, opts);
     };
 
-    // Nuke handlers inline existentes
-    const ATTRS = ['oncopy', 'oncut', 'onpaste', 'onselectstart', 'oncontextmenu', 'ondragstart'];
+    // Nuke handlers inline existentes (sem oncut/onpaste — nao quebrar colar/recortar)
+    const ATTRS = ['oncopy', 'onselectstart', 'oncontextmenu', 'ondragstart'];
     document.querySelectorAll('*').forEach(el => {
       ATTRS.forEach(a => { if (el[a]) el[a] = null; });
       ATTRS.forEach(a => el.removeAttribute && el.removeAttribute(a));
