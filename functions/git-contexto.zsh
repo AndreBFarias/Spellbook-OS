@@ -159,7 +159,8 @@ __sinc_preservadora() {
         return 1
     fi
 
-    if [ -n "$(git status --porcelain)" ]; then
+    local commits_locais=$(git rev-list --count "${upstream}..HEAD" 2>/dev/null)
+    if [ -n "$(git status --porcelain)" ] || [ "${commits_locais:-0}" -gt 0 ]; then
         mkdir -p "$backup_dir"
         rsync -ax --exclude '.git' --exclude "$backup_root" . "$backup_dir"
         echo -e "  ${D_COMMENT}Backup:${D_RESET} ${D_CYAN}${backup_dir}${D_RESET}"
