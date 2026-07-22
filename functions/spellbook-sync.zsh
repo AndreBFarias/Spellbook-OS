@@ -59,17 +59,26 @@ __spellbook_secrets_leaked() {
 
 __spellbook_auto_commit() {
     local dir="$(__spellbook_sync_dir)"
-    local changes
-    changes=$(git -C "$dir" status --porcelain 2>/dev/null)
 
-    [[ -z "$changes" ]] && return 1
+    # Lock: pull (abrir terminal), push (zshexit) e o timer systemd podem disparar
+    # quase juntos -- sem isso, o perdedor do index.lock falha o commit em silencio
+    # (2>/dev/null) e __spellbook_auto_commit ainda "reporta" sucesso ao chamador.
+    local lock="${XDG_STATE_HOME:-$HOME/.local/state}/spellbook-autocommit.lock"
+    mkdir -p "${lock:h}" 2>/dev/null
 
-    # Defense-in-depth: bloqueia autocommit se gitignore foi furado
-    __spellbook_secrets_leaked "$dir" && return 1
+    (
+        flock -w 10 9 || exit 1
 
-    git -C "$dir" add -A 2>/dev/null
-    git -C "$dir" commit -m "auto: sync $(hostname) $(date '+%Y-%m-%d %H:%M')" --quiet 2>/dev/null
-    return 0
+        local changes
+        changes=$(git -C "$dir" status --porcelain 2>/dev/null)
+        [[ -z "$changes" ]] && exit 1
+
+        # Defense-in-depth: bloqueia autocommit se gitignore foi furado
+        __spellbook_secrets_leaked "$dir" && exit 1
+
+        git -C "$dir" add -A 2>/dev/null
+        git -C "$dir" commit -m "auto: sync $(hostname) $(date '+%Y-%m-%d %H:%M')" --quiet 2>/dev/null
+    ) 9>"$lock"
 }
 
 __spellbook_resolve_conflict() {
