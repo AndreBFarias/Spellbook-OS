@@ -180,9 +180,11 @@
         continue;
       }
 
-      // Inline conhecido -> acumula no paragrafo
+      // Inline conhecido -> acumula no paragrafo. Excecao: se embrulha uma imagem
+      // de conteudo, trata como bloco pra a imagem virar bloco de verdade.
       if (INLINE_TAGS.has(tag)) {
-        inlineInto(el, buf);
+        if (hasContentImage(el)) { flush(); walkBlock(el, out, buf, flush); flush(); }
+        else inlineInto(el, buf);
         continue;
       }
 
@@ -218,13 +220,19 @@
   }
 
   function quoteFrom(el) {
-    // autor/hora do preview da citacao, quando presentes
-    const qAuthorEl = el.querySelector(AUTHOR_SEL) || el.querySelector('.fui-StyledText');
-    const author = qAuthorEl ? cleanAuthor(qAuthorEl.innerText) : null;
+    // O preview da citacao mistura autor + hora + texto citado no mesmo innerText,
+    // com uma estrutura de spans que, se caminhada, repete autor/hora no corpo.
+    // Mais robusto: pegar autor/hora e usar o RESTO do innerText como o texto citado.
+    const author = getAuthor(el);
     const timestamp = getTimestamp(el);
-    const bodyEl = el.querySelector(BODY_SEL) || el;
-    const blocks = blocksFrom(bodyEl);
-    const truncated = /…|\.\.\.$/.test((el.innerText || '').trim());
+    const full = cleanLine(el.innerText || '');
+    let body = full;
+    if (author) body = body.split(author).join(' ');
+    if (timestamp) body = body.split(timestamp).join(' ');
+    const truncated = /…|\.\.\.\s*$/.test(full);
+    body = body.replace(/\s+/g, ' ').replace(/^[\s,;:·—-]+/, '')
+      .replace(/…\s*$/, '').replace(/\.\.\.\s*$/, '').trim();
+    const blocks = body ? [{ type: 'p', inlines: [{ t: 'text', v: body }] }] : [];
     return { type: 'quote', author, timestamp, truncated, blocks };
   }
 
@@ -239,20 +247,40 @@
     return { type: 'list', ordered, items };
   }
 
-  // ── Reconhecimento ajustavel (o que o harness vai calibrar) ──
+  // ── Reconhecimento ajustavel ──
+  function quoteAria(el) {
+    const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')) || '';
+    return /início da citação|inicio da citacao/i.test(aria);
+  }
+
   function isQuote(el) {
     if (!el.matches) return false;
     if (el.tagName === 'BLOCKQUOTE') return true;
+    // Teams marca "Início da citação" em DOIS niveis: o wrapper externo (que
+    // embrulha tambem o corpo da resposta) e o preview interno. So o mais interno
+    // (sem outra citacao dentro) e a citacao de fato — o externo e o corpo.
+    if (quoteAria(el)) {
+      const inner = Array.prototype.slice.call(el.querySelectorAll('*')).some(quoteAria);
+      return !inner;
+    }
     if (el.matches('[class*="quote" i], [class*="reply" i], [class*="Citation" i]')) return true;
-    // Sinal forte do Teams: aria/texto "Início da citação"
-    const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')) || '';
-    if (/início da citação|inicio da citacao/i.test(aria)) return true;
     return false;
   }
 
   function isMention(el) {
     if (!el.matches) return false;
+    const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')) || '';
+    // Teams fragmenta a mencao em varios divs, cada um com aria "X mencionado".
+    if (/mencionad|mentioned/i.test(aria)) return true;
     return el.matches('[class*="mention" i], [data-mention], [itemtype*="Person" i]');
+  }
+
+  // Elemento contem alguma imagem de CONTEUDO (nao avatar/emoji) na descendencia?
+  // Usado pra forcar um span inline a virar bloco quando embrulha uma imagem.
+  function hasContentImage(el) {
+    if (!el.querySelectorAll) return false;
+    const list = Array.prototype.slice.call(el.querySelectorAll('img'));
+    return list.some(im => !imgs() || imgs().classify(im) === 'content');
   }
 
   // Elementos que sao puro ruido: botoes, svg, aria-hidden, barra de reacao, icones.
@@ -280,7 +308,7 @@
     return (s || '').replace(/\s+/g, ' ').trim();
   }
 
-  // Junta inlines de texto adjacentes, remove cruft, apara pontas.
+  // Junta inlines de texto adjacentes, funde mencoes fragmentadas, remove cruft.
   function trimInlines(buf) {
     const out = [];
     for (const inl of buf) {
@@ -288,6 +316,11 @@
         if (CRUFT_RE.test(inl.v.trim())) continue;
         const last = out[out.length - 1];
         if (last && last.t === 'text') { last.v += inl.v; continue; }
+      }
+      if (inl.t === 'mention') {
+        // Teams quebra "@Nome Sobrenome" em varios chips -> funde os adjacentes.
+        const last = out[out.length - 1];
+        if (last && last.t === 'mention') { last.v += ' ' + inl.v; continue; }
       }
       out.push(Object.assign({}, inl));
     }
