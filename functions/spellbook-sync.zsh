@@ -30,13 +30,23 @@ __spellbook_is_git_repo() {
 # export com valor literal (plaintext) dentro dele. Por isso ele é checado por CONTEÚDO,
 # não por presença no index (senão bloqueava todo autocommit, como ocorreu 20/05 -> 16/06).
 # Os demais arquivos nunca devem ser versionados: bloqueio por presença, como antes.
+# Presença no index (ja rastreado) OU visivel pro `git status` (novo, nunca commitado,
+# mas não ignorado -- exatamente o arquivo que `add -A` vai pegar a seguir). Checar so
+# `ls-files` deixa passar a PRIMEIRA aparicao de um arquivo sensivel novo: antes do
+# primeiro `add -A` ele não esta tracked ainda, entao o guard não via nada errado.
+__spellbook_secret_visible() {
+    local dir="$1" p="$2"
+    git -C "$dir" ls-files --error-unmatch "$p" >/dev/null 2>&1 && return 0
+    [ -e "$dir/$p" ] && git -C "$dir" status --porcelain -- "$p" 2>/dev/null | grep -q .
+}
+
 __spellbook_secrets_leaked() {
     local dir="$1"
     local -a sensitive=(segape-andre.json profiles.yml meua-ambiente.json novo_login_de_acesso.json)
     local -a leaked=()
     local p
     for p in "${sensitive[@]}"; do
-        git -C "$dir" ls-files --error-unmatch "$p" >/dev/null 2>&1 && leaked+=("$p")
+        __spellbook_secret_visible "$dir" "$p" && leaked+=("$p")
     done
     # .zsh_secrets: tracked é esperado (shim); só conta como leak se tiver plaintext de fato.
     if git -C "$dir" ls-files --error-unmatch .zsh_secrets >/dev/null 2>&1; then
