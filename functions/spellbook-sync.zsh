@@ -145,6 +145,16 @@ spellbook_sync_pull() {
     local dir="$(__spellbook_sync_dir)"
     local start_time=$SECONDS
 
+    # Autosync so cobre main: numa branch/worktree diferente (ex.: sprint isolado),
+    # commitar local ainda e seguro, mas fazer merge de origin/main aqui seria mexer
+    # numa branch que não e essa.
+    local branch
+    branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null)
+    if [[ "$branch" != "main" ]]; then
+        __spellbook_status_cache_write "Branch '${branch:-desconhecida}' (autosync so cobre main)"
+        return 0
+    fi
+
     # Commit mudanças locais pendentes
     local had_local=false
     if __spellbook_auto_commit; then
@@ -219,6 +229,12 @@ spellbook_sync_push() {
     local dir="$(__spellbook_sync_dir)"
 
     __spellbook_auto_commit
+
+    # Autosync so cobre main: commit local sempre roda (rede de seguranca), mas push
+    # so mexe em origin/main quando a branch atual e main de fato.
+    local branch
+    branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null)
+    [[ "$branch" != "main" ]] && return 0
 
     # Push em background com log de erro (nunca bloqueia fechamento do terminal)
     local log="${XDG_STATE_HOME:-$HOME/.local/state}/spellbook-sync.log"
