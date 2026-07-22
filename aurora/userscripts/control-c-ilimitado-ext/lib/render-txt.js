@@ -58,7 +58,7 @@
 
   function inlines(list) {
     return (list || []).map(inl => {
-      if (inl.t === 'mention') return '@' + inl.v.replace(/^@/, '');
+      if (inl.t === 'mention') return '@' + inl.v.replace(/^@/, '') + (inl.href ? ' (' + inl.href + ')' : '');
       if (inl.t === 'link') return inl.v + (inl.href && inl.href !== inl.v ? ' (' + inl.href + ')' : '');
       return inl.v;
     }).join('');
