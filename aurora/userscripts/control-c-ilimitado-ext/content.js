@@ -425,7 +425,7 @@
 
     'conversation-export': async () => {
       const site = recognizeSite();
-      if (site !== 'agente') throw new Error('exportar conversa so funciona em agente.ai (este: ' + site + ')');
+      if (site !== 'claude') throw new Error('exportar conversa so funciona em claude.ai (este: ' + site + ')');
       let result;
       try { result = await tryApiClaude(); }
       catch (e) { log('API falhou:', e.message); result = await scrapeChatDom(); }
