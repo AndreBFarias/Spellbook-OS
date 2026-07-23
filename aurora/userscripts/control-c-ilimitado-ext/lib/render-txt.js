@@ -19,7 +19,25 @@
       if (body) lines.push(body);
       if (lines.length) msgs.push(lines.join('\n\n'));
     }
-    return msgs.join('\n\n' + DIV + '\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    let out = msgs.join('\n\n' + DIV + '\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    const arquivos = arquivosSection(model);
+    if (arquivos) out += '\n\n' + DIV + '\n\n' + arquivos;
+    return out + '\n';
+  }
+
+  // Guia de download no final: todo anexo encontrado na selecao, agrupado por
+  // extensao. So aparece quando ha pelo menos um anexo.
+  function arquivosSection(model) {
+    const groups = (CCI.groupAttachmentsByExt && CCI.groupAttachmentsByExt(model)) || [];
+    if (!groups.length) return '';
+    const parts = ['Arquivos'];
+    for (const g of groups) {
+      const lines = g.items.map(it => it.href
+        ? '- ' + (it.name || 'arquivo') + ' (' + it.href + ')'
+        : '- ' + (it.name || 'arquivo') + ' (link indisponivel)');
+      parts.push(g.label + ':\n' + lines.join('\n'));
+    }
+    return parts.join('\n\n');
   }
 
   function header(msg) {

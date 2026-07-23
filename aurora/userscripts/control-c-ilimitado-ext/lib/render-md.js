@@ -20,7 +20,25 @@
       if (lines.length) msgs.push(lines.join('\n\n'));
     }
     // divisoria entre mensagens: separa claramente quem falou o que
-    return msgs.join('\n\n---\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    let out = msgs.join('\n\n---\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    const arquivos = arquivosSection(model);
+    if (arquivos) out += '\n\n---\n\n' + arquivos;
+    return out + '\n';
+  }
+
+  // Guia de download no final: todo anexo encontrado na selecao, agrupado por
+  // extensao (Excel/PDF/Word/...). So aparece quando ha pelo menos um anexo.
+  function arquivosSection(model) {
+    const groups = (CCI.groupAttachmentsByExt && CCI.groupAttachmentsByExt(model)) || [];
+    if (!groups.length) return '';
+    const parts = ['### Arquivos'];
+    for (const g of groups) {
+      const lines = g.items.map(it => it.href
+        ? '- [' + esc(it.name || 'arquivo') + '](' + it.href + ')'
+        : '- ' + esc(it.name || 'arquivo') + ' _(link indisponível)_');
+      parts.push('**' + esc(g.label) + '**\n' + lines.join('\n'));
+    }
+    return parts.join('\n\n');
   }
 
   function header(msg) {

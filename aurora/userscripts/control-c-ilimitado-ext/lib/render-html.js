@@ -24,7 +24,25 @@
       if (head) parts.push('<p style="margin:10px 0 2px;font-size:15px;">' + head + '</p>');
       parts.push(blocks(msg.blocks, opts));
     }
+    const arquivos = arquivosSection(model);
+    if (arquivos) { parts.push('<hr style="border:none;border-top:1px solid #e0e0e0;margin:14px 0;">'); parts.push(arquivos); }
     parts.push('</div>');
+    return parts.join('\n');
+  }
+
+  // Guia de download no final: todo anexo encontrado na selecao, agrupado por
+  // extensao. So aparece quando ha pelo menos um anexo.
+  function arquivosSection(model) {
+    const groups = (CCI.groupAttachmentsByExt && CCI.groupAttachmentsByExt(model)) || [];
+    if (!groups.length) return '';
+    const parts = ['<h3 style="margin:14px 0 4px;">Arquivos</h3>'];
+    for (const g of groups) {
+      const items = g.items.map(it => it.href
+        ? '<li><a href="' + esc(it.href) + '">' + esc(it.name || 'arquivo') + '</a></li>'
+        : '<li>' + esc(it.name || 'arquivo') + ' <em>(link indisponível)</em></li>'
+      ).join('');
+      parts.push('<p style="margin:8px 0 2px;"><strong>' + esc(g.label) + '</strong></p><ul style="margin:2px 0;">' + items + '</ul>');
+    }
     return parts.join('\n');
   }
 
