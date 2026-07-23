@@ -178,7 +178,7 @@
   }
   */
 
-  // ─── 5. Site-specific: agente.ai conversation export ─
+  // ─── 5. Site-specific: claude.ai conversation export ─
   async function tryApiClaude() {
     const m = location.pathname.match(/(?:session|chat|conversations?)[\/_]([a-zA-Z0-9_-]{16,})/);
     const id = m ? m[1] : null;
