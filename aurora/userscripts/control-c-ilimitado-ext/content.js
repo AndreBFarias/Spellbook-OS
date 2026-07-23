@@ -298,7 +298,10 @@
     // copia os __reactProps$ do React, entao so os nos originais tem o link
     // real (ver extractLiveAttachments em lib/teams-extract.js).
     const gridAttachments = self.CCI.extractLiveAttachments ? self.CCI.extractLiveAttachments(range) : [];
+    console.log('[cci-debug] extractLiveAttachments existe:', !!self.CCI.extractLiveAttachments);
+    console.log('[cci-debug] gridAttachments:', JSON.stringify(gridAttachments));
     const frag = range.cloneContents();
+    console.log('[cci-debug] grids no clone:', frag.querySelectorAll('[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]').length);
     const model = self.CCI.extract(frag, gridAttachments);
     const imgs = await fillImages(model, imageMode);
     return {
