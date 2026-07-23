@@ -154,6 +154,16 @@
 
       if (tag === 'BR') { flush(); continue; }
 
+      // Card de anexo do Teams (data-tid estavel). O DOM traz o NOME do arquivo,
+      // mas NAO a URL de download (o Teams resolve via API interna ao clicar), entao
+      // so marcamos o anexo com o nome; href fica null (nao ha o que baixar da copia).
+      if (el.matches && el.matches('[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]')) {
+        flush();
+        const name = cleanLine(el.innerText || '');
+        if (name) out.push({ type: 'attachment', name: name, href: null });
+        continue;
+      }
+
       // Citacao / resposta
       if (isQuote(el)) {
         flush();
