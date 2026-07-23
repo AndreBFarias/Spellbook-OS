@@ -233,7 +233,7 @@
     sc = sc || document.scrollingElement || document.documentElement;
     sc.scrollTo({ top: 0, behavior: 'instant' });
     await sleep(800);
-    const turnSel = ['[data-testid^="conversation-turn"]', 'div[class*="font-agente-message"]', 'div[class*="font-user-message"]', 'article'];
+    const turnSel = ['[data-testid^="conversation-turn"]', 'div[class*="font-claude-message"]', 'div[class*="font-user-message"]', 'article'];
     const all = new Map();
     const ingest = () => {
       for (const s of turnSel) {
@@ -245,7 +245,7 @@
           const k = t.slice(0, 200);
           if (!all.has(k)) {
             const role = n.matches?.('[class*="font-user-message"]') || n.querySelector?.('[class*="font-user-message"]') ? 'user' :
-                         n.matches?.('[class*="font-agente-message"]') || n.querySelector?.('[class*="font-agente-message"]') ? 'assistant' : 'unknown';
+                         n.matches?.('[class*="font-claude-message"]') || n.querySelector?.('[class*="font-claude-message"]') ? 'assistant' : 'unknown';
             all.set(k, { role, text: t, _y: n.getBoundingClientRect().top + window.scrollY });
           }
         });
