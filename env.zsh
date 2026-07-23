@@ -107,6 +107,14 @@ if [[ -o interactive && -z "$TMUX" ]]; then
         '
         echo
     fi
+    # Aviso ao final do boot quando o SSD remoto 'maria' não está montado.
+    # Checar /proc/mounts é hang-safe: statfs no mountpoint de um sshfs morto
+    # congela o shell em estado D (incidente 2026-07-23).
+    if ! grep -q '/Remotos/Andromeda-OS fuse.sshfs' /proc/mounts 2>/dev/null; then
+        printf '\e[38;2;255;184;108m[AVISO] maria (Andromeda-OS) offline — ~/Remotos/Andromeda-OS não está montado.\e[0m\n'
+        printf '\e[2m  Favor baixar manualmente os arquivos: X, y e z\e[0m\n'
+        printf '\e[2m  Quando a maria voltar: systemctl --user start aurora-conectar-maria.service\e[0m\n'
+    fi
 fi
 
 # --- 5. PROMPT COM CORES DE FUNDO ---
@@ -125,10 +133,10 @@ if [ -f "$HOME/.env" ]; then
 fi
 
 # --- 6. SSH AGENT + CHAVES ---
-# Dedup do PATH: entradas re-somadas por shells aninhados/sessao grafica
+# Dedup do PATH: entradas re-somadas por shells aninhados/sessão grafica
 typeset -U path PATH
-# GNOME Keyring seta SSH_AUTH_SOCK na sessao grafica, mas nao carrega as
-# chaves; o bloco antigo so rodava ssh-add quando NAO havia agent — com
+# GNOME Keyring seta SSH_AUTH_SOCK na sessão grafica, mas não carrega as
+# chaves; o bloco antigo so rodava ssh-add quando NÃO havia agent — com
 # keyring ativo as chaves nunca eram carregadas. Agora: checa cada chave no
 # agent antes de adicionar (idempotente, sem prompt duplo). [do Andromeda-OS]
 if [ -z "$SSH_AUTH_SOCK" ]; then
@@ -171,5 +179,4 @@ export ANDROID_HOME="$HOME/Android/sdk"
 __add_to_path_once "$ANDROID_HOME/emulator"
 __add_to_path_once "$ANDROID_HOME/platform-tools"
 __add_to_path_once "$ANDROID_HOME/cmdline-tools/latest/bin"
-
 
