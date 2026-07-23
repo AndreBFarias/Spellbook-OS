@@ -12,10 +12,10 @@
   // ─── 1. Site recognition ────────────────────────────
   function recognizeSite() {
     const host = location.hostname;
-    if (/(^|\.)agente\.ai$/.test(host)) return 'agente';
+    if (/(^|\.)claude\.ai$/.test(host)) return 'claude';
     if (/(^|\.)teams\.microsoft\.com$/.test(host)) return 'teams';
     if (/(^|\.)github\.com$/.test(host)) return 'github';
-    if (/(^|\.)agente\.com$/.test(host) || /(^|\.)agente\.com$/.test(host)) return 'agente';
+    if (/(^|\.)chatgpt\.com$/.test(host) || /(^|\.)openai\.com$/.test(host)) return 'chatgpt';
     return 'generic';
   }
 
