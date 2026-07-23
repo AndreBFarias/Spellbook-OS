@@ -3,8 +3,8 @@
 // content script roda em isolated world (sem acesso aos globals da pagina).
 
 (function () {
-  if (window.__claudeExportBridgeLoaded) return;
-  window.__claudeExportBridgeLoaded = true;
+  if (window.__cciExportBridgeLoaded) return;
+  window.__cciExportBridgeLoaded = true;
 
   // Trusted Types policy: Chrome 95+ em sites com strict CSP (Teams, GMail,
   // claude.ai mais novo) bloqueia DOMParser.parseFromString sem TrustedHTML.
@@ -39,10 +39,10 @@
   }
 
   window.addEventListener('message', async (e) => {
-    if (e.source !== window || !e.data || e.data.__claudeExport !== 'pdf-request') return;
+    if (e.source !== window || !e.data || e.data.__cciExport !== 'pdf-request') return;
     const { reqId, kind, html, opts, snapshotSelector } = e.data;
 
-    const reply = (data) => window.postMessage(Object.assign({ __claudeExport: 'pdf-result', reqId }, data), '*');
+    const reply = (data) => window.postMessage(Object.assign({ __cciExport: 'pdf-result', reqId }, data), '*');
 
     try {
       if (typeof window.html2pdf !== 'function') {
@@ -73,7 +73,7 @@
 
       const blob = await window.html2pdf().set(opts || {
         margin: 10,
-        filename: 'claude-export.pdf',
+        filename: 'ctrl-c-ilimitado-export.pdf',
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -88,5 +88,5 @@
     }
   });
 
-  window.postMessage({ __claudeExport: 'bridge-ready' }, '*');
+  window.postMessage({ __cciExport: 'bridge-ready' }, '*');
 })();

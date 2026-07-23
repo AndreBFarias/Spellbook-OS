@@ -2,7 +2,7 @@
 // Tambem garante que o popup tenha contexto de extensao valido.
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
-  console.log('[claude-export] installed, reason=' + reason);
+  console.log('[ctrl-c-ilimitado] installed, reason=' + reason);
 });
 
 // Re-injeta content script em abas claude.ai que ja estavam abertas no momento do install
@@ -15,7 +15,7 @@ chrome.runtime.onInstalled.addListener(async () => {
       } catch (_) { /* aba pode estar protegida (about:blank etc) */ }
     }
   } catch (e) {
-    console.error('[claude-export] re-inject falhou', e);
+    console.error('[ctrl-c-ilimitado] re-inject falhou', e);
   }
 });
 
@@ -64,6 +64,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
     await chrome.tabs.sendMessage(tab.id, { action });
   } catch (e) {
-    console.error('[claude-export] context-menu sendMessage falhou', e);
+    console.error('[ctrl-c-ilimitado] context-menu sendMessage falhou', e);
   }
 });

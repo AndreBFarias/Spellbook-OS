@@ -132,11 +132,11 @@
     bridgeLoading = new Promise((resolve, reject) => {
       const onMsg = (e) => {
         if (e.source !== window || !e.data) return;
-        if (e.data.__claudeExport === 'bridge-ready') {
+        if (e.data.__cciExport === 'bridge-ready') {
           bridgeReady = true;
           resolve();
         }
-        if (e.data.__claudeExport === 'pdf-result') {
+        if (e.data.__cciExport === 'pdf-result') {
           const cb = pendingPdf.get(e.data.reqId);
           if (cb) { pendingPdf.delete(e.data.reqId); cb(e.data); }
         }
@@ -173,7 +173,7 @@
         setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 30000);
         resolve({ size });
       });
-      window.postMessage({ __claudeExport: 'pdf-request', reqId, kind, html, opts, snapshotSelector }, '*');
+      window.postMessage({ __cciExport: 'pdf-request', reqId, kind, html, opts, snapshotSelector }, '*');
     });
   }
   */
