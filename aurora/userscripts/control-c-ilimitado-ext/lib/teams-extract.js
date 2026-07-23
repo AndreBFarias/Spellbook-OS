@@ -12,6 +12,7 @@
   const SYS_SEL = '.fui-ChatControlMessage, .fui-ChatControlMessageItem';
   const BODY_SEL = '.fui-ChatMessage__body';
   const AUTHOR_SEL = '.fui-ChatMessage__author';
+  const GRID_SEL = '[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]';
 
   const INLINE_TAGS = new Set(['SPAN', 'A', 'B', 'STRONG', 'I', 'EM', 'CODE', 'U', 'S',
     'SUB', 'SUP', 'MARK', 'SMALL', 'ABBR', 'TIME', 'LABEL', 'FONT']);
@@ -23,15 +24,21 @@
   const TIME_RE = /(\d{1,2}\/\d{1,2}(\/\d{2,4})?(,?\s*\d{1,2}:\d{2})?|\b\d{1,2}:\d{2}\b)/;
 
   // ── Entrada ──
-  function extract(fragment) {
+  // liveGridAttachments: array (uma entrada por card de anexo, na ordem em que
+  // aparecem no documento) com o resultado de attachmentsFromGrid rodado nos
+  // elementos AINDA VIVOS, antes do clone -- ver extractLiveAttachments. E
+  // consumido em fila (shift) conforme walkBlock encontra os cards equivalentes
+  // no fragmento clonado, que nao tem mais os props do React pra ler sozinho.
+  function extract(fragment, liveGridAttachments) {
     coalesceMentions(fragment);
+    const gridQueue = (liveGridAttachments || []).slice();
     const messages = [];
     const items = topLevelItems(fragment);
 
     if (!items.length) {
       // Nenhum container de mensagem reconhecido: trata o fragmento inteiro como
       // um bloco unico (fallback — melhor entregar texto cru que perder tudo).
-      const blocks = blocksFrom(fragment);
+      const blocks = blocksFrom(fragment, gridQueue);
       if (blocks.length) messages.push({ kind: 'message', author: null, timestamp: null, blocks });
       return { messages };
     }
@@ -42,7 +49,7 @@
         if (text) messages.push({ kind: 'system', text });
         continue;
       }
-      messages.push(messageFrom(it));
+      messages.push(messageFrom(it, gridQueue));
     }
     return { messages };
   }
@@ -58,11 +65,11 @@
     return el.matches && el.matches(SYS_SEL);
   }
 
-  function messageFrom(it) {
+  function messageFrom(it, gridQueue) {
     const author = getAuthor(it);
     const timestamp = getTimestamp(it);
     const bodyEl = it.querySelector(BODY_SEL) || it;
-    const blocks = blocksFrom(bodyEl);
+    const blocks = blocksFrom(bodyEl, gridQueue);
     return { kind: 'message', author, timestamp, blocks };
   }
 
@@ -106,7 +113,7 @@
   }
 
   // ── Corpo -> blocos ──
-  function blocksFrom(container) {
+  function blocksFrom(container, gridQueue) {
     const out = [];
     // buffer de inlines do paragrafo corrente. CRITICO: limpar SEMPRE no lugar
     // (buf.length = 0), nunca reatribuir (buf = []). walkBlock recebe esta mesma
@@ -119,14 +126,14 @@
       buf.length = 0;
     };
 
-    walkBlock(container, out, buf, flush);
+    walkBlock(container, out, buf, flush, gridQueue);
     flush();
     return attachmentize(mergeAdjacent(out));
   }
 
   // Caminha um container em nivel de bloco. Empurra blocos especiais em `out` e
   // acumula texto inline em `buf` (via closure de flush).
-  function walkBlock(container, out, buf, flush) {
+  function walkBlock(container, out, buf, flush, gridQueue) {
     for (const node of Array.prototype.slice.call(container.childNodes)) {
       if (node.nodeType === Node.TEXT_NODE) {
         pushText(buf, node.nodeValue);
@@ -154,15 +161,16 @@
 
       if (tag === 'BR') { flush(); continue; }
 
-      // Card de anexo do Teams (data-tid estavel). O DOM nao tem href visivel,
-      // mas os dados do arquivo (inclusive o link de compartilhamento) estao
-      // nos props que o React anexa ao proprio no -- ver attachmentsFromGrid.
-      // Um card pode agrupar 1+ arquivos (props.children); se a leitura falhar
-      // (estrutura do Teams mudou), cai no fallback antigo: so o nome, sem link.
-      if (el.matches && el.matches('[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]')) {
+      // Card de anexo do Teams (data-tid estavel). O elemento AQUI e do
+      // fragmento CLONADO (cloneContents() nao copia __reactProps$ -- so os
+      // nos originais, ainda vivos, tem esses dados), entao NAO da pra ler
+      // attachmentsFromGrid(el) neste ponto. Os dados reais ja foram extraidos
+      // dos nos vivos ANTES do clone (extractLiveAttachments) e chegam aqui via
+      // gridQueue, na mesma ordem de documento -- so consumimos em fila.
+      if (el.matches && el.matches(GRID_SEL)) {
         flush();
-        const attachments = attachmentsFromGrid(el);
-        if (attachments.length) {
+        const attachments = (gridQueue && gridQueue.length) ? gridQueue.shift() : null;
+        if (attachments && attachments.length) {
           out.push.apply(out, attachments);
         } else {
           const name = cleanLine(el.innerText || '');
@@ -213,14 +221,14 @@
       // Inline conhecido -> acumula no paragrafo. Excecao: se embrulha uma imagem
       // de conteudo, trata como bloco pra a imagem virar bloco de verdade.
       if (INLINE_TAGS.has(tag)) {
-        if (hasContentImage(el)) { flush(); walkBlock(el, out, buf, flush); flush(); }
+        if (hasContentImage(el)) { flush(); walkBlock(el, out, buf, flush, gridQueue); flush(); }
         else inlineInto(el, buf);
         continue;
       }
 
       // Bloco generico (div/p/section...): fecha o paragrafo atual e desce.
       flush();
-      walkBlock(el, out, buf, flush);
+      walkBlock(el, out, buf, flush, gridQueue);
       flush();
     }
   }
@@ -449,6 +457,20 @@
     return out;
   }
 
+  // Le os anexos das cards AINDA VIVAS (conectadas ao React) que caem dentro
+  // da selecao do usuario -- precisa rodar ANTES do cloneContents(), que nao
+  // preserva os __reactProps$. Retorna um array na mesma ordem de documento em
+  // que walkBlock vai encontrar os cards equivalentes no fragmento clonado
+  // (cada entrada e o resultado de attachmentsFromGrid pra um card).
+  function extractLiveAttachments(range) {
+    if (!range || typeof document === 'undefined' || !document.querySelectorAll) return [];
+    const all = Array.prototype.slice.call(document.querySelectorAll(GRID_SEL));
+    const inRange = all.filter(function (el) {
+      return range.intersectsNode ? range.intersectsNode(el) : false;
+    });
+    return inRange.map(function (el) { return attachmentsFromGrid(el); });
+  }
+
   // ── Anexos: agrupamento por extensao (guia "Arquivos" no final da saida) ──
   const EXT_LABELS = {
     xlsx: 'Excel', xls: 'Excel', csv: 'Excel',
@@ -556,6 +578,7 @@
   }
 
   CCI.extract = extract;
+  CCI.extractLiveAttachments = extractLiveAttachments;
   CCI.collectAttachments = collectAttachments;
   CCI.groupAttachmentsByExt = groupAttachmentsByExt;
   // exporta helpers pra teste/afinacao

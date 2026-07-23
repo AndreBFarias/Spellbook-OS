@@ -12,10 +12,10 @@
   // ─── 1. Site recognition ────────────────────────────
   function recognizeSite() {
     const host = location.hostname;
-    if (/(^|\.)claude\.ai$/.test(host)) return 'claude';
+    if (/(^|\.)agente\.ai$/.test(host)) return 'agente';
     if (/(^|\.)teams\.microsoft\.com$/.test(host)) return 'teams';
     if (/(^|\.)github\.com$/.test(host)) return 'github';
-    if (/(^|\.)chatgpt\.com$/.test(host) || /(^|\.)openai\.com$/.test(host)) return 'chatgpt';
+    if (/(^|\.)agente\.com$/.test(host) || /(^|\.)agente\.com$/.test(host)) return 'agente';
     return 'generic';
   }
 
@@ -178,7 +178,7 @@
   }
   */
 
-  // ─── 5. Site-specific: claude.ai conversation export ─
+  // ─── 5. Site-specific: agente.ai conversation export ─
   async function tryApiClaude() {
     const m = location.pathname.match(/(?:session|chat|conversations?)[\/_]([a-zA-Z0-9_-]{16,})/);
     const id = m ? m[1] : null;
@@ -233,7 +233,7 @@
     sc = sc || document.scrollingElement || document.documentElement;
     sc.scrollTo({ top: 0, behavior: 'instant' });
     await sleep(800);
-    const turnSel = ['[data-testid^="conversation-turn"]', 'div[class*="font-claude-message"]', 'div[class*="font-user-message"]', 'article'];
+    const turnSel = ['[data-testid^="conversation-turn"]', 'div[class*="font-agente-message"]', 'div[class*="font-user-message"]', 'article'];
     const all = new Map();
     const ingest = () => {
       for (const s of turnSel) {
@@ -245,7 +245,7 @@
           const k = t.slice(0, 200);
           if (!all.has(k)) {
             const role = n.matches?.('[class*="font-user-message"]') || n.querySelector?.('[class*="font-user-message"]') ? 'user' :
-                         n.matches?.('[class*="font-claude-message"]') || n.querySelector?.('[class*="font-claude-message"]') ? 'assistant' : 'unknown';
+                         n.matches?.('[class*="font-agente-message"]') || n.querySelector?.('[class*="font-agente-message"]') ? 'assistant' : 'unknown';
             all.set(k, { role, text: t, _y: n.getBoundingClientRect().top + window.scrollY });
           }
         });
@@ -293,8 +293,13 @@
     }
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed) throw new Error('nada selecionado');
-    const frag = sel.getRangeAt(0).cloneContents();
-    const model = self.CCI.extract(frag);
+    const range = sel.getRangeAt(0);
+    // Le os anexos dos cards AINDA VIVOS antes do clone: cloneContents() nao
+    // copia os __reactProps$ do React, entao so os nos originais tem o link
+    // real (ver extractLiveAttachments em lib/teams-extract.js).
+    const gridAttachments = self.CCI.extractLiveAttachments ? self.CCI.extractLiveAttachments(range) : [];
+    const frag = range.cloneContents();
+    const model = self.CCI.extract(frag, gridAttachments);
     const imgs = await fillImages(model, imageMode);
     return {
       md: self.CCI.renderMd(model, { imageMode }),
@@ -420,7 +425,7 @@
 
     'conversation-export': async () => {
       const site = recognizeSite();
-      if (site !== 'claude') throw new Error('exportar conversa so funciona em claude.ai (este: ' + site + ')');
+      if (site !== 'agente') throw new Error('exportar conversa so funciona em agente.ai (este: ' + site + ')');
       let result;
       try { result = await tryApiClaude(); }
       catch (e) { log('API falhou:', e.message); result = await scrapeChatDom(); }
