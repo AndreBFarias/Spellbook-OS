@@ -112,7 +112,7 @@ if [[ -o interactive && -z "$TMUX" ]]; then
     # congela o shell em estado D (incidente 2026-07-23).
     if ! grep -q '/Remotos/Andromeda-OS fuse.sshfs' /proc/mounts 2>/dev/null; then
         printf '\e[38;2;255;184;108m[AVISO] maria (Andromeda-OS) offline — ~/Remotos/Andromeda-OS não está montado.\e[0m\n'
-        printf '\e[2m  Favor baixar manualmente os arquivos: X, y e z\e[0m\n'
+        printf '\e[2m  Favor baixar manualmente os arquivos .xlsx, .pdf e .docx que precisar.\e[0m\n'
         printf '\e[2m  Quando a maria voltar: systemctl --user start aurora-conectar-maria.service\e[0m\n'
     fi
 fi
@@ -179,4 +179,3 @@ export ANDROID_HOME="$HOME/Android/sdk"
 __add_to_path_once "$ANDROID_HOME/emulator"
 __add_to_path_once "$ANDROID_HOME/platform-tools"
 __add_to_path_once "$ANDROID_HOME/cmdline-tools/latest/bin"
-
