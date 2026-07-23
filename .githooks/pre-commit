@@ -363,6 +363,20 @@ if command -v python3 &>/dev/null; then
     fi
 fi
 
+# Nome de fornecedor de IA colado em identificador (snake_case, ex:
+# claude_gemini_opus) -- \b de regex nao separa por underscore, entao o
+# scanner amplo do [3/6] nao pega. Primeira vez: so avisa. Se o mesmo
+# identificador aparecer staged de novo numa proxima tentativa: substitui.
+if command -v python3 &>/dev/null; then
+    ID_WARN="$HOME/.config/zsh/scripts/ai_identifier_warn.py"
+    if [ -f "$ID_WARN" ]; then
+        python3 "$ID_WARN" $FILES 2>/dev/null
+        for file in $FILES; do
+            [ -f "$file" ] && git add "$file" 2>/dev/null
+        done
+    fi
+fi
+
 # Relatorio
 if [ $FIXES -gt 0 ]; then
     echo "  [auto-fix]$FIX_DETAILS -> re-staged"
