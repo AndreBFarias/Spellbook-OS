@@ -556,6 +556,8 @@
   }
 
   CCI.extract = extract;
+  CCI.collectAttachments = collectAttachments;
+  CCI.groupAttachmentsByExt = groupAttachmentsByExt;
   // exporta helpers pra teste/afinacao
-  CCI._teams = { topLevelItems, isQuote, isMention, isPruned, getAuthor, getTimestamp, cleanAuthor };
+  CCI._teams = { topLevelItems, isQuote, isMention, isPruned, getAuthor, getTimestamp, cleanAuthor, attachmentsFromGrid };
 })(self);
