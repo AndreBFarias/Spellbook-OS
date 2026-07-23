@@ -62,10 +62,18 @@
     return `> Selecao de ${location.href}\n> Em ${new Date().toISOString()}\n\n${text}`;
   }
 
-  function fname(prefix, ext) {
+  // Carimbo host+timestamp compartilhado entre o nome do .md e o das imagens
+  // baixadas no mesmo lote — evita que "teams-img-1.png" de uma exportacao
+  // colida com o de outra (o Chrome renomeia o arquivo duplicado, mas a
+  // referencia dentro do .md continuaria apontando pro nome antigo).
+  function stamp() {
     const host = location.hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    return `${prefix}_${host}_${ts}.${ext}`;
+    return `${host}_${ts}`;
+  }
+
+  function fname(prefix, ext) {
+    return `${prefix}_${stamp()}.${ext}`;
   }
 
   function triggerDownload(blob, filename) {
@@ -313,6 +321,7 @@
     for (const m of model.messages) if (m.blocks) collect(m.blocks);
 
     let n = 0;
+    const batchStamp = stamp();
     for (const b of imgs) {
       if (!b.src) { stat.fail++; continue; }
       try {
@@ -321,7 +330,7 @@
           if (b.dataUri) stat.ok++; else stat.fail++;
         } else if (mode === 'download') {
           const blob = await self.CCI.images.toBlob(b.src);
-          if (blob) { const fn = 'teams-img-' + (++n) + '.' + self.CCI.images.extFor(blob); self.CCI.images.download(blob, fn); b.file = fn; stat.ok++; }
+          if (blob) { const fn = 'teams-img_' + batchStamp + '-' + (++n) + '.' + self.CCI.images.extFor(blob); self.CCI.images.download(blob, fn); b.file = fn; stat.ok++; }
           else stat.fail++;
         }
       } catch (_) { stat.fail++; }
