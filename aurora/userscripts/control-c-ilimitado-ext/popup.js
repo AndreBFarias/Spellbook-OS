@@ -16,6 +16,16 @@ function setButtonsBusy(busy) {
   document.querySelectorAll('button').forEach(b => b.disabled = busy);
 }
 
+// Traduz o erro cru do Chrome quando a aba tem um content script orfao (extension
+// foi recarregada em chrome://extensions mas a aba nao foi atualizada depois).
+function friendlyError(e) {
+  const msg = (e && e.message) || String(e);
+  if (/Could not establish connection|Receiving end does not exist/i.test(msg)) {
+    return 'content script não injetou ainda — recarregue a aba (F5)';
+  }
+  return msg;
+}
+
 // Configura UI baseado no site detectado
 const SPECIAL = {
   claude: { label: 'Em claude.ai', btn: 'Exportar conversa completa', action: 'conversation-export' },
@@ -92,7 +102,7 @@ async function dispatch(action) {
     const okMsg = (d && d.note) ? d.note + ' copiado' : (reply.msg || 'pronto');
     setStatus(okMsg, 'ok');
   } catch (e) {
-    setStatus(e.message, 'err');
+    setStatus(friendlyError(e), 'err');
   } finally {
     setButtonsBusy(false);
     setTimeout(() => { if (!statusEl.classList.contains('err')) setStatus(''); }, 5000);
