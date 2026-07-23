@@ -88,6 +88,14 @@ filter_files() {
             hooks/*|.githooks/*|.git/hooks/*) continue ;;
             docs/claude/hooks/*|scripts/auditoria-repos.sh|scripts/universal-sanitizer.py) continue ;;
             scripts/ai_identifier_warn.py) continue ;;
+            # CCI-CLAUDE-AI-FEATURE-EXCEPTION (2026-07-23, autorizado pelo dono): a
+            # extension Ctrl+C Ilimitado tem uma funcionalidade real de exportar
+            # conversas do site claude.ai. "claude.ai" (hostname real) e
+            # "font-claude-message" (nome de classe CSS que o proprio site usa no
+            # HTML dele) sao constantes externas, nao mencao/atribuicao a IA -- a
+            # substituicao automatica pra "agente" quebra a deteccao de site e o
+            # scraping do DOM. Mesmo escopo do wiring PFL7560 acima.
+            aurora/userscripts/control-c-ilimitado-ext/*) continue ;;
             dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
             *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
             *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;

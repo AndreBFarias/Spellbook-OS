@@ -57,7 +57,14 @@ def process_file(filepath, warned, new_warnings):
             return ident
         changed = True
         fixed_parts = ["agente" if p.lower() in VENDOR_WORDS else p for p in parts]
-        return "_".join(fixed_parts)
+        # colapsa "agente" repetido em sequencia (ex: claude_gemini_opus ->
+        # agente_agente_agente -> agente)
+        collapsed = []
+        for p in fixed_parts:
+            if p == "agente" and collapsed and collapsed[-1] == "agente":
+                continue
+            collapsed.append(p)
+        return "_".join(collapsed)
 
     new_content = IDENTIFIER_RE.sub(repl, content)
 
