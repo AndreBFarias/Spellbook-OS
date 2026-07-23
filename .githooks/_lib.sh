@@ -22,8 +22,21 @@ EMOJI_RE='[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{
 # Co-autoria e atribuicao (case-insensitive via grep -iE)
 COAUTHOR_RE='[Cc]o-[Aa]uthored-[Bb]y|[Pp]aired-[Ww]ith|[Aa]ssisted-[Bb]y'
 
-# Mencoes a ferramentas de IA (case-insensitive via grep -iE)
-AI_MENTION_RE='[Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[Cc]opilot|[Gg]emini|[Gg][Pp][Tt]-[34]|[Dd]eep[Ss]eek|[Cc]ursor|[Aa]ider|[Ww]indsurf|[Cc]odeium|[Tt]abnine|noreply@anthropic'
+# Mencoes a ferramentas de IA (case-insensitive via grep -iE). Usada em
+# mensagem de commit (commit-msg, pre-push) -- texto curto, escrito a mao,
+# onde falso-positivo de "Cursor" (editor) e raro.
+AI_MENTION_RE='[Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[Cc]opilot|[Gg]emini|[Gg][Pp][Tt]-[34]|[Dd]eep[Ss]eek|[Cc]ursor|[Aa]ider|[Ww]indsurf|[Cc]odeium|[Tt]abnine|[Oo]pus|[Ss]onnet|[Hh]aiku|[Ff]able|noreply@anthropic'
+
+# Mesma lista, com fronteira de palavra (\b) e SEM "Cursor" -- usada para
+# substituicao palavra-a-palavra em CONTEUDO de arquivo (comentario,
+# docstring, prosa, config), onde "cursor" colide demais com cursor de
+# banco/UI real (`cursor = conn.cursor()`). "Cursor" ganha checagem propria
+# com filtro de contexto via AI_CURSOR_EXCLUDE_RE (ver pre-commit).
+AI_WORD_CODE_RE='\b([Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[Gg]emini|[Gg][Pp][Tt]-[34]|[Dd]eep[Ss]eek|[Aa]ider|[Ww]indsurf|[Cc]odeium|[Tt]abnine|[Oo]pus|[Ss]onnet|[Hh]aiku|[Ff]able)\b'
+
+# Marcadores de contexto que indicam "cursor" real (banco de dados/UI), nao
+# o editor Cursor. Mesmo filtro usado em scripts/auditoria-repos.sh.
+AI_CURSOR_EXCLUDE_RE='(api_key|api-key|provider|model|client|_MODEL|_API|endpoint|baseurl|base_url|\.cursor\(\)|cursor\s*=\s*conn|cursor\s*=\s*db|cursor\s*=\s*self|getcursor|set_cursor|cursor_factory|CursorKind)'
 
 # Secrets (para grep -P)
 SECRET_RE='(sk-[a-zA-Z0-9]{20,}|sk-ant-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}|AKIA[0-9A-Z]{16})'

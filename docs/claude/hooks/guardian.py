@@ -27,7 +27,7 @@ AI_ATTRIBUTION = re.compile(
     r"(?i)(Co[- ]Authored[- ]By|Generated\s+(by|with)|Created\s+by|Written\s+by|"
     r"Paired[- ]With|Assisted[- ]By)[:\s.]*"
     r"(Claude|GPT|Copilot|Anthropic|OpenAI|Gemini|ChatGPT|DeepSeek|Cursor|"
-    r"Windsurf|Codeium|Tabnine)"
+    r"Windsurf|Codeium|Tabnine|Opus|Sonnet|Haiku|Fable)"
 )
 
 AI_EMAIL = re.compile(r"noreply@anthropic", re.IGNORECASE)
@@ -65,6 +65,7 @@ def is_exempt_path(file_path: str) -> bool:
         "/emoji_guardian.py",
         "/sanitizar_ia.py",
         "/universal-sanitizer.py",
+        "/scripts/auditoria-repos.sh",
         "/GUIDE.md",
         "/CLAUDE.md",
         "/AI.md",
