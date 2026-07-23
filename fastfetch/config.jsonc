@@ -48,6 +48,11 @@
       "key": "Spellbook-OS",
       "text": "cat \"${XDG_RUNTIME_DIR:-/tmp}/spellbook_status_$(id -u)\" 2>/dev/null || printf 'verificando...'"
     },
+    {
+      "type": "command",
+      "key": "Andromeda-OS",
+      "text": "grep -q '/Remotos/Andromeda-OS fuse.sshfs' /proc/mounts 2>/dev/null && printf 'Sincronizado' || printf 'Não Sincronizado'"
+    },
     "break",
     "colors"
   ]
