@@ -154,13 +154,20 @@
 
       if (tag === 'BR') { flush(); continue; }
 
-      // Card de anexo do Teams (data-tid estavel). O DOM traz o NOME do arquivo,
-      // mas NAO a URL de download (o Teams resolve via API interna ao clicar), entao
-      // so marcamos o anexo com o nome; href fica null (nao ha o que baixar da copia).
+      // Card de anexo do Teams (data-tid estavel). O DOM nao tem href visivel,
+      // mas os dados do arquivo (inclusive o link de compartilhamento) estao
+      // nos props que o React anexa ao proprio no -- ver attachmentsFromGrid.
+      // Um card pode agrupar 1+ arquivos (props.children); se a leitura falhar
+      // (estrutura do Teams mudou), cai no fallback antigo: so o nome, sem link.
       if (el.matches && el.matches('[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]')) {
         flush();
-        const name = cleanLine(el.innerText || '');
-        if (name) out.push({ type: 'attachment', name: name, href: null });
+        const attachments = attachmentsFromGrid(el);
+        if (attachments.length) {
+          out.push.apply(out, attachments);
+        } else {
+          const name = cleanLine(el.innerText || '');
+          if (name) out.push({ type: 'attachment', name: name, href: null });
+        }
         continue;
       }
 
@@ -387,6 +394,103 @@
     if (!el.querySelectorAll) return false;
     const list = Array.prototype.slice.call(el.querySelectorAll('img'));
     return list.some(im => !imgs() || imgs().classify(im) === 'content');
+  }
+
+  // ── Anexos: link real via props do React ──
+  // O card de anexo nao expoe href no DOM, mas o React anexa os props do
+  // componente ao proprio no sob uma chave "__reactProps$<sufixo>" (sufixo
+  // aleatorio por carregamento de pagina, nao por elemento -- funciona em
+  // qualquer no marcado pelo React). Confirmado via harness de console em
+  // 2026-07-23 (ver docs/superpowers/specs) em cards reais do Teams.
+  function reactPropsOf(el) {
+    if (!el) return null;
+    const keys = Object.keys(el).filter(function (k) { return k.indexOf('__reactProps$') === 0; });
+    return keys.length ? el[keys[0]] : null;
+  }
+
+  // Ultimo segmento do path de uma URL, decodificado -- fallback quando o
+  // objeto do arquivo nao traz um campo de nome literal.
+  function filenameFromUrl(url) {
+    if (!url) return null;
+    try {
+      const clean = url.split('?')[0];
+      const segs = clean.split('/').filter(Boolean);
+      const last = segs[segs.length - 1];
+      return last ? decodeURIComponent(last) : null;
+    } catch (_) { return null; }
+  }
+
+  function attachmentNameFrom(file) {
+    return file.title || file.name || file.fileName ||
+      filenameFromUrl(file.objectUrl) || filenameFromUrl(file.shareUrl) || null;
+  }
+
+  // Um card "file-attachment-grid" pode agrupar 1+ arquivos (props.children).
+  // Cada child carrega file.props.file com {baseUrl, objectUrl, shareUrl,
+  // previewUrl}. shareUrl e o link de COMPARTILHAMENTO do SharePoint (o mesmo
+  // formato que aparece quando alguem cola um hyperlink de arquivo direto na
+  // mensagem) -- objectUrl e so o path cru na biblioteca (nao abre sozinho) e
+  // previewUrl e um endpoint interno do Teams (asyncgw, exige sessao do app).
+  function attachmentsFromGrid(el) {
+    const props = reactPropsOf(el);
+    const kids = props && props.children;
+    if (!kids) return [];
+    const list = Array.isArray(kids) ? kids : [kids];
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const child = list[i];
+      const file = child && child.props && child.props.file && child.props.file.props &&
+        child.props.file.props.file;
+      if (!file) continue;
+      const href = file.shareUrl || file.objectUrl || null;
+      const name = attachmentNameFrom(file);
+      if (name || href) out.push({ type: 'attachment', name: name || 'arquivo', href: href });
+    }
+    return out;
+  }
+
+  // ── Anexos: agrupamento por extensao (guia "Arquivos" no final da saida) ──
+  const EXT_LABELS = {
+    xlsx: 'Excel', xls: 'Excel', csv: 'Excel',
+    pdf: 'PDF',
+    docx: 'Word', doc: 'Word',
+    pptx: 'PowerPoint', ppt: 'PowerPoint',
+    zip: 'Compactado', rar: 'Compactado', '7z': 'Compactado'
+  };
+
+  function extOf(name) {
+    const m = /\.([a-z0-9]+)$/i.exec(name || '');
+    return m ? m[1].toLowerCase() : '';
+  }
+
+  function labelForExt(ext) {
+    if (EXT_LABELS[ext]) return EXT_LABELS[ext];
+    return ext ? ext.toUpperCase() : 'Outro';
+  }
+
+  function collectAttachments(model) {
+    const out = [];
+    const walk = (blocks) => {
+      for (const b of (blocks || [])) {
+        if (b.type === 'attachment') out.push(b);
+        else if (b.type === 'quote') walk(b.blocks);
+      }
+    };
+    for (const m of (model.messages || [])) if (m.blocks) walk(m.blocks);
+    return out;
+  }
+
+  // Agrupa por extensao, preservando a ordem de 1a aparicao de cada grupo.
+  function groupAttachmentsByExt(model) {
+    const atts = collectAttachments(model);
+    const order = [];
+    const byLabel = new Map();
+    for (const a of atts) {
+      const label = labelForExt(extOf(a.name));
+      if (!byLabel.has(label)) { byLabel.set(label, []); order.push(label); }
+      byLabel.get(label).push(a);
+    }
+    return order.map(label => ({ label, items: byLabel.get(label) }));
   }
 
   // Elementos que sao puro ruido: botoes, svg, aria-hidden, barra de reacao, icones.
