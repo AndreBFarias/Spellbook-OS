@@ -32,7 +32,9 @@
     "gpu",
     { "type": "memory",        "key": "Memória" },
     "swap",
-    { "type": "disk",          "key": "Disco" },
+    // "folders" fixo em mounts locais: sem ele o módulo faz statfs em TODOS os mounts,
+    // e um sshfs com host offline congela o fastfetch (e o boot do terminal) em estado D
+    { "type": "disk",          "key": "Disco", "folders": "/" },
     { "type": "localip",       "key": "IP Local" },
     { "type": "battery",       "key": "Bateria" },
     { "type": "locale",        "key": "Idioma" },
