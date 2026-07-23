@@ -7,7 +7,7 @@
   window.__cciExportBridgeLoaded = true;
 
   // Trusted Types policy: Chrome 95+ em sites com strict CSP (Teams, GMail,
-  // claude.ai mais novo) bloqueia DOMParser.parseFromString sem TrustedHTML.
+  // apps SPA modernos em geral) bloqueia DOMParser.parseFromString sem TrustedHTML.
   // Cria uma policy unica desta extensao (silencia "Refused to create policy"
   // em sites que ja tem CSP trusted-types definido).
   let __ttPolicy = null;
