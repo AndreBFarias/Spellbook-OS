@@ -28,9 +28,10 @@ const MENU_ACTIONS = {
   'cci-copy-md':         'selection-copy-md',
   'cci-copy-txt':        'selection-copy-txt',
   'cci-save-md':         'selection-save-md',
-  'cci-pdf-text':        'selection-pdf-text',
-  'cci-pdf-formatted':   'selection-pdf-md',
-  'cci-pdf-screenshot':  'selection-pdf-snap',
+  // PDF desabilitado temporariamente: bloqueado no Teams (Trusted Types / ERR_BLOCKED_BY_CLIENT).
+  // 'cci-pdf-text':        'selection-pdf-text',
+  // 'cci-pdf-formatted':   'selection-pdf-md',
+  // 'cci-pdf-screenshot':  'selection-pdf-snap',
   'cci-unlock':          'unlock-tier2',
 };
 
@@ -38,9 +39,10 @@ const MENU_ITEMS = [
   { id: 'cci-copy-md',       title: 'Ctrl+C Ilimitado: Copiar como .md (markdown)', contexts: ['selection'] },
   { id: 'cci-copy-txt',      title: 'Ctrl+C Ilimitado: Copiar texto puro',          contexts: ['selection'] },
   { id: 'cci-save-md',       title: 'Ctrl+C Ilimitado: Baixar arquivo .md',         contexts: ['selection'] },
-  { id: 'cci-pdf-text',      title: 'Ctrl+C Ilimitado: PDF (apenas texto)',         contexts: ['selection'] },
-  { id: 'cci-pdf-formatted', title: 'Ctrl+C Ilimitado: PDF (formatado/HTML)',       contexts: ['selection'] },
-  { id: 'cci-pdf-screenshot',title: 'Ctrl+C Ilimitado: PDF (screenshot/imagem)',    contexts: ['selection'] },
+  // PDF desabilitado temporariamente (ver MENU_ACTIONS acima).
+  // { id: 'cci-pdf-text',      title: 'Ctrl+C Ilimitado: PDF (apenas texto)',         contexts: ['selection'] },
+  // { id: 'cci-pdf-formatted', title: 'Ctrl+C Ilimitado: PDF (formatado/HTML)',       contexts: ['selection'] },
+  // { id: 'cci-pdf-screenshot',title: 'Ctrl+C Ilimitado: PDF (screenshot/imagem)',    contexts: ['selection'] },
   { id: 'cci-unlock',        title: 'Ctrl+C Ilimitado: Desbloquear total (Tier 2)', contexts: ['page'] },
 ];
 

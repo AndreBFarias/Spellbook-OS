@@ -111,6 +111,9 @@
   }
 
   // ─── 4. PDF bridge ──────────────────────────────────
+  // Desabilitado temporariamente: bloqueado no Teams (Trusted Types / ERR_BLOCKED_BY_CLIENT).
+  // Reativar removendo este comentário (e os das 3 ACTIONS 'selection-pdf-*' abaixo).
+  /*
   let bridgeReady = false;
   let bridgeLoading = null;
   const pendingPdf = new Map();
@@ -165,6 +168,7 @@
       window.postMessage({ __claudeExport: 'pdf-request', reqId, kind, html, opts, snapshotSelector }, '*');
     });
   }
+  */
 
   // ─── 5. Site-specific: claude.ai conversation export ─
   async function tryApiClaude() {
@@ -372,6 +376,8 @@
       return { clipboardText: o.txt, wrote: false, note: `${o.txt.length} chars (txt)` };
     },
 
+    // PDF desabilitado temporariamente (ver bloco comentado na seção 4 acima).
+    /*
     'selection-pdf-text': async () => {
       const t = selectionText();
       const r = await generatePdf({ kind: 'text', html: t, filename: fname('selecao', 'pdf') });
@@ -401,6 +407,7 @@
         if (!hadId) target.removeAttribute('id');
       }
     },
+    */
 
     'conversation-export': async () => {
       const site = recognizeSite();
