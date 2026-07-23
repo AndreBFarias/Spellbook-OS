@@ -87,6 +87,7 @@ filter_files() {
             .git/*|.mypy_cache/*|.pytest_cache/*|.ruff_cache/*) continue ;;
             hooks/*|.githooks/*|.git/hooks/*) continue ;;
             docs/claude/hooks/*|scripts/auditoria-repos.sh|scripts/universal-sanitizer.py) continue ;;
+            scripts/ai_identifier_warn.py) continue ;;
             dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
             *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
             *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;

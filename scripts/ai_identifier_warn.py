@@ -16,8 +16,8 @@ import sys
 STATE_FILE = os.path.expanduser("~/.local/share/spellbook/ai_identifier_warnings.json")
 
 VENDOR_WORDS = {
-    "agente", "agente", "agente", "agente", "agente", "agente",
-    "agente", "agente", "agente", "agente", "agente", "agente", "agente", "agente",
+    "claude", "anthropic", "openai", "chatgpt", "gemini", "deepseek",
+    "aider", "windsurf", "codeium", "tabnine", "opus", "sonnet", "haiku", "fable",
 }
 
 IDENTIFIER_RE = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b")
