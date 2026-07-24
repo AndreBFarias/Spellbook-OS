@@ -25,10 +25,10 @@
 
   // ── Entrada ──
   // liveGridAttachments: array (uma entrada por card de anexo, na ordem em que
-  // aparecem no documento) com o resultado de attachmentsFromGrid rodado nos
-  // elementos AINDA VIVOS, antes do clone -- ver extractLiveAttachments. E
-  // consumido em fila (shift) conforme walkBlock encontra os cards equivalentes
-  // no fragmento clonado, que nao tem mais os props do React pra ler sozinho.
+  // aparecem no documento) lido no MAIN WORLD por background.js (isolated
+  // world nao enxerga os __reactProps$ do React) e repassado por content.js.
+  // E consumido em fila (shift) conforme walkBlock encontra os cards
+  // equivalentes no fragmento clonado.
   function extract(fragment, liveGridAttachments) {
     coalesceMentions(fragment);
     const gridQueue = (liveGridAttachments || []).slice();
@@ -161,11 +161,8 @@
 
       if (tag === 'BR') { flush(); continue; }
 
-      // Card de anexo do Teams (data-tid estavel). O elemento AQUI e do
-      // fragmento CLONADO (cloneContents() nao copia __reactProps$ -- so os
-      // nos originais, ainda vivos, tem esses dados), entao NAO da pra ler
-      // attachmentsFromGrid(el) neste ponto. Os dados reais ja foram extraidos
-      // dos nos vivos ANTES do clone (extractLiveAttachments) e chegam aqui via
+      // Card de anexo do Teams (data-tid estavel). Os dados reais (nome/link)
+      // ja foram lidos no MAIN WORLD por background.js e chegam aqui via
       // gridQueue, na mesma ordem de documento -- so consumimos em fila.
       if (el.matches && el.matches(GRID_SEL)) {
         flush();
