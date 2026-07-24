@@ -281,6 +281,27 @@
     return out.join('\n');
   }
 
+  // Marca (via atributo DOM real -- atravessa isolated/main world, ao
+  // contrario de props JS) os cards de anexo dentro da selecao, pede pro
+  // background ler os dados no main world, e desmarca depois (sempre, mesmo
+  // se a mensagem falhar). Retorna [] se nao houver cards ou a leitura falhar
+  // -- walkBlock ja tem fallback (nome sem link) pra esse caso.
+  async function readLiveGridAttachments(range) {
+    const GRID_SEL = '[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]';
+    const els = Array.from(document.querySelectorAll(GRID_SEL)).filter(el => range.intersectsNode(el));
+    if (!els.length) return [];
+    els.forEach((el, i) => el.setAttribute('data-cci-grid-tmp', String(i)));
+    try {
+      const reply = await chrome.runtime.sendMessage({ action: 'read-live-grid-attachments' });
+      return (reply && reply.ok && Array.isArray(reply.data)) ? reply.data : [];
+    } catch (e) {
+      err('read-live-grid-attachments falhou', e);
+      return [];
+    } finally {
+      els.forEach(el => el.removeAttribute('data-cci-grid-tmp'));
+    }
+  }
+
   // ─── 5.5. Conversor Teams-aware (modelo -> md/html/txt via self.CCI) ──
   // Extrai a selecao para o modelo, busca as imagens de conteudo conforme o modo,
   // e renderiza os tres formatos. Requer os modulos lib/* (carregados antes deste
@@ -294,14 +315,15 @@
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed) throw new Error('nada selecionado');
     const range = sel.getRangeAt(0);
-    // Le os anexos dos cards AINDA VIVOS antes do clone: cloneContents() nao
-    // copia os __reactProps$ do React, entao so os nos originais tem o link
-    // real (ver extractLiveAttachments em lib/teams-extract.js).
-    const gridAttachments = self.CCI.extractLiveAttachments ? self.CCI.extractLiveAttachments(range) : [];
-    console.log('[cci-debug] extractLiveAttachments existe:', !!self.CCI.extractLiveAttachments);
-    console.log('[cci-debug] gridAttachments:', JSON.stringify(gridAttachments));
+    // Le os anexos dos cards AINDA VIVOS antes do clone (cloneContents() nao
+    // copia __reactProps$). MAS o content script roda em isolated world, que
+    // NAO enxerga expando properties postas pelo React (main world) no mesmo
+    // no do DOM -- e uma barreira de seguranca do Chrome, nao um detalhe de
+    // timing. Por isso a leitura de verdade roda via mensagem pro background,
+    // que injeta um script no main world (ver readGridAttachmentsInMainWorld
+    // em background.js) e devolve so os dados (nome/href), ja serializaveis.
+    const gridAttachments = await readLiveGridAttachments(range);
     const frag = range.cloneContents();
-    console.log('[cci-debug] grids no clone:', frag.querySelectorAll('[data-tid="file-attachment-grid"], [data-tid^="file-attachment"], [data-tid*="fileAttachment" i]').length);
     const model = self.CCI.extract(frag, gridAttachments);
     const imgs = await fillImages(model, imageMode);
     return {

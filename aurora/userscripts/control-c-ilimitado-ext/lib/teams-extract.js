@@ -405,71 +405,14 @@
   }
 
   // ── Anexos: link real via props do React ──
-  // O card de anexo nao expoe href no DOM, mas o React anexa os props do
-  // componente ao proprio no sob uma chave "__reactProps$<sufixo>" (sufixo
-  // aleatorio por carregamento de pagina, nao por elemento -- funciona em
-  // qualquer no marcado pelo React). Confirmado via harness de console em
-  // 2026-07-23 (ver docs/superpowers/specs) em cards reais do Teams.
-  function reactPropsOf(el) {
-    if (!el) return null;
-    const keys = Object.keys(el).filter(function (k) { return k.indexOf('__reactProps$') === 0; });
-    return keys.length ? el[keys[0]] : null;
-  }
-
-  // Ultimo segmento do path de uma URL, decodificado -- fallback quando o
-  // objeto do arquivo nao traz um campo de nome literal.
-  function filenameFromUrl(url) {
-    if (!url) return null;
-    try {
-      const clean = url.split('?')[0];
-      const segs = clean.split('/').filter(Boolean);
-      const last = segs[segs.length - 1];
-      return last ? decodeURIComponent(last) : null;
-    } catch (_) { return null; }
-  }
-
-  function attachmentNameFrom(file) {
-    return file.title || file.name || file.fileName ||
-      filenameFromUrl(file.objectUrl) || filenameFromUrl(file.shareUrl) || null;
-  }
-
-  // Um card "file-attachment-grid" pode agrupar 1+ arquivos (props.children).
-  // Cada child carrega file.props.file com {baseUrl, objectUrl, shareUrl,
-  // previewUrl}. shareUrl e o link de COMPARTILHAMENTO do SharePoint (o mesmo
-  // formato que aparece quando alguem cola um hyperlink de arquivo direto na
-  // mensagem) -- objectUrl e so o path cru na biblioteca (nao abre sozinho) e
-  // previewUrl e um endpoint interno do Teams (asyncgw, exige sessao do app).
-  function attachmentsFromGrid(el) {
-    const props = reactPropsOf(el);
-    const kids = props && props.children;
-    if (!kids) return [];
-    const list = Array.isArray(kids) ? kids : [kids];
-    const out = [];
-    for (let i = 0; i < list.length; i++) {
-      const child = list[i];
-      const file = child && child.props && child.props.file && child.props.file.props &&
-        child.props.file.props.file;
-      if (!file) continue;
-      const href = file.shareUrl || file.objectUrl || null;
-      const name = attachmentNameFrom(file);
-      if (name || href) out.push({ type: 'attachment', name: name || 'arquivo', href: href });
-    }
-    return out;
-  }
-
-  // Le os anexos das cards AINDA VIVAS (conectadas ao React) que caem dentro
-  // da selecao do usuario -- precisa rodar ANTES do cloneContents(), que nao
-  // preserva os __reactProps$. Retorna um array na mesma ordem de documento em
-  // que walkBlock vai encontrar os cards equivalentes no fragmento clonado
-  // (cada entrada e o resultado de attachmentsFromGrid pra um card).
-  function extractLiveAttachments(range) {
-    if (!range || typeof document === 'undefined' || !document.querySelectorAll) return [];
-    const all = Array.prototype.slice.call(document.querySelectorAll(GRID_SEL));
-    const inRange = all.filter(function (el) {
-      return range.intersectsNode ? range.intersectsNode(el) : false;
-    });
-    return inRange.map(function (el) { return attachmentsFromGrid(el); });
-  }
+  // O card de anexo nao expoe href no DOM; o link (shareUrl) mora nos props
+  // que o React anexa ao no (__reactProps$...). ESTE arquivo roda em isolated
+  // world (content script) e NAO enxerga expando properties postas pelo React
+  // (main world) no mesmo no do DOM -- e uma barreira de seguranca do Chrome,
+  // nao um detalhe de timing. Por isso a leitura de verdade NAO mora aqui:
+  // roda em background.js (readGridAttachmentsInMainWorld, injetado via
+  // chrome.scripting world:'MAIN') e chega pronta em walkBlock via gridQueue.
+  // O bloco de anexo consome essa fila logo abaixo, em "Card de anexo do Teams".
 
   // ── Anexos: agrupamento por extensao (guia "Arquivos" no final da saida) ──
   const EXT_LABELS = {
