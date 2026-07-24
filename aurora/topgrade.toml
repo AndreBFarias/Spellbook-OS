@@ -100,6 +100,7 @@
 # Commands to run before anything
 [pre_commands]
 "Aurora self-heal (drift sweep)" = "zsh -c 'source $HOME/.config/zsh/functions/_helpers.zsh 2>/dev/null; source $HOME/.config/zsh/functions/aurora-self-heal.zsh; aurora-self-heal'"
+"Distrobox cache dir (evita bug do fifo travando o upgrade)" = "mkdir -p ~/.cache/distrobox"
 # "Emacs Snapshot" = "rm -rf ~/.emacs.d/elpa.bak && cp -rl ~/.emacs.d/elpa ~/.emacs.d/elpa.bak"
 
 
