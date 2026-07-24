@@ -47,8 +47,14 @@ Após qualquer mudança nos arquivos source, o Chrome precisa recarregar a exten
 **Universal (todo site):**
 - Tier 1 automatico: anula bloqueios CSS/JS de copy/paste/seleção
 - Botao "Desbloquear total" no popup: Tier 2 (mais invasivo, override de listeners futuros)
-- Copiar seleção como markdown ou texto puro
-- Salvar seleção como `.md` ou `.pdf` (texto puro, formatado, ou screenshot fiel)
+- Copiar seleção como markdown, texto puro, ou formatado (Word/Docs, com imagens embutidas)
+- Salvar seleção como `.md`
+- Imagens: embutir (data-URI), baixar como arquivo separado, ou só link — escolha no popup
+
+**Especifico no Teams (`teams.microsoft.com`):**
+- Extração estruturada (autor, hora, citação, código, lista, anexo) em vez de texto cru
+- Guia **"Arquivos"** no final da saída: todo anexo da seleção, agrupado por tipo (Excel/PDF/Word/...), com link real de download quando disponível
+- O link real do anexo é lido do próprio React da página (não do DOM visível) — por isso passa por uma ponte via `background.js` rodando no *main world* da aba; não é possível ler isso de dentro do content script (isolated world não enxerga os `__reactProps$` do React, é uma barreira de segurança do Chrome)
 
 **Especifico em claude.ai:**
 - Botao "Exportar conversa completa" no popup
@@ -56,6 +62,7 @@ Após qualquer mudança nos arquivos source, o Chrome precisa recarregar a exten
 
 ## Limitacoes conhecidas
 
-- Sites que renderizam texto em `<canvas>` (alguns paywalled): so via screenshot PDF
+- **PDF desabilitado temporariamente** (removido da interface, código comentado em `content.js`/`popup.html`/`background.js`): bloqueado no Teams por Trusted Types (`ERR_BLOCKED_BY_CLIENT`). Reativar exige resolver isso primeiro.
 - Sites que detectam DevTools e descarregam conteudo: não tem o que fazer
 - A extension não desbloqueia DRM (HBO Max, Netflix, etc) -- nem tenta
+- Anexos do Teams ainda carregando (placeholder do Fluent UI, sem dado nenhum) na hora da seleção não entram na guia "Arquivos" — espere a página terminar de carregar antes de selecionar

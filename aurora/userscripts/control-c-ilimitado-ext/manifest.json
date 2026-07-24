@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Ctrl+C Ilimitado",
-  "version": "2.2.4",
-  "description": "Desbloqueia copy/paste/selecao em qualquer site. Salva selecao como .md ou .pdf (texto, formatado, screenshot). Em claude.ai, exporta conversa inteira.",
+  "version": "2.3.0",
+  "description": "Desbloqueia copy/paste/selecao em qualquer site. Salva selecao como .md (com guia de anexos linkados no Teams) ou texto formatado. Em claude.ai, exporta conversa inteira.",
   "permissions": [
     "activeTab",
     "scripting",

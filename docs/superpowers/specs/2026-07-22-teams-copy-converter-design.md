@@ -123,3 +123,56 @@ puras `extract`+`renderMd`+`renderTxt` concatenadas num snippet, rodado numa sel
 saída colada de volta. 1-2 rodadas previstas. 1-2 fragmentos reais (sanitizados) viram
 fixtures pra não regredir. Verificação final: colar "formatado" no Docs (imagens aparecem),
 `.md` no Obsidian (limpo), conferir legibilidade pra IA.
+
+## Adendo 2026-07-23 — guia "Arquivos" + correção estrutural do link de anexo
+
+Sessão seguinte adicionou a seção **"Arquivos"** no final de `renderMd`/`renderTxt`/`renderHtml`
+(`lib/teams-extract.js`: `collectAttachments` + `groupAttachmentsByExt`, agrupamento por
+extensão, só aparece se houver ao menos um anexo) e corrigiu a extração do link real do anexo,
+que nunca tinha funcionado de fato. Duas causas raiz distintas, achadas em sequência:
+
+**1. `cloneContents()` não copia expando properties do React.** O card de anexo do Teams
+(`[data-tid="file-attachment-grid"]`) não expõe `href` em nenhum atributo do DOM — o link
+(`shareUrl`) mora nos props que o React anexa ao nó via `__reactProps$<sufixo>`. A seleção do
+usuário é processada via `range.cloneContents()` pra virar um fragmento estático seguro de
+percorrer, mas `Node.cloneNode()` (usado internamente) só copia estrutura DOM/HTML — não copia
+propriedades JS arbitrárias que a página anexou ao objeto do elemento. Resultado: **todo** card
+de anexo caía no fallback antigo (nome via `innerText`, concatenado sem separador quando o card
+agrupa vários arquivos, `href: null`), sempre, não só às vezes. Confirmado via harness de console
+que rodava direto no DOM vivo (funcionava) vs. o pipeline real (sempre falhava) — a diferença era
+exatamente clonado vs. vivo.
+
+**2. Isolated world do content script não enxerga os mesmos expando properties, nem nos nós
+vivos.** Correção óbvia seria "ler os props ANTES de clonar" — mas mesmo lendo os nós vivos
+diretamente de dentro de `content.js`, `Object.keys(el)` não encontra `__reactProps$...`. Motivo:
+content scripts rodam em **isolated world** (mesmo DOM da página, heap de JS separado); é uma
+barreira de segurança do Chrome, não um detalhe de timing — propriedades DOM nativas (tag,
+atributos, filhos) são compartilhadas entre isolated/main world, mas expando properties que a
+própria página anexa a um objeto (como o React faz) ficam isoladas por mundo. Um harness de
+console rodando via `javascript_tool`/DevTools executa no **main world** (mesmo mundo do React da
+página) — por isso "funcionava" nesses testes e nunca no content script real. Achado só depois de
+instrumentar `buildOutputs()` com `console.log` temporário e comparar a saída real com o
+resultado esperado (a saída do content script tinha `gridAttachments: [[],[]]` — a função rodava,
+mas sempre vazia).
+
+**Fix final:** a leitura dos props roda no **main world de verdade**, via
+`chrome.scripting.executeScript({world:'MAIN', func: readGridAttachmentsInMainWorld})` disparado
+por `background.js` (mesmo padrão já usado pro bridge do PDF, `main-bridge.js`, só que com a API
+nativa do MV3 em vez de injeção de `<script>`). Como `executeScript` serializa a função e a
+reexecuta isolada (sem closures do arquivo que a define), a lógica de `attachmentsFromGrid` ficou
+duplicada intencionalmente em `background.js` — precisa ser mantida em sincronia manualmente se
+mudar. `content.js` marca os cards da seleção com um atributo DOM real (`data-cci-grid-tmp`, que
+SIM atravessa isolated/main world, ao contrário de props JS), manda mensagem, recebe de volta só
+dados serializáveis (`{name, href}`), desmarca. `lib/teams-extract.js` ficou só com a fila
+(`gridQueue.shift()` em `walkBlock`) — não lê props do React em lugar nenhum mais.
+
+Efeito colateral descoberto no caminho: cards de anexo recém-carregados (grid grande, 7-8
+arquivos) podem ter filhos ainda em estado de placeholder do Fluent UI (`isPlaceholder: true`,
+sem `props.file`) — esses ficam de fora da guia "Arquivos" silenciosamente (fallback já cobre:
+sem dado, sem entrada). Não tratado — documentado como limitação em `INSTALL.md`.
+
+PDF (`ensureBridge`/`generatePdf`/3 ações `selection-pdf-*`) foi **desabilitado** nessa mesma
+sessão (comentado, não removido) — bloqueado no Teams por Trusted Types, e o gancho anti-IA do
+repo passou a ter uma exceção dedicada em `.githooks/pre-commit` (`aurora/userscripts/control-c-ilimitado-ext/*`
+fica fora da substituição automática `agente→agente`, porque `agente.ai`/`font-agente-message`
+são constantes externas reais, não menção a ferramenta de IA).
