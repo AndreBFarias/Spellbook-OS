@@ -36,7 +36,7 @@ AI_WORD_CODE_RE='\b([Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[
 
 # Marcadores de contexto que indicam "cursor" real (banco de dados/UI), nao
 # o editor Cursor. Mesmo filtro usado em scripts/auditoria-repos.sh.
-AI_CURSOR_EXCLUDE_RE='(api_key|api-key|provider|model|client|_MODEL|_API|endpoint|baseurl|base_url|\.cursor\(\)|cursor\s*=\s*conn|cursor\s*=\s*db|cursor\s*=\s*self|getcursor|set_cursor|cursor_factory|CursorKind)'
+AI_CURSOR_EXCLUDE_RE='(api_key|api-key|provider|model|client|_MODEL|_API|endpoint|baseurl|base_url|\.cursor\(\)|cursor\s*=\s*conn|cursor\s*=\s*db|cursor\s*=\s*self|getcursor|set_cursor|cursor_factory|CursorKind|cursor\s*:|:\s*cursor\b|cursorPointer)'
 
 # Secrets (para grep -P)
 SECRET_RE='(sk-[a-zA-Z0-9]{20,}|sk-ant-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}|AKIA[0-9A-Z]{16})'
