@@ -354,13 +354,18 @@ def intervalos_staged(path: Path):
     restringe nada, porque a defesa de contexto (prosa vs identificador) já
     cobre a maior parte do risco e desligar a correção em silêncio seria pior.
     """
+    # Pathspec e cwd ABSOLUTOS. Com pathspec relativo à raiz do repositório e
+    # cwd num subdiretório, o git resolve o caminho a partir do cwd e devolve
+    # vazio -- o que aqui significaria "nenhuma linha tocada" e desligaria a
+    # correção em silêncio.
+    caminho = path.resolve()
     try:
         resultado = subprocess.run(
-            ["git", "diff", "--cached", "-U0", "--", str(path)],
+            ["git", "diff", "--cached", "-U0", "--", str(caminho)],
             capture_output=True,
             text=True,
             timeout=15,
-            cwd=str(path.parent if path.parent.exists() else Path.cwd()),
+            cwd=str(caminho.parent),
         )
     except (OSError, subprocess.SubprocessError):
         return None
