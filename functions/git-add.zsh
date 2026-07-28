@@ -19,10 +19,14 @@ ga() {
         fi
 
         # Acentuação PT-BR: aplica --fix e informa (corrigidos + revisão manual)
+        # [2026-07-28] --somente-diff-staged: mesmo motivo do bloco [7] do
+        # pre-commit. Este é o SEGUNDO ponto de entrada do mesmo corretor e
+        # tinha o mesmo alcance de arquivo inteiro; sem a flag, um `ga` num
+        # arquivo antigo reescreve linha que ninguém tocou.
         local validador="${ZDOTDIR:-$HOME/.config/zsh}/scripts/validar-acentuacao.py"
         local ptbr_files=(${(M)all_staged[@]:#*.(py|zsh|sh|md)})
         if [ -f "$validador" ] && [[ ${#ptbr_files[@]} -gt 0 ]]; then
-            python3 "$validador" --fix --paths "${ptbr_files[@]}"
+            python3 "$validador" --fix --somente-diff-staged --paths "${ptbr_files[@]}"
         fi
 
         local python_files=(${(M)all_staged[@]:#*.py})
