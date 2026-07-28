@@ -27,13 +27,21 @@ if echo "$MSG" | grep -qP "${EMOJI_RE:-[\x{1F600}-\x{1F64F}]}" 2>/dev/null; then
     _hook_log "commit-msg" "auto-remove: emojis" 2>/dev/null
 fi
 
-# [3/4] Auto-remove mencoes a IA do body (preserva subject line)
+# [3/4] Auto-substitui mencoes a IA no body (preserva subject line)
+# [2026-07-28] Antes isto era `grep -viE`, que APAGAVA a linha inteira em vez
+# de neutralizar a palavra. Como o padrao abaixo inclui "cursor", qualquer
+# mensagem que citasse o cursor de CSS, de banco ou de texto perdia a frase
+# toda, em silencio -- aconteceu no commit 0b2798b2 do protocolo-ouroboros.
+# A substituicao preserva o conteudo e continua sem deixar rastro, alinhada
+# com o bloco [3/6] do pre-commit, que ja substitui em vez de remover.
 AI_PATTERN="${AI_MENTION_RE:-claude|anthropic|openai|chatgpt|copilot|gemini|gpt-[34]|deepseek|cursor|aider|windsurf|codeium|tabnine|noreply@anthropic}"
 SUBJECT=$(echo "$MSG" | head -1)
 BODY=$(echo "$MSG" | tail -n +2)
 
 if echo "$BODY" | grep -qiE "$AI_PATTERN" 2>/dev/null; then
-    BODY=$(echo "$BODY" | grep -viE "$AI_PATTERN")
+    BODY=$(echo "$BODY" | sed -E "s/($AI_PATTERN)/agente/gI")
+    # Colapsa repeticao gerada pela propria substituicao ("agente agente")
+    BODY=$(echo "$BODY" | sed -E 's/\bagente([[:space:]-]+agente\b)+/agente/g')
     MSG="${SUBJECT}"
     if [[ -n "$BODY" ]]; then
         MSG="${SUBJECT}
@@ -42,7 +50,7 @@ ${BODY}"
     # Remover linhas em branco consecutivas no final
     MSG=$(echo "$MSG" | sed -e :a -e '/^\n*$/{$d;N;ba}')
     FIXES=$((FIXES + 1))
-    _hook_log "commit-msg" "auto-remove: mencao IA no body" 2>/dev/null
+    _hook_log "commit-msg" "auto-fix: mencao IA no body (substituicao)" 2>/dev/null
 fi
 
 # [4/4] Verificar se subject menciona IA (BLOQUEIA -- subject e intencional)
