@@ -309,6 +309,11 @@ vehelp() {
     veinbox --auto      classifica e move o de alta confianca
     veinbox -i          processa item a item
 
+  PRINCIPAL
+    energisa            automacao completa + abre o Obsidian
+    energisa --dry-run  simula tudo
+    energisa --no-open  roda sem abrir o app
+
   AUTOMACAO
     vedry               simula a organizacao do vault
     veauto              organiza (alta confianca)
