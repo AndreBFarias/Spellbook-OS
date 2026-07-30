@@ -532,3 +532,70 @@ alias cp-file='claude-peek'
 # Proposito: Relatorio de uso semanal do Claude
 # Uso: cr
 alias cr='claude-report'
+
+# Propósito: Rodar a campanha COMPLETA de revisão de segurança do Mantis
+#            (google/mantis) via cca, em QUALQUER repositório. As skills já
+#            vivem em ~/.agente/skills (mantis-*). Esta função apenas dispara
+#            o orquestrador /mantis-meta-agent, que executa as etapas
+#            (Stage 0-15) em sequência sozinho.
+#
+#            IMPORTANTE: o workspace/estado vai para FORA do código-alvo
+#            (~/.local/state/mantis/<repo>), porque o meta-agent ABORTA (HALT)
+#            se o state_root cair dentro do CODE_ROOT. Assim também não suja o
+#            git do repo.
+#
+#            ATENÇÃO: modo COMPLETO inclui Stage 9 (roda exploits/PoC) e
+#            Stage 11 (gera e APLICA patches) — e via cca isso corre SEM pedir
+#            permissão. Rode em código que você controla / em cópia isolada.
+#
+# Uso: mantis [--no-patch] [caminho-do-repo]
+#        mantis                 -> repo/dir atual, campanha completa com patch
+#        mantis --no-patch      -> vai até o relatório, NÃO aplica patch
+#        mantis /caminho/projeto
+mantis() {
+    local apply_patch=1
+    if [ "$1" = "--no-patch" ] || [ "$1" = "--safe" ]; then
+        apply_patch=0
+        shift
+    fi
+
+    local code_root
+    if [ -n "$1" ]; then
+        code_root=$(cd "$1" 2>/dev/null && pwd) || {
+            echo "[ERRO] caminho inválido: $1"; return 1
+        }
+    else
+        code_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+    fi
+
+    if [ ! -d "$HOME/.agente/skills/mantis-meta-agent" ]; then
+        echo "[ERRO] skills do Mantis não encontradas em ~/.agente/skills."
+        echo "       Reinstale: npx -y skills add google/mantis -g --agent agente-code --skill '*' -y"
+        return 1
+    fi
+
+    local slug=${code_root:t}
+    local state_root="${XDG_STATE_HOME:-$HOME/.local/state}/mantis/$slug"
+    mkdir -p "$state_root/workspace" || return 1
+
+    local modo patch_instr
+    if [ "$apply_patch" -eq 1 ]; then
+        modo="COMPLETO (inclui Stage 11: gera E aplica patches)"
+        patch_instr="MODO COMPLETO: execute também o Stage 11 (gerar, aplicar e reverificar patches contra um reproducer fresco)."
+    else
+        modo="SEM PATCH (para no relatório; não modifica código)"
+        patch_instr="MODO SEM PATCH: pule o Stage 11 (não gere nem aplique patches). Vá até o Stage 14 (relatório) para eu revisar os achados primeiro."
+    fi
+
+    echo "[Mantis] alvo (CODE_ROOT) : $code_root"
+    echo "[Mantis] estado/workspace : $state_root  (fora do código-alvo)"
+    echo "[Mantis] modo             : $modo"
+    [ "$apply_patch" -eq 1 ] && echo "[Mantis] ATENÇÃO: roda exploits e APLICA patches sem pedir permissão (cca)."
+
+    local seed="Rode a campanha completa de revisão de segurança do Mantis usando a skill /mantis-meta-agent. O CODE_ROOT (código-alvo) é este diretório atual: ${code_root}. Passe ao meta-agent --state_root=${state_root} para que workspace/ e estado fiquem FORA do código-alvo (evita o HALT de colocation). Execute o pipeline inteiro em sequência (Stage 0 a Stage 15), delegando cada etapa aos subagentes @mantis-*. ${patch_instr} Ao terminar, mostre o caminho do review_packet-latest.md."
+
+    ( cd "$code_root" && cca "$seed" )
+}
+# Propósito: atalho da campanha Mantis
+# Uso: mts [--no-patch] [caminho]
+alias mts='mantis'

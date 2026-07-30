@@ -186,7 +186,7 @@
       // Bloco de codigo
       if (tag === 'PRE' || (el.matches && el.matches('[class*="code" i]') && el.querySelector('code'))) {
         flush();
-        out.push({ type: 'code', lang: null, text: (el.innerText || '').replace(/\n+$/, '') });
+        out.push({ type: 'code', lang: null, text: codeText(el) });
         continue;
       }
 
@@ -469,6 +469,46 @@
   }
 
   // ── Helpers de texto ──
+  // Texto de um bloco PRESERVANDO as quebras de linha.
+  //
+  // NAO trocar por innerText: o extractor roda sobre range.cloneContents(), um
+  // fragmento DESANEXADO do documento. Pela spec, innerText de elemento que nao
+  // esta sendo renderizado devolve o mesmo que textContent -- e textContent
+  // ignora <br> e fronteira de bloco. O Teams monta o bloco de codigo com <br>
+  // (medido no DOM ao vivo: 197 <br> num SQL de 198 linhas), entao o codigo
+  // inteiro saia numa unica linha de 8 KB.
+  const BLOCK_TAGS = new Set(['DIV', 'P', 'LI', 'TR', 'SECTION', 'ARTICLE',
+    'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE']);
+
+  function blockText(el) {
+    const out = [];
+    const endsNl = () => out.length === 0 || /\n$/.test(out[out.length - 1]);
+    (function walk(node) {
+      for (const n of Array.prototype.slice.call(node.childNodes || [])) {
+        if (n.nodeType === Node.TEXT_NODE) { out.push(n.nodeValue); continue; }
+        if (n.nodeType !== Node.ELEMENT_NODE) continue;
+        // <br> empurra SEMPRE, sem deduplicar: <br><br> e linha em branco
+        // intencional no meio do codigo.
+        if (n.tagName === 'BR') { out.push('\n'); continue; }
+        const isBlock = BLOCK_TAGS.has(n.tagName);
+        if (isBlock && !endsNl()) out.push('\n');
+        walk(n);
+        if (isBlock && !endsNl()) out.push('\n');
+      }
+    })(el);
+    return out.join('');
+  }
+
+  // Texto de bloco de codigo, pronto pra colar num editor.
+  // O Teams indenta com NBSP ( ): invisivel, quebra busca/diff e alguns
+  // parsers SQL rejeitam. Normaliza pra espaco comum.
+  function codeText(el) {
+    return blockText(el)
+      .replace(/ /g, ' ')
+      .replace(/[ \t]+$/gm, '')
+      .replace(/\n+$/, '');
+  }
+
   function pushText(buf, v) {
     if (!v) return;
     const s = v.replace(/\s+/g, ' ');
@@ -521,5 +561,5 @@
   CCI.collectAttachments = collectAttachments;
   CCI.groupAttachmentsByExt = groupAttachmentsByExt;
   // exporta helpers pra teste/afinacao
-  CCI._teams = { topLevelItems, isQuote, isMention, isPruned, getAuthor, getTimestamp, cleanAuthor };
+  CCI._teams = { topLevelItems, isQuote, isMention, isPruned, getAuthor, getTimestamp, cleanAuthor, blockText, codeText };
 })(self);
