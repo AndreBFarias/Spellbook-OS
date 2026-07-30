@@ -28,7 +28,7 @@
   // Guia de download no final: todo anexo encontrado na selecao, agrupado por
   // extensao. So aparece quando ha pelo menos um anexo.
   function arquivosSection(model) {
-    const groups = (CCI.groupAttachmentsByExt && CCI.groupAttachmentsByExt(model)) || [];
+    const groups = (CCI.groupDownloadables && CCI.groupDownloadables(model)) || [];
     if (!groups.length) return '';
     const parts = ['Arquivos'];
     for (const g of groups) {

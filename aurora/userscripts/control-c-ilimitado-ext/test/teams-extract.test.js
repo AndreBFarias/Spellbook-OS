@@ -92,5 +92,31 @@ eq('SQL real mantem uma linha por linha', real.split('\n').length, LINHAS_REAIS.
 eq('SQL real nao tem mais NBSP', / /.test(real), false);
 eq('SQL real preserva a indentacao', real.split('\n')[2], '        COD_EMPRESA,');
 
+// ── Guia "Arquivos": tudo que da pra baixar, nao so card de anexo ──
+console.log('\ngroupDownloadables');
+const groupDownloadables = global.CCI.groupDownloadables;
+const M = (blocks) => ({ messages: [{ kind: 'message', blocks }] });
+
+let g = groupDownloadables(M([{ type: 'attachment', name: 'regional.xlsx', href: 'https://sp/x' }]));
+eq('anexo xlsx vira grupo Excel', g[0].label, 'Excel');
+eq('anexo mantem o href', g[0].items[0].href, 'https://sp/x');
+
+g = groupDownloadables(M([{ type: 'image', src: 'https://teams/img1', file: 'teams-img_1.png' }]));
+eq('imagem baixada usa o nome do arquivo local', g[0].items[0].name, 'teams-img_1.png');
+eq('imagem baixada aponta pro arquivo local', g[0].items[0].href, 'teams-img_1.png');
+eq('imagem vai pro grupo Imagem', g[0].label, 'Imagem');
+
+// dataUri tem megabytes de base64 — jamais pode virar href de item de lista.
+g = groupDownloadables(M([{ type: 'image', src: 'https://teams/img1', dataUri: 'data:image/png;base64,AAAA' }]));
+eq('imagem embutida nao usa dataUri como href', g[0].items[0].href, 'https://teams/img1');
+
+g = groupDownloadables(M([{ type: 'quote', blocks: [{ type: 'image', src: 'https://teams/q1' }] }]));
+eq('imagem dentro de citacao e coletada', g.length, 1);
+
+g = groupDownloadables(M([{ type: 'image', src: 'i' }, { type: 'attachment', name: 'a.pdf' }]));
+eq('ordem dos grupos segue a 1a aparicao', g.map(x => x.label).join(','), 'Imagem,PDF');
+
+eq('sem nada baixavel nao gera grupo', groupDownloadables(M([{ type: 'p', inlines: [] }])).length, 0);
+
 console.log('\n' + pass + ' ok, ' + fail + ' falhou');
 process.exit(fail ? 1 : 0);

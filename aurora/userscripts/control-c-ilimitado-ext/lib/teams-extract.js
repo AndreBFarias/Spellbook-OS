@@ -417,7 +417,8 @@
     pdf: 'PDF',
     docx: 'Word', doc: 'Word',
     pptx: 'PowerPoint', ppt: 'PowerPoint',
-    zip: 'Compactado', rar: 'Compactado', '7z': 'Compactado'
+    zip: 'Compactado', rar: 'Compactado', '7z': 'Compactado',
+    png: 'Imagem', jpg: 'Imagem', jpeg: 'Imagem', gif: 'Imagem', webp: 'Imagem', svg: 'Imagem'
   };
 
   function extOf(name) {
@@ -430,27 +431,36 @@
     return ext ? ext.toUpperCase() : 'Outro';
   }
 
-  function collectAttachments(model) {
+  // Tudo que da pra baixar da selecao: card de anexo E imagem de conteudo.
+  // Cada item sai normalizado como { name, href, label } — o label e o grupo
+  // que a guia "Arquivos" mostra.
+  function collectDownloadables(model) {
     const out = [];
+    let nImg = 0;
     const walk = (blocks) => {
       for (const b of (blocks || [])) {
-        if (b.type === 'attachment') out.push(b);
-        else if (b.type === 'quote') walk(b.blocks);
+        if (b.type === 'attachment') {
+          out.push({ name: b.name || 'arquivo', href: b.href || null, label: labelForExt(extOf(b.name)) });
+        } else if (b.type === 'image') {
+          nImg++;
+          // b.file so existe no modo Baixar (arquivo real no disco); sem ele
+          // aponta pra URL original. dataUri NUNCA entra: sao megabytes de
+          // base64 que arrebentariam a lista.
+          out.push({ name: b.file || b.alt || ('imagem ' + nImg), href: b.file || b.src || null, label: 'Imagem' });
+        } else if (b.type === 'quote') walk(b.blocks);
       }
     };
     for (const m of (model.messages || [])) if (m.blocks) walk(m.blocks);
     return out;
   }
 
-  // Agrupa por extensao, preservando a ordem de 1a aparicao de cada grupo.
-  function groupAttachmentsByExt(model) {
-    const atts = collectAttachments(model);
+  // Agrupa por rotulo, preservando a ordem de 1a aparicao de cada grupo.
+  function groupDownloadables(model) {
     const order = [];
     const byLabel = new Map();
-    for (const a of atts) {
-      const label = labelForExt(extOf(a.name));
-      if (!byLabel.has(label)) { byLabel.set(label, []); order.push(label); }
-      byLabel.get(label).push(a);
+    for (const it of collectDownloadables(model)) {
+      if (!byLabel.has(it.label)) { byLabel.set(it.label, []); order.push(it.label); }
+      byLabel.get(it.label).push(it);
     }
     return order.map(label => ({ label, items: byLabel.get(label) }));
   }
@@ -560,8 +570,8 @@
   }
 
   CCI.extract = extract;
-  CCI.collectAttachments = collectAttachments;
-  CCI.groupAttachmentsByExt = groupAttachmentsByExt;
+  CCI.collectDownloadables = collectDownloadables;
+  CCI.groupDownloadables = groupDownloadables;
   // exporta helpers pra teste/afinacao
   CCI._teams = { topLevelItems, isQuote, isMention, isPruned, getAuthor, getTimestamp, cleanAuthor, blockText, codeText };
 })(self);
