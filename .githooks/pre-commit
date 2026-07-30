@@ -96,6 +96,16 @@ filter_files() {
             # substituicao automatica pra "agente" quebra a deteccao de site e o
             # scraping do DOM. Mesmo escopo do wiring PFL7560 acima.
             aurora/userscripts/control-c-ilimitado-ext/*) continue ;;
+            # MANTIS-SKILLS-PATH-EXCEPTION (2026-07-30, autorizado pelo dono): a
+            # funcao mantis() (campanha google/mantis) referencia o diretorio real
+            # ~/.claude/skills e o comando de instalacao `--agent claude-code`.
+            # Sao path de filesystem e nome de agente -- constantes externas, nao
+            # mencao/atribuicao a IA. A substituicao automatica pra "agente" gerava
+            # ~/.agente/skills e --agent agente-code, quebrando a checagem e o
+            # comando de reinstalacao. Mesmo escopo do CCI acima.
+            # NOTA: filter_files() alimenta TODOS os blocos ([1/6]..[6/6]), entao
+            # este arquivo fica fora tambem da varredura de emoji/acentuacao.
+            cca/aliases_cca.zsh) continue ;;
             dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
             *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
             *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;

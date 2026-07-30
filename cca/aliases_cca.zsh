@@ -535,7 +535,7 @@ alias cr='claude-report'
 
 # Propósito: Rodar a campanha COMPLETA de revisão de segurança do Mantis
 #            (google/mantis) via cca, em QUALQUER repositório. As skills já
-#            vivem em ~/.agente/skills (mantis-*). Esta função apenas dispara
+#            vivem em ~/.claude/skills (mantis-*). Esta função apenas dispara
 #            o orquestrador /mantis-meta-agent, que executa as etapas
 #            (Stage 0-15) em sequência sozinho.
 #
@@ -568,9 +568,9 @@ mantis() {
         code_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
     fi
 
-    if [ ! -d "$HOME/.agente/skills/mantis-meta-agent" ]; then
-        echo "[ERRO] skills do Mantis não encontradas em ~/.agente/skills."
-        echo "       Reinstale: npx -y skills add google/mantis -g --agent agente-code --skill '*' -y"
+    if [ ! -d "$HOME/.claude/skills/mantis-meta-agent" ]; then
+        echo "[ERRO] skills do Mantis não encontradas em ~/.claude/skills."
+        echo "       Reinstale: npx -y skills add google/mantis -g --agent claude-code --skill '*' -y"
         return 1
     fi
 
