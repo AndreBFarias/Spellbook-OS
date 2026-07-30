@@ -331,3 +331,41 @@ EOF
 
 alias venergisa='ve'
 alias veh='vehelp'
+
+# ============================================
+# CICLO COMPLETO DE ORGANIZACAO
+# ============================================
+
+veenriquecer() {
+    __ve_check || return 1
+    __ve_header "Enriquecedor -- tags, links e indices"
+    __ve_py enriquecer.py "$@"
+}
+
+vesync() {
+    __ve_check || return 1
+    local aplicar="--aplicar"
+    local modo_org="--auto"
+    if [[ "$1" == "--dry" || "$1" == "--dry-run" ]]; then
+        aplicar=""; modo_org="--dry-run"
+        __ve_header "Ciclo completo -- SIMULACAO"
+    else
+        __ve_header "Ciclo completo do vault"
+    fi
+
+    print -P "\n${D_CYAN:-}[1/4]${D_RESET:-} organizando arquivos"
+    __ve_py organizar.py $modo_org
+
+    print -P "\n${D_CYAN:-}[2/4]${D_RESET:-} enriquecendo notas"
+    __ve_py enriquecer.py $aplicar --quieto
+
+    print -P "\n${D_CYAN:-}[3/4]${D_RESET:-} checando integridade"
+    __ve_py health_check.py 2>/dev/null | tail -12
+
+    print -P "\n${D_CYAN:-}[4/4]${D_RESET:-} digest"
+    local d="$VAULT_ENERGISA_DIR/00-Sistema/_Digest.md"
+    [[ -f "$d" ]] && cat "$d" || print "  (sem digest)"
+
+    __ve_log INFO "vesync ${modo_org}"
+    print ""
+}
