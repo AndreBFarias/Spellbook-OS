@@ -369,3 +369,82 @@ vesync() {
     __ve_log INFO "vesync ${modo_org}"
     print ""
 }
+
+# ============================================
+# AUTOMACAO COMPLETA + ABERTURA
+# espelha controle_de_bordo() do vault pessoal
+# ============================================
+
+energisa() {
+    __ve_check || return 1
+
+    local skip_open=0 dry_run=0 verbose=0
+    for arg in "$@"; do
+        case "$arg" in
+            --no-open)  skip_open=1 ;;
+            --dry-run)  dry_run=1 ;;
+            --verbose)  verbose=1 ;;
+            -h|--help)
+                print "uso: energisa [--dry-run] [--no-open] [--verbose]"
+                print "  --dry-run   simula tudo, não altera nada"
+                print "  --no-open   não abre o Obsidian ao final"
+                print "  --verbose   mostra a saida completa de cada etapa"
+                return 0 ;;
+        esac
+    done
+
+    __ve_header "VAULT ENERGISA -- AUTOMACAO COMPLETA" "${D_CYAN:-}"
+
+    local flag_org="--auto" flag_enr="--aplicar"
+    if (( dry_run )); then
+        flag_org="--dry-run"; flag_enr=""
+        print -P "${D_YELLOW:-}  modo simulacao: nada sera alterado${D_RESET:-}"
+    fi
+    local quieto="--quieto"
+    (( verbose )) && quieto=""
+
+    # aviso: editar config com o Obsidian aberto pode ser sobrescrito ao fechar
+    if pgrep -f "obsidian" >/dev/null 2>&1; then
+        if wmctrl -lx 2>/dev/null | grep -qi "Vault-Energisa"; then
+            print -P "${D_COMMENT:-}  (Obsidian com o vault aberto -- use Ctrl+R nele ao final)${D_RESET:-}"
+        fi
+    fi
+
+    print -P "\n${D_COMMENT:-}[1/6] Limpando backups antigos${D_RESET:-}"
+    __ve_py vault_backup.py --cleanup 2>/dev/null | tail -3
+
+    print -P "\n${D_COMMENT:-}[2/6] Organizando arquivos${D_RESET:-}"
+    __ve_py organizar.py $flag_org
+
+    print -P "\n${D_COMMENT:-}[3/6] Processando a Inbox${D_RESET:-}"
+    local n_inbox=$(find "$VE_INBOX" -maxdepth 1 -type f ! -name '.*' 2>/dev/null | wc -l)
+    if (( n_inbox > 0 )); then
+        if (( dry_run )); then
+            __ve_py inbox_processor.py --dry-run
+        else
+            __ve_py inbox_processor.py --auto
+        fi
+    else
+        print "  Inbox vazia"
+    fi
+
+    print -P "\n${D_COMMENT:-}[4/6] Enriquecendo notas (tags, links, indices)${D_RESET:-}"
+    __ve_py enriquecer.py $flag_enr $quieto
+
+    print -P "\n${D_COMMENT:-}[5/6] Verificando integridade${D_RESET:-}"
+    __ve_py health_check.py 2>/dev/null | tail -10
+
+    print -P "\n${D_COMMENT:-}[6/6] Digest${D_RESET:-}"
+    local d="$VAULT_ENERGISA_DIR/00-Sistema/_Digest.md"
+    [[ -f "$d" ]] && cat "$d" || print "  (sem digest)"
+
+    __ve_header "AUTOMACAO CONCLUIDA" "${D_GREEN:-}"
+    __ve_log INFO "energisa (${flag_org})"
+
+    if (( ! skip_open )); then
+        print "\n  abrindo o vault no Obsidian"
+        veopen
+    fi
+}
+
+alias energ='energisa'
