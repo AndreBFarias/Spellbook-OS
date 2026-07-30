@@ -6,20 +6,18 @@
 // DOM (nodeType/nodeValue/tagName/childNodes), entao nos falsos bastam e o teste
 // roda em qualquer lugar sem instalar nada.
 
-const fs = require('fs');
-const path = require('path');
-
 // ── Nos DOM falsos ──
 const T = (v) => ({ nodeType: 3, nodeValue: v });
 const E = (tag, kids) => ({ nodeType: 1, tagName: tag, childNodes: kids || [] });
 const BR = () => E('BR');
 
-// ── Carrega o modulo (ele faz (function(root){...})(self)) ──
+// ── Carrega o modulo ──
+// lib/teams-extract.js e um IIFE que escreve em `self` (browser). Em Node basta
+// definir os dois globals que ele espera e deixar o require executa-lo.
 global.Node = { TEXT_NODE: 3, ELEMENT_NODE: 1 };
-const fake = { Node: global.Node };
-const src = fs.readFileSync(path.join(__dirname, '..', 'lib', 'teams-extract.js'), 'utf8');
-new Function('self', src)(fake);
-const { blockText, codeText } = fake.CCI._teams;
+global.self = global;
+require('../lib/teams-extract.js');
+const { blockText, codeText } = global.CCI._teams;
 
 // ── Runner minimo ──
 let pass = 0, fail = 0;
