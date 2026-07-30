@@ -496,7 +496,9 @@
         if (isBlock && !endsNl()) out.push('\n');
       }
     })(el);
-    return out.join('');
+    // Apara quebra nas pontas, como innerText faz — esta funcao e o substituto
+    // dele para nos desanexados, entao nao pode divergir no acabamento.
+    return out.join('').replace(/^\n+/, '').replace(/\n+$/, '');
   }
 
   // Texto de bloco de codigo, pronto pra colar num editor.
