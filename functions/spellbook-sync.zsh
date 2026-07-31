@@ -67,7 +67,14 @@ __spellbook_secrets_leaked() {
     return 1
 }
 
-__spellbook_auto_commit() {
+# Guarda [2026-07-31]: o auto-commit sequestrava a mensagem de qualquer
+# trabalho em ~/.config/zsh. Cada terminal fechado disparava um push, e
+# commits com conteudo real apareciam como "auto: sync nitro-5 HH:MM" -- o
+# histórico do repo deixava de dizer o que mudou e por que.
+#
+# O sync continua: pull ao abrir e push ao fechar. O que sai e o COMMIT
+# automático. Para religar temporariamente: SPELLBOOK_AUTOCOMMIT=1
+__spellbook_auto_commit_original() {
     local dir="$(__spellbook_sync_dir)"
 
     # Lock: pull (abrir terminal), push (zshexit) e o timer systemd podem disparar
@@ -247,7 +254,7 @@ spellbook_sync_push() {
 
     local dir="$(__spellbook_sync_dir)"
 
-    __spellbook_auto_commit
+    __spellbook_auto_commit_guardado
 
     # Autosync so cobre main: commit local sempre roda (rede de seguranca), mas push
     # so mexe em origin/main quando a branch atual e main de fato.
@@ -328,7 +335,7 @@ spellbook_sync_force() {
     case "$modo" in
         --local)
             echo -e "  ${D_YELLOW}Forçando versão local para o remote...${D_RESET}"
-            __spellbook_auto_commit
+            __spellbook_auto_commit_guardado
             git -C "$dir" push origin main --force-with-lease
             __ok "Push forçado concluído"
             ;;
@@ -348,3 +355,18 @@ spellbook_sync_force() {
 }
 
 # "O que não se pode medir, não se pode melhorar." -- Lord Kelvin
+
+
+# Wrapper que respeita a guarda. Sem SPELLBOOK_AUTOCOMMIT=1, so avisa.
+__spellbook_auto_commit_guardado() {
+    if [[ "${SPELLBOOK_AUTOCOMMIT:-0}" == "1" ]]; then
+        __spellbook_auto_commit_original "$@"
+        return $?
+    fi
+    if ! git -C "$(__spellbook_sync_dir)" diff --quiet 2>/dev/null \
+       || [[ -n "$(git -C "$(__spellbook_sync_dir)" ls-files -o --exclude-standard 2>/dev/null)" ]]; then
+        print -P "%F{yellow}[spellbook]%f ha mudancas não commitadas em ~/.config/zsh." >&2
+        print -P "%F{240}           commite voce mesmo, com uma mensagem que diga o que mudou.%f" >&2
+    fi
+    return 0
+}
