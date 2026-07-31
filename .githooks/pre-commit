@@ -61,7 +61,9 @@ for _f in $(git diff --cached --name-only --diff-filter=ACM 2>/dev/null); do
         *Segredos/*|*Credenciais/*|*.key|*.pem|*.p12|*.pfx|*.jks|\
         *.git-credentials|*.zsh_secrets|*id_rsa*|*id_ed25519*|\
         *credentials.json|*service-account*.json|*senhas.yml|*senhas.yaml|\
-        *recovery-codes*|*backup-codes*)
+        *recovery-codes*|*backup-codes*|*Backup-codes*|\
+        *token*.txt|*tokens_*|*api?key*|*api-key*|*apikey*|*_api.txt|\
+        *acessos-*|*acessos_*|.GA_*|*ambiente.json|*-ambiente.json)
             _cred_bloqueados="$_cred_bloqueados
   $_f (pelo caminho)"
             continue ;;
@@ -75,7 +77,10 @@ for _f in $(git diff --cached --name-only --diff-filter=ACM 2>/dev/null); do
     || grep -qP -- '"private_key"[[:space:]]*:[[:space:]]*"-----BEGIN' "$_f" 2>/dev/null \
     || grep -qP -- 'gh[pousr]_[A-Za-z0-9]{30}|github_pat_[A-Za-z0-9_]{30}' "$_f" 2>/dev/null \
     || grep -qP -- 'AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{15}|AIza[0-9A-Za-z_-]{30}' "$_f" 2>/dev/null \
-    || grep -qP -- 'https?://[^/[:space:]:@]+:[^/[:space:]@]{6,}@' "$_f" 2>/dev/null; then
+    || grep -qP -- 'https?://[^/[:space:]:@]+:[^/[:space:]@]{6,}@' "$_f" 2>/dev/null \
+    || grep -qP -- '(?i)^[[:space:]]*(export[[:space:]]+)?[A-Z_]*(TOKEN|SECRET|API_?KEY|PASSW|SENHA)[A-Z_]*=[^[:space:]$"'"'"']{8,}' "$_f" 2>/dev/null \
+    || grep -qP -- '(?i)^[[:space:]]*[-*]?[[:space:]]*(senha|password|passwd|pwd)[[:space:]]*:[[:space:]]*\S{6,}' "$_f" 2>/dev/null \
+    || grep -qcP -- '^[[:space:]]*[a-z0-9]{5}-[a-z0-9]{5}[[:space:]]*$' "$_f" 2>/dev/null | grep -qE '^[3-9]|^[0-9]{2,}' ; then
         _cred_bloqueados="$_cred_bloqueados
   $_f (pelo conteudo)"
     fi
