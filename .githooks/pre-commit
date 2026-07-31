@@ -240,11 +240,11 @@ for file in $FILES; do
         [ -z "$_AI_RANGES" ] && continue
         BEFORE_SUM=$(md5sum "$file" 2>/dev/null | cut -d' ' -f1)
         OURO_RANGES="$_AI_RANGES" OURO_RE="$_AI_WORD_CODE" perl -CSD -i -pe \
-            "$_PERL_RANGES_BEGIN"' if('"$_PERL_RANGES_TEST"'){ s/$ENV{OURO_RE}/agente/gi }' \
+            "$_PERL_RANGES_BEGIN"' if('"$_PERL_RANGES_TEST"' && '"$_PERL_SKIP_LINE"'){ s{'"$_PERL_KEEP_TOKEN"'|$ENV{OURO_RE}}{ defined $1 ? $1 : q(agente) }gei }' \
             "$file" 2>/dev/null
         if ! grep -qiP "$_AI_CURSOR_EXCLUDE" "$file" 2>/dev/null; then
             OURO_RANGES="$_AI_RANGES" perl -CSD -i -pe \
-                "$_PERL_RANGES_BEGIN"' if('"$_PERL_RANGES_TEST"'){ s/\b[Cc]ursor\b/agente/g }' \
+                "$_PERL_RANGES_BEGIN"' if('"$_PERL_RANGES_TEST"' && '"$_PERL_SKIP_LINE"'){ s{'"$_PERL_KEEP_TOKEN"'|\b[Cc]ursor\b}{ defined $1 ? $1 : q(agente) }ge }' \
                 "$file" 2>/dev/null
         fi
         OURO_RANGES="$_AI_RANGES" perl -CSD -i -pe \
