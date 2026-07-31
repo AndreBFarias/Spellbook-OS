@@ -82,6 +82,16 @@ STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
 filter_files() {
     local result=""
     for file in $1; do
+        # BYTE-EXATO (2026-07-29, autorizado pelo dono): arquivos cujo md5 e o
+        # contrato -- artefatos de firmware, blobs de vendor, fixtures binarias.
+        # O auto-fix de whitespace (sed 's/[[:space:]]*$//') e o append de newline
+        # final MUDAM os bytes e quebram md5 versionado / gate de instalador.
+        # Mecanismo opt-in e geral: o repo declara no .gitattributes versionado
+        #     caminho/arquivo   byte-exact
+        # e nenhum repo sem esse atributo muda de comportamento.
+        if git check-attr byte-exact -- "$file" 2>/dev/null | grep -q ': set$'; then
+            continue
+        fi
         case "$file" in
             venv/*|.venv/*|node_modules/*|__pycache__/*) continue ;;
             .git/*|.mypy_cache/*|.pytest_cache/*|.ruff_cache/*) continue ;;
