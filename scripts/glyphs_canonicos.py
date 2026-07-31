@@ -29,4 +29,23 @@ ALLOWED_GLYPHS = frozenset({
     "↗",  # U+2197 arrow upper right (web/network, tendencia de alta)
     "↘",  # U+2198 arrow lower right (tendencia de baixa -- be_medidas)
     "↔",  # U+2194 arrow left-right (relacao bidirecional A<->B)
+    # --- notacao tecnica, acrescentada em 31/07/2026 (Fase 7) --------------
+    # Estes caem dentro das faixas 2600-26FF e 2700-27BF, que o sanitizer
+    # apaga por serem "Miscellaneous Symbols" e "Dingbats". Mas nenhum deles
+    # e emoji: sao a notacao com que documentacao, diagrama e tabela de
+    # resultado dizem o que passou, o que falhou e o que exige atenção.
+    # Apaga-los não limpa o texto, destroi o sentido dele.
+    "→",  # U+2192 seta direita (fluxo, de-para, "vira")
+    "←",  # U+2190 seta esquerda
+    "↑",  # U+2191 seta acima
+    "↓",  # U+2193 seta abaixo
+    "✓",  # U+2713 marca de conferencia (passou)
+    "✔",  # U+2714 marca de conferencia grossa
+    "✗",  # U+2717 marca de falha (não passou)
+    "✘",  # U+2718 marca de falha grossa
+    "★",  # U+2605 estrela cheia (prioridade, destaque)
+    "☆",  # U+2606 estrela vazia
+    "⚠",  # U+26A0 sinal de atenção (aviso em documentacao)
+    "☐",  # U+2610 caixa vazia (checklist em texto puro)
+    "☑",  # U+2611 caixa marcada
 })
