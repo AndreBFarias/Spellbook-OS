@@ -163,6 +163,31 @@ FIXES=0
 BLOCKS=0
 FIX_DETAILS=""
 
+# OURO-HOOK-DUPLA-MUTACAO-EXCEPTION (2026-07-30, autorizado pelo dono): no
+# protocolo-ouroboros os blocos abaixo param aqui. O repo JA rodou o framework
+# proprio na delegacao do topo deste arquivo -- sao 18 hooks, e entre eles
+# emoji, mencao a IA, acentuacao PT-BR, CPF/CNPJ do casal, paths obsoletos,
+# print() e except vazio. Continuar daqui e rodar a MESMA verificacao duas
+# vezes, com a diferenca de que a segunda MUTA o arquivo por fora do diff.
+#
+# O custo dessa duplicacao foi medido em 2026-07-30, num unico dia de trabalho:
+#   - 15712a12: o mutador escalonado trocou um nome de fornecedor DENTRO de uma
+#     string e a constante ficou apontando para um diretorio inexistente.
+#     Nenhuma linha vermelha; descoberto por acaso. Restaurado em bfac3d78 --
+#     cuja propria mensagem saiu do hook nomeando o diretorio errado.
+#   - 295e1f18: reescreveu a palavra-isca de um teste DE REGRESSAO do proprio
+#     corretor, dentro do commit da sprint que o consertava. O teste passou a
+#     afirmar o contrario do que existe para provar, e ficou verde.
+#   - 2026-07-27: 13 linhas de CSS corrompidas pelo mesmo caminho.
+#
+# A validacao de identidade [0] acima continua rodando para todos os repos,
+# inclusive este -- e o unico check global que o framework do repo nao cobre.
+#
+# Reverter: cp pre-commit.bak-2026-07-30-ouroboros pre-commit
+if [ "$_repo_root_wiring" = "$_ouro_root" ]; then
+    exit 0
+fi
+
 # === VERIFICACOES DE ANONIMATO (rodam SEMPRE, mesmo com framework) ===
 
 # [1/6] Anti-emoji (auto-fix + re-stage)
