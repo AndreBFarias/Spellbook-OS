@@ -191,7 +191,15 @@ fi
 # === VERIFICACOES DE ANONIMATO (rodam SEMPRE, mesmo com framework) ===
 
 # [1/6] Anti-emoji (auto-fix + re-stage)
-_EMOJI="${EMOJI_RE:-[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}]}"
+# Faixa estreitada em 31/07/2026. As faixas 2600-26FF e 2700-27BF sao
+# "Miscellaneous Symbols" e "Dingbats": elas contem emoji de verdade, mas
+# tambem notacao tecnica que a documentacao usa e que nao deve ser apagada --
+# marca de conferencia (U+2713, U+2717), estrela (U+2605, U+2606), sinal de
+# atencao (U+26A0) e o simbolo de aviso. Apagar isso de um diagrama ou de uma
+# tabela de resultado destroi o sentido do texto.
+#
+# As faixas de emoji propriamente ditas (1F300+) continuam inteiras.
+_EMOJI="${EMOJI_RE:-[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2614}-\x{2615}\x{2648}-\x{2653}\x{267F}\x{2693}\x{26A1}\x{26AA}-\x{26AB}\x{26BD}-\x{26BE}\x{26C4}-\x{26C5}\x{26CE}\x{26D4}\x{26EA}\x{26F2}-\x{26F3}\x{26F5}\x{26FA}\x{26FD}\x{2705}\x{270A}-\x{270B}\x{2728}\x{274C}\x{274E}\x{2753}-\x{2755}\x{2757}\x{2795}-\x{2797}\x{27B0}\x{27BF}]}"
 EMOJI_COUNT=0
 for file in $FILES; do
     if [ -f "$file" ] && grep -qP "$_EMOJI" "$file" 2>/dev/null; then
