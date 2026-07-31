@@ -447,10 +447,36 @@ WARNINGS=0
 
 # [7] Acentuacao PT-BR (auto-fix real via validar-acentuacao.py --fix, re-stage)
 VALIDADOR_ACENTO="$HOME/.config/zsh/scripts/validar-acentuacao.py"
+
+# INFRA-ACENTO-PY-COMPARADOR-01 (2026-07-31, autorizado pelo dono): no
+# Comparador-Briefing-Painel o --fix NAO toca .py. Mesmo formato dos wirings de
+# Nyx-Code e protocolo-ouroboros no topo deste arquivo; os outros projetos
+# passam direto (zero impacto).
+#
+# Por que so neste repo. O projeto le PDF e planilha comparando texto
+# NORMALIZADO (sem acento) contra chaves literais. O --fix acentuou essas
+# chaves quatro vezes em 31/07 -- em cor_farol, nos mapas de cabecalho dos
+# parsers e ate na expectativa de um teste -- e o efeito e sempre o mesmo:
+# nenhuma comparacao casa mais e tudo cai no default, SEM erro. Um farol de
+# obra ficou preto e um cabecalho de coluna sumiu, calados. A heuristica de
+# prosa-vs-identificador do validador nao alcanca esse caso: sao cadeias em
+# portugues, dentro de dict, comparadas com texto despido de acento.
+#
+# O codigo do repo ja foi blindado (as tabelas de busca normalizam as chaves na
+# construcao, e os testes afirmam propriedade em vez de literal), mas a
+# blindagem depende de quem escreve lembrar dela. Esta excecao remove a classe
+# inteira. Markdown, shell e txt seguem sendo corrigidos normalmente ali -- sao
+# prosa de verdade, e e onde o ganho do --fix esta.
+_acento_pula_py=""
+[ "$_repo_root_wiring" = "/home/andrefarias/Desenvolvimento/Projetos_segape/Comparador-Briefing-Painel" ] \
+    && _acento_pula_py="sim"
+
 ACCENT_TARGETS=""
 for file in $FILES; do
     case "$file" in
-        *.md|*.py|*.zsh|*.sh|*.txt|*.rst) [ -f "$file" ] && ACCENT_TARGETS="$ACCENT_TARGETS $file" ;;
+        *.py) [ -z "$_acento_pula_py" ] && [ -f "$file" ] \
+                  && ACCENT_TARGETS="$ACCENT_TARGETS $file" ;;
+        *.md|*.zsh|*.sh|*.txt|*.rst) [ -f "$file" ] && ACCENT_TARGETS="$ACCENT_TARGETS $file" ;;
     esac
 done
 if [ -n "$ACCENT_TARGETS" ] && [ -f "$VALIDADOR_ACENTO" ] && command -v python3 &>/dev/null; then
