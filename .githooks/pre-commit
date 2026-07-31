@@ -215,6 +215,24 @@ _ranges_staged() {
 _PERL_RANGES_BEGIN='BEGIN{@R=map{[split/-/]}split/,/,($ENV{OURO_RANGES}||q())}'
 _PERL_RANGES_TEST='grep{$.>=$_->[0]&&$.<=$_->[1]}@R'
 
+# [2026-07-30] Duas protecoes a mais, pelo mesmo motivo do intervalo de linhas:
+# a substituicao nao pode reescrever o que NAO e mencao/atribuicao.
+#
+#   1. Token com barra (URL e caminho de filesystem). Trocar a marca dentro de
+#      uma URL transforma link valido em link morto, e dentro de um caminho
+#      inventa uma pasta que nao existe. Casos reais: um link de relatorio
+#      quebrado duas vezes seguidas, e a pasta Conceitos/Claude virando
+#      Conceitos/agente no proprio CLAUDE.md do vault.
+#   2. Escape por linha: `ia-artifact:manter`. Existe porque a regra que LISTA
+#      os nomes proibidos precisa poder cita-los -- sem isso a Regra 3 do vault
+#      virou "Zero mencoes a IA (agente, GPT, agente, Copilot, agente, agente)"
+#      e deixou de significar qualquer coisa.
+#
+# A guarda de token com barra vem PRIMEIRO na alternancia: quando ela casa,
+# devolve o texto original sem tocar.
+_PERL_KEEP_TOKEN='(\S*/\S*)'
+_PERL_SKIP_LINE='!/ia-artifact:manter/'
+
 AI_COUNT=0
 for file in $FILES; do
     if [ -f "$file" ]; then
