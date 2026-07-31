@@ -5,9 +5,13 @@
 tree() {
     __verificar_dependencias "tree" || return 1
 
-    if ! [[ "$1" =~ ^[0-9]+$ ]] || [ -z "$1" ]; then
-        echo -e "  ${D_COMMENT}Uso: tree <profundidade> [diretório] (0 = infinito)${D_RESET}"
-        return 1
+    # Sem profundidade numerica, delega para o tree de verdade. Antes esta
+    # função recusava e devolvia 1, o que quebrava o uso normal de `tree` --
+    # sobrescrever um comando do sistema so se justifica quando o
+    # comportamento original continua alcancavel.
+    if [ -z "$1" ] || ! [[ "$1" =~ ^[0-9]+$ ]]; then
+        command tree "$@"
+        return $?
     fi
 
     local niveis_arg="$1"
