@@ -222,7 +222,7 @@ _PERL_RANGES_TEST='grep{$.>=$_->[0]&&$.<=$_->[1]}@R'
 #      uma URL transforma link valido em link morto, e dentro de um caminho
 #      inventa uma pasta que nao existe. Casos reais: um link de relatorio
 #      quebrado duas vezes seguidas, e a pasta Conceitos/Claude virando
-#      Conceitos/agente no proprio CLAUDE.md do vault.
+#      Conceitos/agente no proprio arquivo de regras do vault.
 #   2. Escape por linha: `ia-artifact:manter`. Existe porque a regra que LISTA
 #      os nomes proibidos precisa poder cita-los -- sem isso a Regra 3 do vault
 #      virou "Zero mencoes a IA (agente, GPT, agente, Copilot, agente, agente)"
