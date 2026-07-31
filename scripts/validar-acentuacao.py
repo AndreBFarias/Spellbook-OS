@@ -193,6 +193,54 @@ def _marcar(regioes: dict, inicio: tuple, fim: tuple) -> None:
     regioes.setdefault(linha_fim, []).append((0, col_fim))
 
 
+def _marcar_string(regioes: dict, token) -> None:
+    """Marca uma string como prosa, MENOS o que estiver entre chaves.
+
+    Numa f-string, `{...}` e codigo, nao texto. Marcar a string inteira fazia
+    o auto-fix acentuar identificador dentro da interpolacao: em
+
+        print(f"  {len(acoes)} arquivo(s) movidos")
+
+    a string tem espaco interno, entao passava na heuristica de prosa, e
+    `acoes` virava `ações` -- um nome que nao existe. O arquivo continua
+    compilando, porque em Python 3 isso e identificador valido; so quebra em
+    runtime, com NameError, longe do commit que causou.
+
+    Aconteceu em dois scripts em 31/07/2026.
+    """
+    texto = token.string
+    if "{" not in texto:
+        _marcar(regioes, token.start, token.end)
+        return
+
+    # Multi-linha com interpolacao: e mais seguro não marcar nada do que
+    # marcar errado -- o custo e um acento a menos numa docstring.
+    if token.start[0] != token.end[0]:
+        return
+
+    linha, col_ini = token.start
+    trechos, agente, profundidade, inicio_texto = [], 0, 0, 0
+    for i, ch in enumerate(texto):
+        if ch == "{":
+            # `{{` e uma chave literal, não abre interpolacao
+            if profundidade == 0 and i + 1 < len(texto) and texto[i + 1] == "{":
+                continue
+            if profundidade == 0:
+                trechos.append((inicio_texto, i))
+            profundidade += 1
+        elif ch == "}":
+            if profundidade > 0:
+                profundidade -= 1
+                if profundidade == 0:
+                    inicio_texto = i + 1
+    if profundidade == 0:
+        trechos.append((inicio_texto, len(texto)))
+
+    for ini, fim in trechos:
+        if fim > ini:
+            regioes.setdefault(linha, []).append((col_ini + ini, col_ini + fim))
+
+
 def _regioes_prosa_py(texto: str):
     """Regiões de prosa num arquivo Python, via tokenize.
 
@@ -220,7 +268,7 @@ def _regioes_prosa_py(texto: str):
                 tokenize.DEDENT,
             )
             if e_docstring or _tem_espaco_interno(token.string):
-                _marcar(regioes, token.start, token.end)
+                _marcar_string(regioes, token)
         if token.type not in (tokenize.NL, tokenize.COMMENT):
             anterior = token.type
     return regioes
