@@ -63,7 +63,8 @@ for _f in $(git diff --cached --name-only --diff-filter=ACM 2>/dev/null); do
         *credentials.json|*service-account*.json|*senhas.yml|*senhas.yaml|\
         *recovery-codes*|*backup-codes*|*Backup-codes*|\
         *token*.txt|*tokens_*|*api?key*|*api-key*|*apikey*|*_api.txt|\
-        *acessos-*|*acessos_*|.GA_*|*ambiente.json|*-ambiente.json)
+        *acessos-*|*acessos_*|.GA_*|*ambiente.json|*-ambiente.json|\
+        *api.txt|*-api-*|.zshrc*|*zshrc-*|keys|chaves)
             _cred_bloqueados="$_cred_bloqueados
   $_f (pelo caminho)"
             continue ;;
