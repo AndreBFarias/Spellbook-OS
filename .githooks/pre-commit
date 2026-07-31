@@ -37,6 +37,61 @@ cd "$REPO_ROOT" || exit 0
 # Graceful degradation: se _lib.sh nao carregou, usar logica inline
 if type _hook_detect_context &>/dev/null; then
     _hook_detect_context "$REPO_ROOT"
+
+# ---------------------------------------------------------------------------
+# GUARDA DE CREDENCIAL -- bloqueia, nao sanitiza.
+#
+# Instalado em 31/07/2026. O hook tinha sanitizador de emoji e de mencao a IA,
+# mas nada que barrasse credencial: uma auditoria mediu que, dos 23 arquivos de
+# credencial reais deste usuario, o hook deixava passar 22. E a lista de
+# extensoes que ele PULAVA incluia .key, .pem e .env -- exatamente as que quase
+# sempre SAO credencial.
+#
+# Aqui nao ha auto-fix, de proposito. Segredo commitado nao se conserta
+# reescrevendo o arquivo: o blob ja entrou no object database e sobrevive ao
+# `git rm`. Foi assim que 18 credenciais deste vault ficaram recuperaveis por
+# quatro meses. A unica resposta correta e recusar o commit.
+# ---------------------------------------------------------------------------
+_cred_bloqueados=""
+for _f in $(git diff --cached --name-only --diff-filter=ACM 2>/dev/null); do
+    [ -f "$_f" ] || continue
+
+    # 1) o caminho: pasta de credencial, ou extensao que quase sempre e chave
+    case "$_f" in
+        *Segredos/*|*Credenciais/*|*.key|*.pem|*.p12|*.pfx|*.jks|\
+        *.git-credentials|*.zsh_secrets|*id_rsa*|*id_ed25519*|\
+        *credentials.json|*service-account*.json|*senhas.yml|*senhas.yaml|\
+        *recovery-codes*|*backup-codes*)
+            _cred_bloqueados="$_cred_bloqueados
+  $_f (pelo caminho)"
+            continue ;;
+    esac
+
+    # 2) o conteudo: exige o CORPO da chave, nao a palavra. Sem isso,
+    #    `paramiko.RSAKey.from_private_key(` viraria falso positivo -- foi
+    #    exatamente o que aconteceu com o detector da Fase 1 antes de ser
+    #    apertado.
+    if grep -qP -- '-----BEGIN [A-Z ]*PRIVATE KEY-----[\r\n]+[A-Za-z0-9+/=]{40}' "$_f" 2>/dev/null \
+    || grep -qP -- '"private_key"[[:space:]]*:[[:space:]]*"-----BEGIN' "$_f" 2>/dev/null \
+    || grep -qP -- 'gh[pousr]_[A-Za-z0-9]{30}|github_pat_[A-Za-z0-9_]{30}' "$_f" 2>/dev/null \
+    || grep -qP -- 'AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{15}|AIza[0-9A-Za-z_-]{30}' "$_f" 2>/dev/null \
+    || grep -qP -- 'https?://[^/[:space:]:@]+:[^/[:space:]@]{6,}@' "$_f" 2>/dev/null; then
+        _cred_bloqueados="$_cred_bloqueados
+  $_f (pelo conteudo)"
+    fi
+done
+
+if [ -n "$_cred_bloqueados" ]; then
+    printf '\n\033[0;31m  COMMIT BLOQUEADO: credencial detectada\033[0m\n'
+    printf '%s\n' "$_cred_bloqueados"
+    printf '\n  Segredo nao mora em repositorio. O cofre e ~/Cofre/segredos.kdbx:\n'
+    printf '    python3 ~/"Controle de Bordo"/.sistema/scripts/segredos.py inventario\n'
+    printf '\n  Se for mesmo falso positivo -- exemplo em documentacao, chave de\n'
+    printf '  teste, fixture -- o git tem uma flag para pular os hooks. Prefira\n'
+    printf '  ajustar o arquivo a usa-la: o proximo commit encontra o mesmo bloqueio.\n\n'
+    exit 1
+fi
+
     _hook_validate_identity || exit 1
 else
     CURRENT_NAME=$(git config --get user.name)
