@@ -315,6 +315,17 @@ __cca_run() {
     local -a mcp_args=()
     [ -n "${CCA_CONTEXT7:-}" ] && [ -f "$zroot/cca/mcp-context7.json" ] \
         && mcp_args=(--mcp-config "$zroot/cca/mcp-context7.json")
+    # code-review-graph: mesma economia do context7, mas com autodetecção em vez de
+    # toggle manual. O server só sobe onde existe grafo construído (.code-review-graph/
+    # na raiz do repo) -- em repo sem grafo ele não teria o que responder e só custaria
+    # os ~170MB. Escapes: CCA_CRG=0 desliga mesmo com grafo, CCA_CRG=1 força sem grafo.
+    local _crg_root
+    _crg_root="$(git rev-parse --show-toplevel 2>/dev/null)" || _crg_root="$PWD"
+    if [ "${CCA_CRG:-}" != "0" ] && [ -f "$zroot/cca/mcp-code-review-graph.json" ] \
+       && { [ -d "$_crg_root/.code-review-graph" ] || [ -n "${CCA_CRG:-}" ]; }; then
+        mcp_args+=(--mcp-config "$zroot/cca/mcp-code-review-graph.json")
+    fi
+    unset _crg_root
     # Se claude.slice esta instalado no user systemd, rodar dentro dele (limites de memoria)
     if systemctl --user list-unit-files 2>/dev/null | grep -q '^claude.slice'; then
         NODE_OPTIONS="$node_opts" systemd-run --user --slice=claude.slice --scope --quiet --collect \

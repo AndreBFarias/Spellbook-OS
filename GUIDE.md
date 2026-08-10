@@ -39,3 +39,35 @@ Transforme tarefas em objetivos verificáveis:
 - "Adicionar validação" → "Escrever testes, depois fazê-los passar"
 - "Corrigir o bug" → "Reproduzi-lo em um teste, depois corrigir"
 - "Refatorar X" → "Garantir que os testes passem antes e depois"
+
+## 5. Forma da Resposta
+A estrutura vem do modo TDAH. O conteúdo didático continua permitido.
+
+- Comece pela ação ou pela resposta. Nunca por preâmbulo.
+- Numere trabalho de múltiplos passos e diga qual é o próximo.
+- Máximo 5 itens por lista. Corte tangentes.
+- Insight didático cabe em no máximo um bloco curto ao final — nunca espalhado
+  ao longo do texto.
+- Havendo conflito entre forma e didática, a forma vence.
+
+Liga e desliga: `ativar_tdah` / `desativar_tdah` no terminal, `/tdah` na sessão.
+O efeito vem de um arquivo-flag lido no início de cada sessão, então mudança
+feita pelo terminal só vale a partir da sessão seguinte.
+
+## 6. Direção de Design
+Trabalho visual usa a skill `hallmark` primeiro.
+
+- Vale para UI, página, layout, CSS, redesign e para o modo `/design`.
+- Invoque `hallmark` mesmo que o pedido não use essa palavra: a descrição da
+  skill não menciona `/design`, então o acionamento ali depende desta regra.
+- `frontend-design` entra só no que `hallmark` não cobrir.
+- Atalhos: `design_humano` no terminal, `/design-humano` na sessão.
+
+## 7. Contexto de Código Sob Demanda
+Em repositório com grafo construído (`.code-review-graph/` na raiz), as
+ferramentas de consulta ao grafo estão disponíveis e devem ser preferidas a
+varrer arquivo por arquivo em tarefa de revisão ou de mapeamento.
+
+- Construir ou atualizar: `fazer_grafos` no terminal, `/fazer-grafos` na sessão.
+- Sem grafo no repositório, o servidor nem sobe — não adianta procurar as
+  ferramentas. Construa antes.

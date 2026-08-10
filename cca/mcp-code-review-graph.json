@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "code-review-graph",
+      "args": [
+        "serve",
+        "--tools",
+        "query_graph_tool,semantic_search_nodes_tool,detect_changes_tool,get_review_context_tool"
+      ]
+    }
+  }
+}

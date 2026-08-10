@@ -438,7 +438,7 @@ _step_tui() {
         _TUI_GIT_NAME_MEC=""
         _TUI_GIT_EMAIL_MEC=""
         _TUI_DEV_DIR="\${HOME}/Desenvolvimento"
-        _TUI_MEC_ROOT="\${HOME}/Desenvolvimento/Projetos_segape/pipelines-main"
+        _TUI_MEC_ROOT="\${HOME}/Desenvolvimento/Projetos_segape/pipelines"
         _TUI_REMOTE_HOST=""
         _TUI_REMOTE_USER=""
         _TUI_FEATURES='"mec_tools"'
@@ -454,7 +454,7 @@ _step_tui() {
         _TUI_GIT_NAME_MEC="${_EXISTING_GIT_NAME_MEC:-}"
         _TUI_GIT_EMAIL_MEC="${_EXISTING_GIT_EMAIL_MEC:-}"
         _TUI_DEV_DIR="${_EXISTING_DEV_DIR:-\${HOME}/Desenvolvimento}"
-        _TUI_MEC_ROOT="${_EXISTING_MEC_ROOT:-\${HOME}/Desenvolvimento/Projetos_segape/pipelines-main}"
+        _TUI_MEC_ROOT="${_EXISTING_MEC_ROOT:-\${HOME}/Desenvolvimento/Projetos_segape/pipelines}"
         _TUI_REMOTE_HOST="${_EXISTING_REMOTE_HOST:-}"
         _TUI_REMOTE_USER="${_EXISTING_REMOTE_USER:-}"
         _TUI_FEATURES='"mec_tools"'
@@ -521,7 +521,7 @@ Pressione OK para continuar."
     4) # Diretórios
         dev_dir=$(_inputbox "Diretórios" "Diretório de desenvolvimento:" "${DEV_DIR:-${HOME}/Desenvolvimento}") \
             || { tui_step=3; continue; }
-        mec_root=$(_inputbox "Diretórios" "Raiz do projeto MEC (pipelines):" "${MEC_ROOT:-${dev_dir}/Projetos_segape/pipelines-main}") \
+        mec_root=$(_inputbox "Diretórios" "Raiz do projeto MEC (pipelines):" "${MEC_ROOT:-${dev_dir}/Projetos_segape/pipelines}") \
             || { tui_step=3; continue; }
         tui_step=5 ;;
     5) # Sincronização Remota
@@ -584,7 +584,7 @@ _step_gen_config() {
     local _remote_host="${_TUI_REMOTE_HOST:-}"
     local _remote_user="${_TUI_REMOTE_USER:-}"
     local _dev_dir="${_TUI_DEV_DIR:-${HOME}/Desenvolvimento}"
-    local _mec_root="${_TUI_MEC_ROOT:-${HOME}/Desenvolvimento/Projetos_segape/pipelines-main}"
+    local _mec_root="${_TUI_MEC_ROOT:-${HOME}/Desenvolvimento/Projetos_segape/pipelines}"
     _dev_dir="${_dev_dir//\$\{HOME\}/$HOME}"
     _mec_root="${_mec_root//\$\{HOME\}/$HOME}"
 
@@ -1104,6 +1104,115 @@ _step_claude_attribution() {
     fi
 }
 
+# --- Ferramentas de terceiros adotadas por padrão nas sessões de IA ---
+# Spec: docs/superpowers/specs/2026-08-10-3-features-claude-default-design.md
+#
+# Os três passos abaixo NUNCA escrevem o caminho do diretório de config
+# literalmente: usam "$HOME/.claude" montado em variável. O pre-commit
+# substitui menção solta ao produto por "agente", e caminho literal em linha
+# nova viraria "~/.agente/skills". Token com barra sobrevive; palavra solta não.
+
+# Skill de design vendorizada em docs/claude/skills/hallmark/. O symlink em si
+# é feito por --relink; aqui só conferimos que a origem existe e que o link
+# aponta pra ela, porque instalação nova roda os steps antes do relink.
+_step_skill_design() {
+    _step "Skill de design (hallmark)"
+    local docs_dir="${SCRIPT_DIR}/docs/claude/skills/hallmark"
+    local claude_dir="${HOME}/.claude"
+    local link="${claude_dir}/skills/hallmark"
+
+    if [[ ! -f "$docs_dir/SKILL.md" ]]; then
+        _warn "Origem ausente: docs/claude/skills/hallmark/SKILL.md"
+        _warn "Recupere com o comando de atualização em PROVENANCE.md"
+        return 0
+    fi
+
+    if [[ -L "$link" && "$(readlink -f "$link")" == "$(readlink -f "$docs_dir")" ]]; then
+        _ok "hallmark já ligado ($(find -L "$link" -type f 2>/dev/null | wc -l) arquivos)"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] ln -sfn $docs_dir $link"
+        return 0
+    fi
+
+    mkdir -p "${claude_dir}/skills"
+    [[ -e "$link" && ! -L "$link" ]] && { _warn "$link existe e não é symlink — não toquei"; return 0; }
+    ln -sfn "$docs_dir" "$link" && _ok "hallmark ligado"
+}
+
+# Plugin de formato de resposta + arquivo-flag que o ativa por padrão.
+_step_plugin_formato() {
+    _step "Plugin de formato de resposta (i-have-adhd)"
+    local claude_dir="${HOME}/.claude"
+    local settings="${claude_dir}/settings.json"
+    local flag="${claude_dir}/.i-have-adhd-always"
+    # Nome do binário da CLI. Fica em variável e a linha leva o marcador porque
+    # é a única forma de palavra solta sobreviver ao pre-commit -- sem isso o
+    # hook a trocaria por "agente" e os três usos abaixo quebrariam.
+    local cli="claude"  # ia-artifact:manter
+
+    if ! command -v "$cli" &>/dev/null; then
+        _warn "CLI de sessão ausente — plugin não instalado"
+        return 0
+    fi
+
+    local ja_instalado=false
+    if command -v jq &>/dev/null && [[ -f "$settings" ]]; then
+        jq -e '.enabledPlugins | has("i-have-adhd@i-have-adhd")' "$settings" &>/dev/null && ja_instalado=true
+    fi
+
+    if [[ "$ja_instalado" == true ]]; then
+        _ok "plugin já instalado"
+    elif [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] marketplace add ayghri/i-have-adhd + plugin install"
+    else
+        _run "$cli" plugin marketplace add ayghri/i-have-adhd </dev/null &>/dev/null
+        if "$cli" plugin install i-have-adhd@i-have-adhd </dev/null &>/dev/null; then
+            _ok "plugin instalado"
+        else
+            _warn "Falha ao instalar o plugin — rode manualmente e confira o login"
+            return 0
+        fi
+    fi
+
+    if [[ -f "$flag" ]]; then
+        _ok "modo TDAH já ativo por padrão"
+    elif [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] cria arquivo-flag .i-have-adhd-always"
+    else
+        : > "$flag" && _ok "modo TDAH ativado por padrão (remova o flag pra desligar)"
+    fi
+}
+
+# Índice de código: só o binário. O grafo é por repositório e fica a cargo de
+# fazer_grafos -- construir aqui seria adivinhar qual repositório interessa.
+_step_grafo_codigo() {
+    _step "Índice de código (code-review-graph)"
+
+    if command -v code-review-graph &>/dev/null; then
+        _ok "já instalado ($(code-review-graph --version 2>/dev/null | head -1))"
+        return 0
+    fi
+
+    if ! command -v pipx &>/dev/null; then
+        _warn "pipx ausente — instale com: sudo apt install pipx"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        _info "[dry-run] pipx install code-review-graph"
+        return 0
+    fi
+
+    if pipx install code-review-graph &>/dev/null; then
+        _ok "instalado — use fazer_grafos dentro de um repositório"
+    else
+        _warn "Falha no pipx install code-review-graph"
+    fi
+}
+
 # Nota: Kitty NÃO está no Snap store (verificado 2026-05-21). O apt do
 # Pop!_OS 22.04 entrega Kitty 0.21.2 (jun/2021) que JÁ suporta OSC 9 —
 # basta pra evitar o vazamento. Quem quiser versão recente: build manual
@@ -1423,6 +1532,9 @@ main() {
     _step_secrets_vault
     _step_hooks
     _step_claude_attribution
+    _step_skill_design
+    _step_plugin_formato
+    _step_grafo_codigo
     _step_ritual
     _step_zshenv
     _step_fastfetch_symlink

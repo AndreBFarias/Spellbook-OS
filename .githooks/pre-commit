@@ -189,6 +189,14 @@ filter_files() {
             # emoji/acentuacao -- rodar scripts/validar-acentuacao.py --paths a
             # mao ao escrever spec novo.
             docs/superpowers/*) continue ;;
+            # HALLMARK-VENDOR-EXCEPTION (2026-08-10, autorizado pelo dono): copia
+            # vendorizada de nutlope/hallmark, pinada por SHA em PROVENANCE.md.
+            # Conteudo de terceiro precisa ser byte-identico ao upstream, senao
+            # o pin mente e comparar com versao nova fica impossivel. O hook
+            # mutilaria 3 mencoes soltas e removeria 41 emoji do texto original.
+            # Nao e codigo nosso nem atribuicao de autoria -- e dependencia
+            # copiada. Mesmo escopo do control-c-ilimitado-ext acima.
+            docs/claude/skills/hallmark/*) continue ;;
             dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
             *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
             *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;
