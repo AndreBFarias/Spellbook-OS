@@ -177,6 +177,18 @@ filter_files() {
             # NOTA: filter_files() alimenta TODOS os blocos ([1/6]..[6/6]), entao
             # este arquivo fica fora tambem da varredura de emoji/acentuacao.
             cca/aliases_cca.zsh) continue ;;
+            # SPECS-TECNICOS-EXCEPTION (2026-08-10, autorizado pelo dono): specs
+            # de design em docs/superpowers/ descrevem ferramentas de terceiros
+            # e precisam citar nomes de produto, arquivos de instrucao e linhas
+            # de comando literais. O KEEP_TOKEN so preserva token com barra, e
+            # mencao solta virava "agente Code" / "agente.md", mutilando prosa
+            # tecnica e comando copiavel. Sao constantes externas, nao
+            # atribuicao de autoria a IA. Mesmo escopo do CCI e do MANTIS acima.
+            # CUSTO ACEITO: como filter_files() alimenta TODOS os blocos
+            # ([1/6]..[6/6]), estes arquivos ficam fora tambem da varredura de
+            # emoji/acentuacao -- rodar scripts/validar-acentuacao.py --paths a
+            # mao ao escrever spec novo.
+            docs/superpowers/*) continue ;;
             dist/*|build/*|.next/*|.nuxt/*|.eggs/*) continue ;;
             *.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.bmp|*.webp) continue ;;
             *.mp4|*.mp3|*.wav|*.flac|*.ogg|*.webm) continue ;;
