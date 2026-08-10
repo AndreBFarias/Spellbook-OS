@@ -106,6 +106,14 @@ arquivo-flag para persistir.
 
 `design_humano` no shell abre `cca` já com a skill hallmark acionada.
 
+### D5 — specs técnicos saem do filtro do pre-commit
+
+`docs/superpowers/*` entra no `case` de exclusão de `filter_files()`, com
+comentário datado no padrão dos três precedentes já autorizados pelo dono.
+
+Justificativa e custo aceito estão detalhados na seção "Armadilha conhecida"
+adiante, que também registra o mapeamento medido do comportamento do hook.
+
 ## Arquitetura
 
 ### C1 — hallmark vendorizado
