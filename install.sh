@@ -1118,8 +1118,8 @@ _step_claude_attribution() {
 _step_skill_design() {
     _step "Skill de design (hallmark)"
     local docs_dir="${SCRIPT_DIR}/docs/claude/skills/hallmark"
-    local claude_dir="${HOME}/.claude"
-    local link="${claude_dir}/skills/hallmark"
+    local cfg_dir="${HOME}/.claude"
+    local link="${cfg_dir}/skills/hallmark"
 
     if [[ ! -f "$docs_dir/SKILL.md" ]]; then
         _warn "Origem ausente: docs/claude/skills/hallmark/SKILL.md"
@@ -1137,7 +1137,7 @@ _step_skill_design() {
         return 0
     fi
 
-    mkdir -p "${claude_dir}/skills"
+    mkdir -p "${cfg_dir}/skills"
     [[ -e "$link" && ! -L "$link" ]] && { _warn "$link existe e não é symlink — não toquei"; return 0; }
     ln -sfn "$docs_dir" "$link" && _ok "hallmark ligado"
 }
@@ -1145,9 +1145,9 @@ _step_skill_design() {
 # Plugin de formato de resposta + arquivo-flag que o ativa por padrão.
 _step_plugin_formato() {
     _step "Plugin de formato de resposta (i-have-adhd)"
-    local claude_dir="${HOME}/.claude"
-    local settings="${claude_dir}/settings.json"
-    local flag="${claude_dir}/.i-have-adhd-always"
+    local cfg_dir="${HOME}/.claude"
+    local settings="${cfg_dir}/settings.json"
+    local flag="${cfg_dir}/.i-have-adhd-always"
     # Nome do binário da CLI. Fica em variável e a linha leva o marcador porque
     # é a única forma de palavra solta sobreviver ao pre-commit -- sem isso o
     # hook a trocaria por "agente" e os três usos abaixo quebrariam.
