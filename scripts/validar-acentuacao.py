@@ -180,6 +180,59 @@ def _tem_espaco_interno(literal: str) -> bool:
     return " " in miolo.strip()
 
 
+_PREFIXO_BYTES = re.compile(r"^[rRbBuUfF]*[bB][rRbBuUfF]*['\"]")
+
+
+def _e_bytes_literal(literal: str) -> bool:
+    """Bytes literal aceita SOMENTE ASCII.
+
+    Reescrever 'não' -> 'não' dentro de b"..." produz
+    SyntaxError: bytes can only contain ASCII literal characters.
+    Nunca e prosa, independentemente de ter espaco interno.
+    """
+    return bool(_PREFIXO_BYTES.match(literal.strip()))
+
+
+_SINAIS_DE_DADO = (
+    re.compile(r"<>"),
+    re.compile(r"\{\w"),
+    re.compile(r"\w,\w"),
+)
+
+
+def _tem_sinal_de_dado(literal: str) -> bool:
+    """A string carrega DADO ESTRUTURADO (formula, lista, template)?
+
+    Fecha o segundo buraco da regra 4: valor canonico multi-palavra dentro de
+    formula de planilha ou de lista separada por virgula. Prosa PT-BR nao usa
+    `<>`, nao usa `{campo}` e sempre poe espaco depois da virgula.
+
+    Custo consciente: prosa sem espaco apos virgula deixa de ser reescrita --
+    continua sendo ACUSADA pelos gates, apenas nao e corrigida em silencio.
+    """
+    return any(sinal.search(literal) for sinal in _SINAIS_DE_DADO)
+
+
+def _e_chave_ou_comparacao(tokens: list, indice: int) -> bool:
+    """A string em `indice` esta em posicao de identificador, nao de prosa?
+
+    Fecha o buraco da regra 4 para chaves de DUAS OU MAIS palavras
+    (ex.: "Nao iniciada"), que a regra 3 classificaria como prosa e
+    reescreveria -- quebrando COUNTIF, validacao de dados e JOIN.
+
+    Reconhece:
+      {"Nao iniciada": ...}   -> seguida de ':'
+      d["Nao iniciada"]       -> seguida de ']'
+      if x == "Em analise":   -> seguida de ':' (comparacao com valor canonico)
+    """
+    for proximo in tokens[indice + 1 :]:
+        if proximo.type in (tokenize.NL, tokenize.NEWLINE, tokenize.COMMENT,
+                            tokenize.INDENT, tokenize.DEDENT):
+            continue
+        return proximo.type == tokenize.OP and proximo.string in (":", "]")
+    return False
+
+
 def _marcar(regioes: dict, inicio: tuple, fim: tuple) -> None:
     """Registra a região de um token (possivelmente multi-linha) como prosa."""
     linha_ini, col_ini = inicio
@@ -254,7 +307,7 @@ def _regioes_prosa_py(texto: str):
         return None
 
     anterior = None
-    for token in tokens:
+    for indice, token in enumerate(tokens):
         if token.type == tokenize.COMMENT:
             _marcar(regioes, token.start, token.end)
         elif token.type == tokenize.STRING:
@@ -267,7 +320,15 @@ def _regioes_prosa_py(texto: str):
                 tokenize.INDENT,
                 tokenize.DEDENT,
             )
-            if e_docstring or _tem_espaco_interno(token.string):
+            if _e_bytes_literal(token.string):
+                pass  # ASCII obrigatorio: reescrever quebra o arquivo
+            elif e_docstring:
+                _marcar_string(regioes, token)
+            elif (
+                _tem_espaco_interno(token.string)
+                and not _e_chave_ou_comparacao(tokens, indice)
+                and not _tem_sinal_de_dado(token.string)
+            ):
                 _marcar_string(regioes, token)
         if token.type not in (tokenize.NL, tokenize.COMMENT):
             anterior = token.type
