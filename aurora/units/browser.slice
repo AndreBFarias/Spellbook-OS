@@ -1,9 +1,11 @@
 [Unit]
-Description=Aurora 2.2 - Slice para browsers (Chrome, Firefox, Brave)
+Description=Aurora 2.2 - Slice para browsers (nativos + Flatpak Edge/Waterfox)
 Before=slices.target
 
 [Slice]
-MemoryHigh=8G
-MemoryMax=10G
-MemorySwapMax=4G
+# Calibrado para 14.81 GiB RAM (SPR-2026-08-07): High morde antes do thrashing
+# medido (~6.2 GiB RSS); Max contem o pico. Nao subir sem recalcular.
+MemoryHigh=4G
+MemoryMax=6G
+MemorySwapMax=3G
 CPUWeight=80

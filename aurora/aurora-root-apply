@@ -10,13 +10,21 @@ ALVO_GOVERNOR="performance"   # mantido em performance (escolha do usuário); su
 ALVO_EPP="performance"
 SYSCTL_FILE="/etc/sysctl.d/99-aurora.conf"
 
-# Aurora 2.8 - modo termico via sentinela /etc/aurora/allow-powersave.
-# Se existir, o usuario escolheu "cool" (comando `cool`): governor dinamico que
-# esfria idle/carga-leve preservando turbo total sob carga (EPP=balance_performance).
-# Sem o sentinela, mantem a postura "performance" historica. Ver DOSSIE-2026-07-09.
+# Aurora 3.1 - modo termico via sentinela VOLATIL /run/aurora/allow-powersave.
+# Se existir, o usuario escolheu "cool" (comando `cool`) NESTA SESSAO: governor dinamico
+# que esfria idle/carga-leve preservando turbo total sob carga (EPP=balance_performance).
+# Sem a sentinela, mantem a postura "performance" historica. Ver DOSSIE-2026-07-09.
+#
+# Por que /run e nao /etc: /run e tmpfs, some no reboot. Assim PERF e o estado natural
+# da maquina -- nascer em COOL exigiria alguem recriar a sentinela de proposito, e nao
+# apenas esquecer de desfazer um `cool`. Era /etc/aurora/allow-powersave (persistente):
+# um `cool` rodado em 10/08/2026 e esquecido deixou todo boot seguinte em "Equilibrado",
+# com o usuario corrigindo na mao. Estado que exige memoria humana nao e idempotente.
+SENTINELA="/run/aurora/allow-powersave"
+rm -f /etc/aurora/allow-powersave 2>/dev/null   # residuo do formato persistente antigo
 MODO_COOL=0
 ALVO_S76="performance"
-if [ -e /etc/aurora/allow-powersave ]; then
+if [ -e "$SENTINELA" ]; then
   MODO_COOL=1
   ALVO_GOVERNOR="powersave"
   ALVO_EPP="balance_performance"
@@ -199,6 +207,38 @@ if [ -e "$PP" ]; then
   fi
 else
   log "platform_profile ausente (acer_wmi predator_v4 carregado? precisa reboot pos modprobe.d)"
+fi
+
+# 12. Aurora 3.0 - PPT/tctl stock no modo PERF estatico (sem sentinela).
+# O auto-switcher era o UNICO que reafirmava o ryzenadj, mas ele sai de cena sem a
+# sentinela (master-switch em aurora-switcher). Resultado: o PPT ficava congelado no
+# ultimo valor do modo COOL (38-45 W, teto de idle) com o governor pinado em
+# performance -> clock alto com potencia de modo economico, o pior dos dois mundos.
+# Aqui reafirmamos o stock do 7535HS em todo re-apply (boot + watchdog <=15min +
+# pos-resume), fechando o buraco. No modo COOL nao tocamos: o switcher e o dono.
+# tctl-temp=90 e escolha do dono: teto de HARDWARE (so age AO atingir 90 C), nao o
+# degrade de PPT por software do switcher (CAP_TEMP=85), que era o que estrangulava
+# o uso interativo. Fans ficam no maximo pelo NBFC, ortogonal a isto.
+# CO (--set-coall) NAO existe neste equipamento: o SMU da BIOS Acer rejeita.
+PPT_STAPM=71500; PPT_FAST=80000; PPT_SLOW=70000; TCTL_ALVO=90
+if [ "$MODO_COOL" -eq 0 ]; then
+  if command -v ryzenadj >/dev/null 2>&1; then
+    ryzenadj --stapm-limit="$PPT_STAPM" --fast-limit="$PPT_FAST" \
+             --slow-limit="$PPT_SLOW" --tctl-temp="$TCTL_ALVO" >/dev/null 2>&1
+    # Confirma pela leitura, nao pelo rc (mesmo padrao do system76-power/platform_profile).
+    # NAO validar por "STAPM LIMIT": e adaptativo (Skin Temperature Aware Power Mgmt), o
+    # SMU recalcula sozinho e a leitura deriva do valor escrito em segundos (visto ao vivo:
+    # 71 -> 56 W), o que geraria warn falso-positivo a cada watchdog. "PPT LIMIT SLOW" e
+    # estavel e reflete o que escrevemos -> e o invariante certo pro teto sustentado.
+    slow_real=$(ryzenadj -i 2>/dev/null | awk -F'|' '/PPT LIMIT SLOW/ {gsub(/ /,"",$3); print int($3)}')
+    if [ "${slow_real:-0}" -ge $(( PPT_SLOW/1000 - 2 )) ] 2>/dev/null; then
+      log "ryzenadj PERF: slow ${slow_real}W / fast $((PPT_FAST/1000))W / tctl ${TCTL_ALVO}C"
+    else
+      warn "ryzenadj nao aplicou o PPT stock (slow-limit lido: ${slow_real:-?}W, esperado $((PPT_SLOW/1000))W)"
+    fi
+  else
+    warn "ryzenadj ausente -> PPT fica no default da BIOS (instale via aurora-bootstrap.sh)"
+  fi
 fi
 
 log "aurora-root-apply concluido"

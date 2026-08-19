@@ -7,10 +7,11 @@ log() { printf '[aurora-watchdog] %s\n' "$*"; }
 
 ALVO_GOVERNOR="performance"   # mantido em performance (escolha do usuário)
 ALVO_S76="performance"
-# Aurora 2.8 - respeita o modo COOL (sentinela /etc/aurora/allow-powersave). Sob ele,
-# o esperado passa a ser powersave/balanced, entao o watchdog NÃO trata a escolha do
+# Aurora 3.1 - respeita o modo COOL (sentinela volátil /run/aurora/allow-powersave). Sob
+# ela, o esperado passa a ser powersave/balanced, então o watchdog NÃO trata a escolha do
 # usuário como desvio (nem a reverte a cada 15min). Ver DOSSIE-2026-07-09 / comando `cool`.
-if [ -e /etc/aurora/allow-powersave ]; then
+SENTINELA="/run/aurora/allow-powersave"
+if [ -e "$SENTINELA" ]; then
   ALVO_GOVERNOR="powersave"
   ALVO_S76="balanced"
 fi
@@ -89,7 +90,7 @@ if ! systemctl is-active --quiet nbfc_service.service 2>/dev/null; then
   log "nbfc_service (fan agressiva) inativo -> restart"
   systemctl start nbfc_service.service 2>/dev/null || true
 fi
-if [ -e /etc/aurora/allow-powersave ] && ! systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
+if [ -e "$SENTINELA" ] && ! systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
   log "aurora-switcher.timer inativo -> restart"
   systemctl start aurora-switcher.timer 2>/dev/null || true
 fi

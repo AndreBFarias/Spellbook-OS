@@ -103,7 +103,19 @@ journalctl -u $s --no-pager -n 30
 done
 
 # --- Check 3: aurora-user.service (só se houver dbus de usuário) ---
+# Type=oneshot RemainAfterExit=yes: em boot pode estar "activating" por alguns
+# segundos. Amostrar 1x gerava AURORA-ERRO.md falso-positivo (2026-08-10).
 if [ $USER_BUS_OK -eq 1 ]; then
+  _au_wait=0
+  while [ "$_au_wait" -lt 45 ]; do
+    _au_state=$(systemctl --user show -p ActiveState --value aurora-user.service 2>/dev/null || echo unknown)
+    case "$_au_state" in
+      active|failed|inactive) break ;;
+    esac
+    sleep 1
+    _au_wait=$((_au_wait + 1))
+  done
+  unset _au_wait
   if ! systemctl --user is-active --quiet aurora-user.service 2>/dev/null; then
     falhas+=("aurora-user.service inativo")
     status_dump=$(systemctl --user status aurora-user.service --no-pager 2>&1 | head -15)

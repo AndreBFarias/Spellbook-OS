@@ -36,7 +36,8 @@ exec 9>"$RUN/switcher.lock"; flock -n 9 || exit 0   # nao concorre com cool/perf
 log(){ printf '[aurora-switcher] %s\n' "$*"; }
 
 # Master-switch: so opera com a sentinela (modo dinamico). Sem ela (modo 'perf' estatico), sai.
-[ -e /etc/aurora/allow-powersave ] || { rm -f "$STATE" "$RUN/target" 2>/dev/null; exit 0; }
+# Sentinela volatil (Aurora 3.1): mora no proprio $RUN, entao morre no reboot junto do STATE.
+[ -e "$RUN/allow-powersave" ] || { rm -f "$STATE" "$RUN/target" 2>/dev/null; exit 0; }
 
 # ---- estado anterior ----
 POSTURE=BASE; PREV_TOTAL=0; PREV_IDLE=0; UP_CNT=0; DOWN_CNT=0; LAST_SWITCH=0; PPT_CUR=-1

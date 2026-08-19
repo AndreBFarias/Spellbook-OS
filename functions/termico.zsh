@@ -3,11 +3,14 @@
 # Comandos:
 #   temp    -> readout de todos os sensores + modo/governor atual
 #   cool    -> modo dinâmico (governor powersave + EPP balance_performance): esfria idle/carga-leve, turbo intacto
+#              — dura só até o próximo boot (sentinela em tmpfs); PERF é o default de fábrica
 #   perf    -> volta ao modo performance (postura Aurora histórica)
 #   travou  -> fallback do Ctrl+Alt+0: recupera o display AMD travado sem reboot
 # Ver DOSSIE-2026-07-09-termico-e-freeze.md e AURORA-2.6-THERMAL.md.
 
-AURORA_SENTINEL="/etc/aurora/allow-powersave"
+# Sentinela VOLÁTIL (Aurora 3.1): /run é tmpfs, some no reboot. `cool` vale só até
+# desligar — a máquina sempre volta a ligar em PERF, sem depender de lembrar do `perf`.
+AURORA_SENTINEL="/run/aurora/allow-powersave"
 AURORA_APPLY="/usr/local/sbin/aurora-root-apply"
 
 # --- helper: lê um arquivo de hwmon pelo nome do chip -----------------------
@@ -101,7 +104,20 @@ temp() {
   echo ""
   __item "NBFC fan" "${nbfc_st:-?} (curva agressiva, piso 40%)"
   if [ -n "$pptmw" ] && [ "$pptmw" -gt 0 ] 2>/dev/null; then
-    __item "ryzenadj PPT" "$((pptmw/1000))W  (tctl-cap 95°C · CO indisp. no SMU)"
+    __item "ryzenadj PPT" "$((pptmw/1000))W dinâmico (switcher · tctl-cap 90°C · CO indisp. no SMU)"
+  elif command -v ryzenadj >/dev/null 2>&1; then
+    # Modo PERF: o switcher apaga o state file ao sair, então lê o SMU direto.
+    # Usa PPT LIMIT SLOW (estável, = o que escrevemos), não STAPM LIMIT — este é
+    # adaptativo e o SMU o recalcula, derivando do valor aplicado (71 -> 56 W).
+    local rz rz_ppt rz_tctl
+    rz=$(sudo -n ryzenadj -i 2>/dev/null | awk -F'|' '
+      /PPT LIMIT SLOW/ {gsub(/ /,"",$3); s=int($3)}
+      /THM LIMIT CORE/ {gsub(/ /,"",$3); t=int($3)}
+      END {if (s>0) printf "%d %d", s, t}')
+    if [ -n "$rz" ]; then
+      rz_ppt=${rz%% *}; rz_tctl=${rz##* }
+      __item "ryzenadj PPT" "${rz_ppt}W estático (PERF · tctl-cap ${rz_tctl}°C · CO indisp. no SMU)"
+    fi
   fi
   echo -e "  ${D_COMMENT}alternar:  cool (auto dinâmico) | perf (estático pinado) | travou (display travado)${D_RESET}"
   echo ""
@@ -110,10 +126,11 @@ temp() {
 # --- toggle modo COOL (powersave + balance_performance) ---------------------
 cool() {
   __header "Aplicando modo COOL (dinâmico, frio)" "$D_GREEN"
-  sudo mkdir -p /etc/aurora && sudo touch "$AURORA_SENTINEL" || { __err "falha criando sentinela"; return 1; }
+  sudo mkdir -p /run/aurora && sudo touch "$AURORA_SENTINEL" || { __err "falha criando sentinela"; return 1; }
   if sudo "$AURORA_APPLY"; then
     __ok "modo AUTO (dinâmico) ativo — switcher decide EPP/PPT por carga (BASE idle / PERF carga)."
     __ok "fan SEMPRE agressiva (NBFC); governor powersave fixo; watchdog ressuscita switcher/NBFC se caírem."
+    __warn "vale só até o próximo boot — a máquina sempre religa em PERF (sentinela em tmpfs)."
   else
     __err "aurora-root-apply falhou"; return 1
   fi

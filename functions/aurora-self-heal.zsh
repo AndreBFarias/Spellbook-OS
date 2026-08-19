@@ -163,7 +163,7 @@ aurora-self-heal() {
     issues+=("nbfc_service inativo (fan agressiva anti-calor caiu)")
     fixes_root+=("$aurora/aurora-thermal-apply.sh")
   fi
-  if [ -e /etc/aurora/allow-powersave ] && ! systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
+  if [ -e /run/aurora/allow-powersave ] && ! systemctl is-active --quiet aurora-switcher.timer 2>/dev/null; then
     issues+=("aurora-switcher.timer inativo (CPU inteligente parada)")
     fixes_root+=("$aurora/aurora-thermal-apply.sh")
   fi

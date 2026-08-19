@@ -55,10 +55,12 @@ if ! lsmod | grep -q '^ec_sys'; then
 fi
 
 # --- 4. Config agressiva + seleção (idempotente) ---
+_nbfc_cfg_mudou=0
 if [ -f "$NBFC_CFG_SRC" ] && _have nbfc; then
   sudo -n mkdir -p /usr/share/nbfc/configs
   if ! sudo -n cmp -s "$NBFC_CFG_SRC" "$NBFC_CFG_DST" 2>/dev/null; then
-    sudo -n install -m 0644 "$NBFC_CFG_SRC" "$NBFC_CFG_DST" && log "config NBFC agressiva instalada"
+    sudo -n install -m 0644 "$NBFC_CFG_SRC" "$NBFC_CFG_DST" &&
+      { _nbfc_cfg_mudou=1; log "config NBFC agressiva instalada"; }
   fi
   if ! grep -qF "$NBFC_CFG_NAME" /etc/nbfc/nbfc.json 2>/dev/null; then
     sudo -n nbfc config --set "$NBFC_CFG_NAME" >/dev/null 2>&1 && log "config selecionada: $NBFC_CFG_NAME"
@@ -77,6 +79,10 @@ if [ -n "$_nbfc_unit" ]; then
   if ! systemctl is-active --quiet "$_nbfc_unit" 2>/dev/null; then
     sudo -n nbfc stop >/dev/null 2>&1   # mata daemon manual (nbfc start) se houver -> evita 2 daemons
     sudo -n systemctl start "$_nbfc_unit" >/dev/null 2>&1 && log "$_nbfc_unit iniciado"
+  elif [ "$_nbfc_cfg_mudou" -eq 1 ]; then
+    # Aurora 3.1 - o daemon lê a curva só no start. Sem este restart, editar o JSON não
+    # tinha efeito até o próximo boot: a política ficava escrita em disco mas não aplicada.
+    sudo -n systemctl restart "$_nbfc_unit" >/dev/null 2>&1 && log "$_nbfc_unit reiniciado (curva de fan nova)"
   fi
 elif _have nbfc; then
   nbfc status >/dev/null 2>&1 || { sudo -n nbfc start >/dev/null 2>&1 && log "nbfc start (sem unit systemd)"; }

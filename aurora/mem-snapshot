@@ -7,12 +7,22 @@
 #   - swap (total/used) em MiB
 #   - PSI memory (some avg10, some avg60) - detecta thrashing antes do OOM
 #   - top 15 processos por RSS no formato pid:comm:rss_mib
+# SPR-2026-08-07 F4: alerta desktop/journal por PSI (CSV permanece 8 colunas).
 # Idempotente, single-instance via flock.
 
 set -u
 
 LOG=/var/log/mem-snapshot.log
 LOCK=/run/mem-snapshot.lock
+PSI_STATE=/run/mem-snapshot.psi-state
+
+# Limiares configuraveis (proof-of-work / tuning sem editar o script)
+AURORA_PSI_AVISO="${AURORA_PSI_AVISO:-10.00}"
+AURORA_PSI_CRITICO="${AURORA_PSI_CRITICO:-10.00}"
+AURORA_PSI_COOLDOWN_S="${AURORA_PSI_COOLDOWN_S:-300}"
+
+USUARIO="${AURORA_MEM_USER:-andrefarias}"
+USER_UID=$(id -u "$USUARIO" 2>/dev/null || echo 1000)
 
 exec 9>"$LOCK"
 flock -n 9 || exit 0
@@ -36,20 +46,28 @@ read mem_total mem_avail swap_total swap_free < <(
 )
 swap_used=$((swap_total - swap_free))
 
-# PSI (Pressure Stall Information) - some avg10 e avg60
-# Linha "some avg10=X.XX avg60=Y.YY ..."
+# PSI (Pressure Stall Information) - some avg10/avg60 + full avg10 (alerta only)
 psi_avg10="-"
 psi_avg60="-"
+psi_full10="-"
 if [ -r /proc/pressure/memory ]; then
-  read psi_avg10 psi_avg60 < <(
-    awk '/^some/ {
-      for (i=2;i<=NF;i++) {
-        split($i, kv, "=")
-        if (kv[1]=="avg10") a10=kv[2]
-        if (kv[1]=="avg60") a60=kv[2]
+  read psi_avg10 psi_avg60 psi_full10 < <(
+    awk '
+      /^some/ {
+        for (i=2;i<=NF;i++) {
+          split($i, kv, "=")
+          if (kv[1]=="avg10") a10=kv[2]
+          if (kv[1]=="avg60") a60=kv[2]
+        }
       }
-      print a10, a60; exit
-    }' /proc/pressure/memory
+      /^full/ {
+        for (i=2;i<=NF;i++) {
+          split($i, kv, "=")
+          if (kv[1]=="avg10") f10=kv[2]
+        }
+      }
+      END { print (a10==""?"-":a10), (a60==""?"-":a60), (f10==""?"-":f10) }
+    ' /proc/pressure/memory
   )
 fi
 
@@ -66,3 +84,69 @@ top15=$(ps -eo pid,comm,rss --no-headers --sort=-rss 2>/dev/null | head -15 | aw
 printf '%s,%d,%d,%d,%d,%s,%s,%s\n' \
   "$TS" "$mem_total" "$mem_avail" "$swap_total" "$swap_used" \
   "$psi_avg10" "$psi_avg60" "$top15" >> "$LOG"
+
+# --- F4: alerta preventivo por PSI (nunca aborta a coleta) -------------------
+# CSV permanece com 8 colunas (oom-postmortem le col 6 por indice).
+_alerta_psi() {
+  # top1: primeiro registro do top15 -> comm + rss
+  local top1 comm rss nivel msg now last_alert consecutive
+  top1="${top15%%;*}"
+  comm=$(printf '%s' "$top1" | cut -d: -f2)
+  rss=$(printf '%s' "$top1" | cut -d: -f3)
+  [ -z "$comm" ] && comm="desconhecido"
+  [ -z "$rss" ] && rss="?"
+
+  consecutive=0
+  last_alert=0
+  if [ -r "$PSI_STATE" ]; then
+    consecutive=$(grep -E '^consecutive_aviso=' "$PSI_STATE" 2>/dev/null | cut -d= -f2)
+    last_alert=$(grep -E '^last_alert_epoch=' "$PSI_STATE" 2>/dev/null | cut -d= -f2)
+    consecutive=${consecutive:-0}
+    last_alert=${last_alert:-0}
+  fi
+
+  # Comparacao numerica: so se PSI for numero
+  local some_ok=0 full_ok=0
+  if printf '%s' "$psi_avg10" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then some_ok=1; fi
+  if printf '%s' "$psi_full10" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then full_ok=1; fi
+
+  nivel=""
+  if [ "$full_ok" -eq 1 ] && awk -v v="$psi_full10" -v t="$AURORA_PSI_CRITICO" 'BEGIN{exit !(v+0 >= t+0)}'; then
+    nivel="CRITICO"
+    consecutive=0
+  elif [ "$some_ok" -eq 1 ] && awk -v v="$psi_avg10" -v t="$AURORA_PSI_AVISO" 'BEGIN{exit !(v+0 >= t+0)}'; then
+    consecutive=$((consecutive + 1))
+    if [ "$consecutive" -ge 2 ]; then
+      nivel="AVISO"
+    fi
+  else
+    consecutive=0
+  fi
+
+  now=$(date +%s)
+  # Persiste estado mesmo sem notificar
+  printf 'consecutive_aviso=%s\nlast_alert_epoch=%s\n' "$consecutive" "$last_alert" > "$PSI_STATE" 2>/dev/null || true
+
+  [ -n "$nivel" ] || return 0
+
+  # Cooldown entre notificacoes
+  if [ "$((now - last_alert))" -lt "$AURORA_PSI_COOLDOWN_S" ] 2>/dev/null; then
+    return 0
+  fi
+
+  if [ "$nivel" = "CRITICO" ]; then
+    msg="Pressao de memoria CRITICA (full ${psi_full10}%) — ${comm} com ${rss} MiB. Feche abas ou o aplicativo."
+  else
+    msg="Pressao de memoria em ${psi_avg10}% — ${comm} com ${rss} MiB. Feche abas ou o aplicativo."
+  fi
+
+  logger -t aurora-mem-alert "$msg" 2>/dev/null || true
+  runuser -u "$USUARIO" -- env \
+    "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${USER_UID}/bus" \
+    "DISPLAY=${DISPLAY:-:1}" \
+    notify-send -u critical -a Aurora "Memoria sob pressao" "$msg" 2>/dev/null || true
+
+  printf 'consecutive_aviso=%s\nlast_alert_epoch=%s\n' "0" "$now" > "$PSI_STATE" 2>/dev/null || true
+}
+
+_alerta_psi || true

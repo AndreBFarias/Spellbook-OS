@@ -57,13 +57,28 @@ KERNELSTUB_PARAMS=(
   # Aurora 2.3 ULTRA - always-plugged desktop replacement
   "pcie_aspm=off"
   "nvme_core.default_ps_max_latency_us=0"
+  # Aurora 3.1 - governor nasce em performance no próprio kernel init, antes de
+  # qualquer daemon. Sem isto o default do amd-pstate e powersave, e a maquina passa
+  # os primeiros segundos de boot em modo economico ate o aurora-root.service subir.
+  # Não conflita com `cool`: o param define o DEFAULT, e o aurora-root-apply escreve
+  # o governor explicitamente quando a sentinela de COOL existe.
+  "cpufreq.default_governor=performance"
 )
 
 if command -v kernelstub >/dev/null 2>&1; then
   cmdline_atual=$(sudo -n kernelstub --print-config 2>/dev/null | awk -F': ' '/Kernel Boot Options/ {sub(/^\.+/,"",$2); print $2}' || true)
+  # Aurora 3.1 - fallback correto e a config PERSISTIDA (0644, legivel sem sudo), não
+  # /proc/cmdline. /proc/cmdline e o boot CORRENTE: um param recem-adicionado ainda não
+  # aparece la, entao o loop abaixo o re-adicionaria a CADA execução (apt hook incluso)
+  # ate o próximo reboot -- reescrevendo o loader EFI a toa. Visto ao vivo ao introduzir
+  # cpufreq.default_governor. O kernelstub deduplica, mas o trabalho repetido e inutil.
+  if [ -z "$cmdline_atual" ] && [ -r /etc/kernelstub/configuration ]; then
+    cmdline_atual=$(tr -d ' "' < /etc/kernelstub/configuration | tr ',' ' ')
+    log "Usando /etc/kernelstub/configuration (config persistida; --print-config requer sudo)"
+  fi
   if [ -z "$cmdline_atual" ]; then
     cmdline_atual=$(cat /proc/cmdline)
-    log "Usando /proc/cmdline (kernelstub --print-config requer sudo)"
+    warn "Usando /proc/cmdline (boot corrente) - params novos podem ser re-adicionados ate o reboot"
   fi
   faltando=()
   for p in "${KERNELSTUB_PARAMS[@]}"; do
@@ -304,6 +319,63 @@ aplica_slice_override "discord"        "electron.slice"
 aplica_slice_override "code"           "electron.slice"
 aplica_slice_override "cursor"         "electron.slice"
 aplica_slice_override "zoom"           "electron.slice"
+
+# Aurora 2.2 / SPR-2026-08-07: drop-in por app-id Flatpak.
+# O Flatpak cria app-flatpak-<id>-<pid>.scope sem Slice=; o prefixo de drop-in
+# redireciona para a slice correta. NAO usar app-.scope.d/ (casa infraestrutura).
+# App-ids com hifen quebram a truncagem de prefixo do systemd — recusados.
+aplica_dropin_flatpak() {
+  local app_id="$1" slice="$2"
+  local dir conf prefix body
+  if [[ "$app_id" == *-* ]]; then
+    warn "Drop-in Flatpak ignorado: app-id contem hifen (prefixo ambiguo): $app_id"
+    return 0
+  fi
+  if ! command -v flatpak >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! flatpak info "$app_id" >/dev/null 2>&1; then
+    return 0
+  fi
+  body="# Aurora - teto de memoria para Flatpak (drop-in por prefixo de scope transiente)
+# Redireciona scope do Flatpak (app-flatpak-*) ou do GNOME (app-gnome-*) para a
+# slice correta. Os limites vivem na slice, não aqui.
+[Scope]
+Slice=${slice}
+"
+  # Flatpak 1.14 cria app-flatpak-<id>-<pid>.scope; GNOME 42 tambem pode
+  # envolver o mesmo app em app-gnome-<id>-<pid>.scope (medido no Thunderbird).
+  for prefix in "app-flatpak-${app_id}-" "app-gnome-${app_id}-"; do
+    dir="$USER_SYSTEMD_DIR/${prefix}.scope.d"
+    conf="$dir/50-aurora-slice.conf"
+    mkdir -p "$dir"
+    if [ -f "$conf" ] && [ "$(cat "$conf")" = "$body" ]; then
+      continue
+    fi
+    printf '%s' "$body" > "${conf}.tmp" && mv -f "${conf}.tmp" "$conf"
+    chmod 0644 "$conf"
+    log "Drop-in Flatpak aplicado: $dir (slice=$slice)"
+  done
+}
+
+# browser.slice
+aplica_dropin_flatpak "com.microsoft.Edge"                "browser.slice"
+aplica_dropin_flatpak "net.waterfox.waterfox"             "browser.slice"
+
+# electron.slice
+aplica_dropin_flatpak "com.discordapp.Discord"            "electron.slice"
+aplica_dropin_flatpak "md.obsidian.Obsidian"              "electron.slice"
+aplica_dropin_flatpak "com.spotify.Client"                "electron.slice"
+aplica_dropin_flatpak "org.telegram.desktop"              "electron.slice"
+aplica_dropin_flatpak "com.rtosta.zapzap"                 "electron.slice"
+
+# heavy-other.slice
+aplica_dropin_flatpak "com.obsproject.Studio"             "heavy-other.slice"
+aplica_dropin_flatpak "org.gimp.GIMP"                     "heavy-other.slice"
+aplica_dropin_flatpak "org.kde.krita"                     "heavy-other.slice"
+aplica_dropin_flatpak "org.onlyoffice.desktopeditors"     "heavy-other.slice"
+aplica_dropin_flatpak "io.gitlab.theevilskeleton.Upscaler" "heavy-other.slice"
+aplica_dropin_flatpak "org.mozilla.thunderbird_esr"       "heavy-other.slice"
 
 # 4. Reload systemd e enable
 sudo -n systemctl daemon-reload
