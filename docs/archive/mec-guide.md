@@ -1,12 +1,12 @@
 # MEC — Guia de Contexto do Projeto
-# Projeto: pipelines-main | ENV: dev | STATUS: produção
+# Projeto: pipelines | ENV: dev | STATUS: produção
 
 ---
 
 ## 1. Estrutura do projeto
 
 ```
-pipelines-main/
+pipelines/
 ├── .pipelines/          # Venv isolado com adaptadores BigQuery
 │   └── bin/
 │       ├── dbt          # USAR ESTE — tem adaptador BigQuery
@@ -60,7 +60,7 @@ pipelines-main/
 |-------|----------|-----------|
 | `mec` | `conjurar_mec` | Menu FZF com 29 operações |
 | `conjurar_mec` | — | Abre menu interativo MEC |
-| `santuario Projetos_segape pipelines-main` | — | Setup completo do projeto |
+| `santuario Projetos_segape pipelines` | — | Setup completo do projeto |
 | `git_info` | — | Exibe identidade git local |
 
 ### dbt manual (de dentro de `queries/`)
@@ -99,13 +99,13 @@ A função `__aplicar_contexto_git_automatico` em `git-contexto.zsh` detecta o
 diretório atual e aplica `git config --local` automaticamente:
 
 ```
-/Projetos_segape/pipelines-main  →  andrefariasmec / andrefarias@mec.gov.br
+/Projetos_segape/pipelines  →  andrefariasmec / andrefarias@mec.gov.br
 /VitoriaMariaDB/     →  vitoriamariadb / vitoriamaria.sds@gmail.com
 qualquer outro       →  [REDACTED]   / [REDACTED]
 ```
 
 Esse contexto é aplicado em:
-- `santuario Projetos_segape pipelines-main`
+- `santuario Projetos_segape pipelines`
 - Abertura automática via hooks do projeto
 
 Verificar com: `git config --local user.email`
@@ -116,7 +116,7 @@ Verificar com: `git config --local user.email`
 
 | Variável | Valor |
 |----------|-------|
-| `__MEC_ROOT` | `~/Desenvolvimento/Projetos_segape/pipelines-main` |
+| `__MEC_ROOT` | `~/Desenvolvimento/Projetos_segape/pipelines` |
 | `__MEC_DBT_BIN` | `$__MEC_ROOT/.pipelines/bin/dbt` |
 | `__MEC_DBT_DIR` | `$__MEC_ROOT/queries` |
 | `__MEC_PROFILES_DIR` | `$__MEC_ROOT/dev` |
@@ -144,7 +144,7 @@ Prefixo de nome: `br_mec_segape.<modelo>` (dataset no BigQuery).
 ## 7. Workflow padrão (9 etapas)
 
 ```
-1. santuario Projetos_segape pipelines-main    # Setup: cd + identidade + venv
+1. santuario Projetos_segape pipelines    # Setup: cd + identidade + venv
 2. git pull --rebase               # Sincronizar com remoto
 3. git checkout -b feat/nome       # Criar branch de trabalho
 4. (editar modelos SQL/YAML)

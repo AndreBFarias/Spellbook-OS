@@ -110,7 +110,7 @@ santuario() {
 
     echo ""
 
-    if [[ "$(pwd)" == *"/Projetos_segape/pipelines-main"* ]]; then
+    if [[ "$(pwd)" == *"/Projetos_segape/pipelines"* ]]; then
         echo -e "  ${D_ORANGE}Protocolo MEC${D_RESET}"
         __aplicar_contexto_git_automatico
     elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* ]]; then
@@ -317,7 +317,7 @@ santuario() {
     # Para validar sprint: `cca "/validar-sprint"` ou `sval`.
     # Para ciclo completo: `cca "/sprint-ciclo <ideia>"` ou `sciclo <ideia>`.
 
-    if [[ "$(pwd)" == *"/Projetos_segape/pipelines-main"* ]]; then
+    if [[ "$(pwd)" == *"/Projetos_segape/pipelines"* ]]; then
         echo -e -n "  ${D_ORANGE}Abrir menu MEC? (s/N)${D_RESET} "
         local mec_reply=""
         read -k 1 mec_reply
