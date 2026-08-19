@@ -23,8 +23,10 @@ purpose_regex = re.compile(r"^\s*#\s*Prop[oó]sito:\s*(.*)", re.IGNORECASE)
 usage_regex = re.compile(r"^\s*#\s*Uso:\s*(.*)", re.IGNORECASE)
 alias_regex = re.compile(r"^\s*alias\s+([^=]+)='([^']*)'")
 alias_regex_dq = re.compile(r'^\s*alias\s+([^=]+)="([^"]*)"')
+# O hifen entra na classe porque a familia cca- (cca-here, cca-tmux, cca-janelas)
+# nomeia função com hifen, e sem ele nenhuma delas aparecia no menu.
 func_start_regex = re.compile(
-    r"^\s*([a-zA-Z][a-zA-Z0-9_]*)\s*\(\)\s*\{|^\s*function\s+([a-zA-Z][a-zA-Z0-9_]+)\s*\{"
+    r"^\s*([a-zA-Z][a-zA-Z0-9_-]*)\s*\(\)\s*\{|^\s*function\s+([a-zA-Z][a-zA-Z0-9_-]+)\s*\{"
 )
 
 
