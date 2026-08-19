@@ -20,16 +20,17 @@
 # O que ele NUNCA faz: apagar antes de conferir, e apagar sem você digitar
 # o nome do repositório com as próprias mãos.
 #
-# A conta que apaga é a [REDACTED] -- é a única das três autenticadas neste
-# computador que tem o escopo delete_repo. A função troca a conta ativa,
-# apaga, e devolve a conta ativa ao que era antes.
+# A conta que apaga precisa do escopo delete_repo. A função troca a conta ativa,
+# apaga, e devolve a conta ativa ao que era antes. O nome da conta e o do
+# repositório ficam em config.local.zsh, que não é versionado: este arquivo vai
+# para um repositório público e identidade não mora nele.
 # ============================================================================
 
 REPATRIAR_VAULT="${BORDO_DIR:-$HOME/Controle de Bordo}"
 REPATRIAR_HOST="maria"
 REPATRIAR_CAMINHO="/mnt/Mnemosyne/git/controle-de-bordo.git"
-REPATRIAR_REPO="[REDACTED]/controle-de-bordo-vault"
-REPATRIAR_CONTA="[REDACTED]"
+REPATRIAR_REPO="${REPATRIAR_REPO:-}"
+REPATRIAR_CONTA="${REPATRIAR_CONTA:-}"
 
 # -- O remoto de casa, no formato que o git entende --
 __repatriar_url() {
@@ -60,6 +61,12 @@ __repatriar_faltando() {
 
 repatriar() {
     local verbo="${1:-estado}"
+
+    if [[ -z "$REPATRIAR_REPO" || -z "$REPATRIAR_CONTA" ]]; then
+        __err "Defina REPATRIAR_REPO e REPATRIAR_CONTA em config.local.zsh."
+        __warn "A conta precisa do escopo delete_repo: gh auth status"
+        return 1
+    fi
 
     if [ ! -d "$REPATRIAR_VAULT/.git" ]; then
         __err "Não achei o vault em: $REPATRIAR_VAULT"

@@ -47,3 +47,9 @@ export ZSH_REMOTE_PASTA_LOCAL="${BEHOLDER_DIR}"
 # === DBT / BIGQUERY ===
 
 export BQ_KEYFILE_PATH=""
+
+# === VAULT REPATRIADO ===
+# Usado por functions/repatriar.zsh. A conta precisa do escopo delete_repo.
+
+export REPATRIAR_REPO=""
+export REPATRIAR_CONTA=""
