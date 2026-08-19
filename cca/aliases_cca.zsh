@@ -504,6 +504,101 @@ cca-list() {
     tmux ls 2>/dev/null | grep -E '^claude-' || echo "(nenhuma)"
 }
 
+# Propósito: Emite uma linha por sessão Claude com terminal (winid<TAB>rótulo). Interno.
+__cca_janelas_linhas() {
+    local -A janela_de_pid
+    local winid desk wpid host wtitulo
+    while read -r winid desk wpid host wtitulo; do
+        [ "$wpid" = "0" ] && continue
+        janela_de_pid[$wpid]="${winid}"$'\t'"${wtitulo}"
+    done < <(wmctrl -lp 2>/dev/null)
+
+    local pid tty etime cur achado projeto
+    while read -r pid tty etime; do
+        cur="$pid"
+        achado=""
+        while [ -n "$cur" ] && [ "$cur" != "1" ]; do
+            if [ -n "${janela_de_pid[$cur]}" ]; then
+                achado="${janela_de_pid[$cur]}"
+                break
+            fi
+            cur=$(ps -o ppid= -p "$cur" 2>/dev/null | tr -d ' ')
+        done
+        projeto=$(basename "$(readlink /proc/$pid/cwd 2>/dev/null || echo '?')")
+        if [ -n "$achado" ]; then
+            printf '%s\t%-26s %-10s %-7s %s\n' "${achado%%$'\t'*}" "$projeto" "$etime" "$tty" "${achado#*$'\t'}"
+        else
+            printf '%s\t%-26s %-10s %-7s %s\n' "-" "$projeto" "$etime" "$tty" "(sem janela — tmux ou ssh)"
+        fi
+    done < <(ps -eo pid=,tty=,etime=,comm= --sort=start_time | awk '$4=="claude" && $2!="?" {print $1, $2, $3}')
+}
+
+# Propósito: Lista as sessões Claude Code abertas e traz a janela escolhida para frente
+# Uso: cca-janelas [--list]
+# Flags: --list=Imprime a tabela sem abrir o FZF
+cca-janelas() {
+    case "${1:-}" in
+        --help|-h)
+            __header "CCA-JANELAS" "$D_PURPLE"
+            echo -e "  ${D_COMMENT}Menu FZF das sessões Claude vivas; ENTER foca a janela do terminal${D_RESET}"
+            echo ""
+            echo -e "    ${D_FG}cca-janelas${D_RESET}          Menu interativo"
+            echo -e "    ${D_FG}cca-janelas --list${D_RESET}   Só imprime a tabela"
+            echo ""
+            echo -e "  ${D_COMMENT}Abas do mesmo Ghostty dividem uma janela: depois de focar,${D_RESET}"
+            echo -e "  ${D_COMMENT}percorra as abas com Ctrl+Shift+Esquerda/Direita.${D_RESET}"
+            echo ""
+            return 0
+            ;;
+    esac
+
+    __verificar_dependencias "fzf" "wmctrl" || return 1
+
+    if [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then
+        __warn "Sessão Wayland: o wmctrl não enxerga as janelas — a lista sai sem título."
+    fi
+
+    local linhas
+    # Abas do mesmo terminal dividem uma janela só: marca quando o winid se repete.
+    linhas=$(__cca_janelas_linhas | awk -F'\t' '{l[NR]=$0; k[NR]=$1; c[$1]++}
+        END{for(i=1;i<=NR;i++) print (k[i]!="-" && c[k[i]]>1) ? l[i] "  [1 de " c[k[i]] " abas]" : l[i]}')
+
+    if [ -z "$linhas" ]; then
+        __warn "Nenhuma sessão Claude com terminal ativo."
+        return 0
+    fi
+
+    if [ "${1:-}" = "--list" ] || [ "${1:-}" = "-l" ]; then
+        __header "SESSÕES CLAUDE" "$D_PURPLE"
+        printf '%s\n' "$linhas" | cut -f2- | sed 's/^/  /'
+        echo ""
+        return 0
+    fi
+
+    local escolha
+    escolha=$(printf '%s\n' "$linhas" | fzf \
+        --height=40% --layout=reverse --border=rounded \
+        --margin=1 --padding=1 \
+        --prompt="  Janelas > " \
+        --header="  ENTER foca a janela | ESC sai" \
+        --delimiter='\t' --with-nth=2 \
+        --color="bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4")
+
+    [ -z "$escolha" ] && return 0
+
+    local winid="${escolha%%$'\t'*}"
+    if [ "$winid" = "-" ]; then
+        __warn "Essa sessão não tem janela própria. Se for tmux: cca-list e depois tmux attach -t <nome>"
+        return 1
+    fi
+
+    wmctrl -ia "$winid"
+}
+
+# Propósito: Atalho com o nome longo para cca-janelas
+# Uso: claude_janelas
+alias claude_janelas='cca-janelas'
+
 # Propósito: Retomar última sessão Claude no cwd atual (modo direto)
 # Uso: cca-resume [args]
 cca-resume() {
