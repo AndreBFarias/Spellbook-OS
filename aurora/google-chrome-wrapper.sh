@@ -18,7 +18,20 @@ for p in "${EXTENSION_PATHS[@]}"; do
   [ -d "$p" ] && [ -f "$p/manifest.json" ] && valid+=("$p")
 done
 
+# Aceleracao de video por hardware. vainfo na iGPU AMD Radeon 660M (radeonsi)
+# confirma VP9 e AV1 em VAEntrypointVLD — os codecs que o YouTube entrega. Sem
+# estas flags o Chrome decodifica em software e a CPU carrega o video sozinha.
+# LIBVA_DRIVER_NAME fixa a iGPU: nesta maquina hibrida a dedicada NVIDIA não tem
+# driver VA-API instalado, e sem a dica a escolha fica ao acaso.
+export LIBVA_DRIVER_NAME="${LIBVA_DRIVER_NAME:-radeonsi}"
+
 args=()
+args+=(
+  --ignore-gpu-blocklist
+  --enable-gpu-rasterization
+  --enable-zero-copy
+  --enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL,VaapiIgnoreDriverChecks
+)
 if [ ${#valid[@]} -gt 0 ]; then
   joined=$(IFS=','; echo "${valid[*]}")
   args+=("--load-extension=${joined}")

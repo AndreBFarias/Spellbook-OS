@@ -343,10 +343,27 @@ _PERL_RANGES_TEST='grep{$.>=$_->[0]&&$.<=$_->[1]}@R'
 #      os nomes proibidos precisa poder cita-los -- sem isso a Regra 3 do vault
 #      virou "Zero mencoes a IA (agente, GPT, agente, Copilot, agente, agente)"
 #      e deixou de significar qualquer coisa.
+#   3. [2026-08-18] Identificador tecnico: token colado a hifen, ponto ou
+#      underscore. Nome de pacote, id de aplicativo e model-id NAO sao mencao
+#      nem atribuicao de autoria -- sao constante externa, como a URL do item 1.
+#      Caso real: um doc de sprint que registrava `apt purge claude-desktop`
+#      virou "agente-desktop", pacote que nao existe, deixando o registro
+#      factualmente errado e o comando incopiavel. Mesmo estrago em
+#      com.anthropic.Claude, claude.ai e claude-sonnet-4-5.
+#   4. [2026-08-18] Code span de crase simples. Em markdown a crase marca "isto
+#      e literal": comando, caminho, nome de arquivo. Reescrever ali quebra o
+#      que o leitor vai copiar e colar.
 #
-# A guarda de token com barra vem PRIMEIRO na alternancia: quando ela casa,
-# devolve o texto original sem tocar.
-_PERL_KEEP_TOKEN='(\S*/\S*)'
+#      O separador do item 3 exige alfanumerico dos DOIS lados. Sem isso o ponto
+#      final de frase ("pedi ao Claude.") faz prosa comum parecer identificador
+#      e escapar da regra -- verificado em teste antes de subir.
+#
+# Prosa solta segue sendo substituida: "pedi ao Claude" continua virando
+# "pedi ao agente". A guarda so cobre o que tem forma de identificador.
+#
+# As guardas vem PRIMEIRO na alternancia: quando uma casa, devolve o texto
+# original sem tocar.
+_PERL_KEEP_TOKEN='(`[^`\n]*`|\S*/\S*|[A-Za-z0-9]+(?:[-._][A-Za-z0-9]+)+)'
 _PERL_SKIP_LINE='!/ia-artifact:manter/'
 
 AI_COUNT=0

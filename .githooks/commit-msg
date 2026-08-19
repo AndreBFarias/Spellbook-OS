@@ -34,14 +34,32 @@ fi
 # toda, em silencio -- aconteceu no commit 0b2798b2 do protocolo-ouroboros.
 # A substituicao preserva o conteudo e continua sem deixar rastro, alinhada
 # com o bloco [3/6] do pre-commit, que ja substitui em vez de remover.
-AI_PATTERN="${AI_MENTION_RE:-claude|anthropic|openai|chatgpt|copilot|gemini|gpt-[34]|deepseek|cursor|aider|windsurf|codeium|tabnine|noreply@anthropic}"
+# [2026-07-30] A deteccao e a substituicao passaram para _ai_mention_in_text /
+# _ai_mention_scrub_text (_lib.sh), que aplicam fronteira de palavra e o
+# filtro de contexto do cursor. Antes disto, "corrige o path do <x>_ocr_cache"
+# saia do hook nomeando um diretorio inexistente, e o mesmo texto no assunto
+# era impossivel de commitar. Fallback abaixo: se _lib.sh não carregou, o hook
+# NÃO pode falhar aberto -- define as funcoes com o comportamento minimo.
+# A fronteira \< \> cobre o email de atribuicao pelo dominio do fornecedor.
+_AI_FALLBACK_RE='\<(claude|anthropic|openai|chatgpt|copilot|gemini|gpt-[34]|deepseek|aider|windsurf|codeium|tabnine|opus|sonnet|haiku|fable)\>'
+if ! declare -F _ai_mention_in_text >/dev/null 2>&1; then
+    _ai_mention_in_text() {
+        printf '%s\n' "$1" | grep -qiE "$_AI_FALLBACK_RE" 2>/dev/null
+    }
+    _ai_mention_scrub_text() {
+        # Mesma guarda do _lib.sh: nao reescrever identificador tecnico. E \< \>
+        # vira \b porque o perl nao entende a fronteira do GNU -- deixar passar
+        # desligaria o gate em silencio.
+        local re="${_AI_FALLBACK_RE//\\</\\b}"; re="${re//\\>/\\b}"
+        printf '%s\n' "$1" | perl -CSD -pe "s{(\`[^\`\n]*\`|\S*/\S*|[A-Za-z0-9]+(?:[-._][A-Za-z0-9]+)+)|$re}{ defined \$1 ? \$1 : q(agente) }gei"
+    }
+fi
+
 SUBJECT=$(echo "$MSG" | head -1)
 BODY=$(echo "$MSG" | tail -n +2)
 
-if echo "$BODY" | grep -qiE "$AI_PATTERN" 2>/dev/null; then
-    BODY=$(echo "$BODY" | sed -E "s/($AI_PATTERN)/agente/gI")
-    # Colapsa repeticao gerada pela propria substituicao ("agente agente")
-    BODY=$(echo "$BODY" | sed -E 's/\bagente([[:space:]-]+agente\b)+/agente/g')
+if _ai_mention_in_text "$BODY"; then
+    BODY=$(_ai_mention_scrub_text "$BODY")
     MSG="${SUBJECT}"
     if [[ -n "$BODY" ]]; then
         MSG="${SUBJECT}
@@ -54,7 +72,7 @@ ${BODY}"
 fi
 
 # [4/4] Verificar se subject menciona IA (BLOQUEIA -- subject e intencional)
-if echo "$SUBJECT" | grep -qiE "$AI_PATTERN" 2>/dev/null; then
+if _ai_mention_in_text "$SUBJECT"; then
     echo "  [BLOQUEIO] Subject da mensagem menciona ferramenta de IA"
     echo "    Remova qualquer referencia a IA do subject"
     BLOCKED=1
@@ -65,7 +83,24 @@ fi
 echo "$MSG" > "$MSG_FILE"
 
 # Warning de formato (nao bloqueia)
-if ! echo "$SUBJECT" | grep -qE '^(feat|fix|refactor|docs|test|perf|chore|style|ci|build|release|micro):' 2>/dev/null; then
+#
+# HOOK-COMMITMSG-SEGAPE-FORMAT-01 (2026-08-07): em SEGAPE/pipelines o padrao do
+# time e "<substantivo-de-acao> <objeto>" em PT-BR minusculo, sem ponto final
+# ("ajuste regra valor obra", "inclusao coluna ano na tabela painel_escola"), e
+# NAO conventional commits: dos 4.996 commits nao-merge do repo, so 4% usam
+# "tipo: descricao" (medicao de 2026-08-07). Emitir o aviso ali empurrava para
+# fora do padrao da equipe a cada commit.
+#
+# So o pipelines. Os demais repos sob Projetos_segape sao pessoais e usam
+# conventional commits em 81% a 100% dos commits -- neles o aviso e util e fica
+# ligado. Um except em Projetos_segape inteiro desligaria o aviso onde ele acerta.
+_repo_root_fmt=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+case "$_repo_root_fmt" in
+    */Projetos_segape/pipelines) _fmt_warn_off=1 ;;
+    *)                           _fmt_warn_off=0 ;;
+esac
+
+if [ "$_fmt_warn_off" -eq 0 ] && ! echo "$SUBJECT" | grep -qE '^(feat|fix|refactor|docs|test|perf|chore|style|ci|build|release|micro):' 2>/dev/null; then
     echo "  [aviso] Formato recomendado: tipo: descricao (feat, fix, refactor, docs, test, perf, chore, style, ci, build, release)"
 fi
 

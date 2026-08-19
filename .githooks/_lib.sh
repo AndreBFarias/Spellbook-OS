@@ -22,10 +22,36 @@ EMOJI_RE='[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{
 # Co-autoria e atribuicao (case-insensitive via grep -iE)
 COAUTHOR_RE='[Cc]o-[Aa]uthored-[Bb]y|[Pp]aired-[Ww]ith|[Aa]ssisted-[Bb]y'
 
-# Mencoes a ferramentas de IA (case-insensitive via grep -iE). Usada em
-# mensagem de commit (commit-msg, pre-push) -- texto curto, escrito a mao,
-# onde falso-positivo de "Cursor" (editor) e raro.
-AI_MENTION_RE='[Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[Cc]opilot|[Gg]emini|[Gg][Pp][Tt]-[34]|[Dd]eep[Ss]eek|[Cc]ursor|[Aa]ider|[Ww]indsurf|[Cc]odeium|[Tt]abnine|[Oo]pus|[Ss]onnet|[Hh]aiku|[Ff]able|noreply@anthropic'
+# Mencoes a ferramentas de IA em MENSAGEM de commit (commit-msg, pre-push).
+#
+# [2026-07-30, sprint INFRA-HOOK-COMMIT-MSG-MODELO-IA] O gate continua
+# bloqueando mencao a ferramenta de IA na mensagem -- a ideia original vale.
+# Mudou a FRONTEIRA, em dois pontos, cada um com dano medido:
+#
+#   (1) fronteira de palavra (\< \>): o nome do fornecedor colado dentro de um
+#       identificador ou de um path (a_b_c, dir/a_b_c) e vocabulario tecnico do
+#       projeto, não atribuicao de autoria. Sem isso, "restaura o path do
+#       <x>_ocr_cache" saiu do hook como "<agente>_ocr_cache" na mensagem do
+#       commit bfac3d78 -- a mensagem passou a afirmar um diretorio que não
+#       existe -- e o mesmo texto no ASSUNTO era impossivel de commitar.
+#       Como "_" e caractere de palavra para o grep/sed do GNU, \< \> ja
+#       isolam o caso; e a mesma semantica de STANDALONE_MODEL_RE em
+#       hooks/check_anonymity.py:93 do protocolo-ouroboros.
+#
+#   (2) "cursor" saiu desta lista e ganhou variavel propria com filtro de
+#       contexto (AI_MENTION_CURSOR_RE + AI_CURSOR_EXCLUDE_RE), do mesmo jeito
+#       que AI_WORD_CODE_RE ja fazia para conteudo de arquivo: e propriedade
+#       CSS (cursor: pointer), cursor de banco (cursor.execute) e cursor de
+#       texto. Como estava, comeu uma linha inteira de mensagem em 0b2798b2.
+#
+# O que NÃO mudou: "gerado por <modelo>" continua bloqueado. Prosa de autoria
+# não tem underscore nem marcador de cursor -- casa a fronteira de palavra e
+# cai no gate, que e exatamente a razao de o hook existir.
+AI_MENTION_RE='\<([Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[Cc]opilot|[Gg]emini|[Gg][Pp][Tt]-[34]|[Dd]eep[Ss]eek|[Aa]ider|[Ww]indsurf|[Cc]odeium|[Tt]abnine|[Oo]pus|[Ss]onnet|[Hh]aiku|[Ff]able|noreply@anthropic)\>'
+
+# "Cursor" em mensagem: so conta quando a mensagem NÃO tem nenhum marcador de
+# cursor real (ver AI_CURSOR_EXCLUDE_RE abaixo).
+AI_MENTION_CURSOR_RE='\<[Cc]ursor\>'
 
 # Mesma lista, com fronteira de palavra (\b) e SEM "Cursor" -- usada para
 # substituicao palavra-a-palavra em CONTEUDO de arquivo (comentario,
@@ -36,10 +62,69 @@ AI_WORD_CODE_RE='\b([Cc]laude|[Aa]nthropic|[Oo]pen[Aa][Ii]|[Cc]hat[Gg][Pp][Tt]|[
 
 # Marcadores de contexto que indicam "cursor" real (banco de dados/UI), nao
 # o editor Cursor. Mesmo filtro usado em scripts/auditoria-repos.sh.
-AI_CURSOR_EXCLUDE_RE='(api_key|api-key|provider|model|client|_MODEL|_API|endpoint|baseurl|base_url|\.cursor\(\)|cursor\s*=\s*conn|cursor\s*=\s*db|cursor\s*=\s*self|getcursor|set_cursor|cursor_factory|CursorKind|cursor\s*:|:\s*cursor\b|cursorPointer)'
+# [2026-07-30] Acrescentado `cursor\.<letra>`: acesso a atributo so acontece
+# num objeto cursor de banco/UI (cursor.execute, cursor.fetchall). O nome da
+# ferramenta em prosa nunca aparece seguido de ponto e letra minuscula.
+AI_CURSOR_EXCLUDE_RE='(api_key|api-key|provider|model|client|_MODEL|_API|endpoint|baseurl|base_url|\.cursor\(\)|cursor\s*=\s*conn|cursor\s*=\s*db|cursor\s*=\s*self|getcursor|set_cursor|cursor_factory|CursorKind|cursor\s*:|:\s*cursor\b|cursorPointer|cursor\.[a-z_])'
 
 # Secrets (para grep -P)
 SECRET_RE='(sk-[a-zA-Z0-9]{20,}|sk-ant-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}|AKIA[0-9A-Z]{16})'
+
+# --- Mencao a IA em mensagem de commit ---
+#
+# Um unico par de funcoes para commit-msg e pre-push. Antes cada hook montava
+# o proprio `grep -qiE "$AI_MENTION_RE"`; com o filtro de contexto do cursor
+# isso viraria a mesma logica escrita duas vezes -- e divergir aqui produz o
+# pior defeito possivel: o commit-msg aceita a mensagem e o pre-push barra o
+# push da mesma mensagem, sem saida.
+
+_AI_KEEP_TOKEN='(`[^`\n]*`|\S*/\S*|[A-Za-z0-9]+(?:[-._][A-Za-z0-9]+)+)'
+
+# Verdadeiro (0) quando o TEXTO menciona ferramenta de IA de um jeito que o
+# projeto proibe. Uso: `if _ai_mention_in_text "$MSG"; then ...`
+_ai_mention_in_text() {
+    local texto="$1"
+    # Mesma guarda da substituicao: o que _ai_mention_scrub_text preserva nao
+    # pode BLOQUEAR aqui, senao "corrige claude-desktop" no assunto vira commit
+    # impossivel enquanto o mesmo texto no corpo passa intacto -- o pior defeito
+    # possivel, gate e scrub discordando sobre o mesmo texto.
+    texto=$(printf '%s\n' "$texto" | perl -CSD -pe "s{$_AI_KEEP_TOKEN}{ }g" 2>/dev/null)
+    if printf '%s\n' "$texto" | grep -qiE "$AI_MENTION_RE" 2>/dev/null; then
+        return 0
+    fi
+    if printf '%s\n' "$texto" | grep -qiP "$AI_CURSOR_EXCLUDE_RE" 2>/dev/null; then
+        return 1
+    fi
+    printf '%s\n' "$texto" | grep -qiE "$AI_MENTION_CURSOR_RE" 2>/dev/null
+}
+
+# Devolve o TEXTO com as mencoes substituidas por "agente", preservando o
+# resto da frase (nunca apaga a linha). O filtro de contexto do cursor e por
+# TEXTO INTEIRO, não por linha: numa mensagem de commit a declaracao CSS
+# aparece num paragrafo e a explicacao noutro.
+# Mesma guarda do _PERL_KEEP_TOKEN do pre-commit: code span, token com barra
+# (URL/caminho) e identificador tecnico (separador com alfanumerico dos dois
+# lados) sao constante externa, nao mencao. Sem isto a mensagem "reescreveu
+# claude-desktop como agente-desktop" saia do hook como "reescreveu
+# agente-desktop como agente-desktop", perdendo o sentido.
+
+# \< \> e fronteira do GNU e o perl NAO entende: passaria a exigir "<" literal
+# e a substituicao pararia de casar qualquer coisa, desligando o gate inteiro
+# sem avisar. Converte para \b antes de entregar ao perl.
+_ai_re_para_perl() { printf '%s' "${1//\\</\\b}" | sed 's/\\>/\\b/g'; }
+
+_ai_mention_scrub_text() {
+    local texto="$1"
+    local re_men re_cur
+    re_men=$(_ai_re_para_perl "$AI_MENTION_RE")
+    re_cur=$(_ai_re_para_perl "$AI_MENTION_CURSOR_RE")
+    texto=$(printf '%s\n' "$texto" | perl -CSD -pe "s{$_AI_KEEP_TOKEN|$re_men}{ defined \$1 ? \$1 : q(agente) }gei")
+    if ! printf '%s\n' "$texto" | grep -qiP "$AI_CURSOR_EXCLUDE_RE" 2>/dev/null; then
+        texto=$(printf '%s\n' "$texto" | perl -CSD -pe "s{$_AI_KEEP_TOKEN|$re_cur}{ defined \$1 ? \$1 : q(agente) }gei")
+    fi
+    # Colapsa repeticao gerada pela propria substituicao ("agente agente").
+    printf '%s\n' "$texto" | sed -E 's/\bagente([[:space:]-]+agente\b)+/agente/g'
+}
 
 # --- Funcoes utilitarias ---
 

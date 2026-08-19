@@ -48,7 +48,9 @@ if [ -f "$WRAPPER_TPL" ]; then
   log "wrapper instalado em $DIVERT_TARGET"
 fi
 
-# 3. Policy file: desabilita IA + bloqueia Antigravity
+# 3. Policy file: bloqueia IA (nuvem E local) + Antigravity.
+#    A local fica bloqueada de proposito: o modelo on-device gasta CPU/RAM/disco
+#    da maquina do usuário para servir recurso do Google. GPU segue liberada.
 sudo mkdir -p "$POLICY_DIR"
 sudo tee "$POLICY_FILE" >/dev/null << 'POLEOF'
 {
@@ -65,6 +67,7 @@ sudo tee "$POLICY_FILE" >/dev/null << 'POLEOF'
   "OptimizationGuideOnDeviceModelExecutionEnabled": false,
   "GenAILocalFoundationalModelSettings": 1,
   "BuiltInAIAPIsEnabled": false,
+  "HardwareAccelerationModeEnabled": true,
   "ExtensionInstallBlocklist": [
     "eeijfnjmjelapkebgockoeaadonbchdd"
   ],

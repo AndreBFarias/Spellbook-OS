@@ -9,6 +9,15 @@ set -u
 DESKTOP="org.gnome.TextEditor.desktop"
 log() { printf '[editor] %s\n' "$*"; }
 
+# [2026-08-18] DESATIVADO pelo dono. O gnome-text-editor duplicava o gedit no
+# menu (dois "Text Editor") e o gedit e o que recebe o tema Dracula. O pacote
+# foi removido com apt purge; sem esta guarda o script o reinstalava na proxima
+# operação do apt -- o bootstrap roda no hook DPkg::Post-Invoke -- e ainda
+# tomava text/plain do gedit de volta.
+# Para reativar: apague este bloco.
+log "desativado: o dono optou pelo gedit (tematizado) como editor padrão"
+exit 0
+
 # 1. gnome-text-editor instalado? (instala se faltar -- "adicionar, nunca remover")
 if [ ! -f "/usr/share/applications/$DESKTOP" ]; then
   log "instalando gnome-text-editor..."
