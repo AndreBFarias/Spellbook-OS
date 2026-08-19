@@ -157,6 +157,15 @@ EXCLUDED_PATH_SUBSTRINGS = (
     '/.obsidian/',                 # vault real do Obsidian (plugins/themes/snippets de terceiros)
     '/obsidian/config/plugins/',   # plugins vendorizados (Dracula_OS-Theme)
     '/obsidian/config/themes/',    # temas vendorizados (Dracula_OS-Theme)
+    # SANITIZER-SEGAPE-EXCLUDE-01 (2026-08-07): repos de trabalho da SEGAPE/MEC.
+    # Sao codigo de outra equipe e usam emoji como DADO: em
+    # projeto_painel_ministro/painel_fundeb_condicionalidade.sql os glifos sao o
+    # VALOR da coluna descricao_cumprimento, exibida no painel do FUNDEB.
+    # Stripar corrompe o produto. A regra git-tracked-preserve não bastou: os 14
+    # arquivos do incidente de 06/08 ficaram pendurados na tree, e "so limpa o
+    # que tem mudanca local" passou a autorizar reescreve-los a cada santuario.
+    # Exclusão estatica por caminho não herda estado anterior.
+    '/Projetos_segape/',
 )
 
 
@@ -178,6 +187,57 @@ def _path_excluido(filepath: str) -> bool:
     if any(sub in p for sub in EXCLUDED_PATH_SUBSTRINGS):
         return True
     return _eh_pacote_terceiros(filepath)
+
+
+# SANITIZER-GUARDIAN-GIT-TRACKED-PRESERVE-01 (2026-08-03): num repositorio git,
+# so limpa arquivo com mudanca local (modificado ou novo). Arquivo ja commitado e
+# conteudo estabelecido do repositorio -- de quem quer que seja -- e reescreve-lo
+# contamina o diff com trabalho alheio. Foi o que aconteceu em SEGAPE/pipelines:
+# `santuario Projetos_segape pipelines` limpou 13 arquivos de outra equipe
+# (pipelines/templates/*.py, .github/workflows/*, familia.sql), abortou o checkout
+# da branch nova e corrompeu a descrição de uma coluna cujo CONTEUDO e emoji
+# ("Icone representativo (emoji) ... (<glifo> Habilitado, <glifo> Inabilitado)").
+#
+# Este invariante generaliza as tres exclusões anteriores (vendor, dev-journey,
+# plugins do Obsidian): todas eram arquivo commitado. A politica "zero emoji"
+# continua valendo onde importa -- no que voce esta prestes a commitar.
+#
+# Fora de repositorio git, nada muda: limpa tudo, como antes.
+def _mudancas_locais(directory: str) -> Optional[set]:
+    """Paths absolutos com mudanca local (modificado, staged ou untracked).
+
+    Retorna None quando `directory` nao esta em repositorio git -- o chamador
+    entende None como "sem restricao", preservando o comportamento antigo.
+    """
+    import subprocess
+
+    try:
+        raiz = subprocess.run(
+            ["git", "-C", str(directory), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if raiz.returncode != 0:
+            return None
+
+        proc = subprocess.run(
+            ["git", "-C", str(directory), "status", "--porcelain", "-z",
+             "--untracked-files=all"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if proc.returncode != 0:
+            return None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    base = Path(raiz.stdout.strip())
+    mudados = set()
+    for entrada in proc.stdout.split("\0"):
+        if len(entrada) < 4:
+            continue
+        # formato porcelain: XY <caminho>; rename traz "orig -> novo" mas com -z
+        # o destino vem em campo próprio, entao o caminho aqui ja e o final.
+        mudados.add(str((base / entrada[3:]).resolve()))
+    return mudados
 
 # Extensões de arquivo para verificar
 TEXT_EXTENSIONS = {
@@ -401,6 +461,20 @@ def clean_directory(
     Retorna (arquivos_limpos, linhas_modificadas, total_emojis).
     """
     files_with_emojis = scan_directory(directory, verbose=verbose)
+
+    # SANITIZER-GUARDIAN-GIT-TRACKED-PRESERVE-01: em repositorio git, so limpa o
+    # que tem mudanca local. None = fora de repo git, sem restricao.
+    mudancas = _mudancas_locais(directory)
+    if mudancas is not None:
+        antes = len(files_with_emojis)
+        files_with_emojis = [
+            (fp, res) for fp, res in files_with_emojis
+            if str(Path(fp).resolve()) in mudancas
+        ]
+        preservados = antes - len(files_with_emojis)
+        if preservados and (verbose or dry_run):
+            print(f"[PRESERVADO] {preservados} arquivo(s) sem mudanca local "
+                  f"(commitados; limpar contaminaria o diff)")
 
     files_cleaned = 0
     total_lines = 0

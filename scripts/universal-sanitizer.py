@@ -62,6 +62,21 @@ EXCLUDED_PATH_SUBSTRINGS = (
     "/.obsidian/",
     "/obsidian/config/plugins/",
     "/obsidian/config/themes/",
+    # SANITIZER-SEGAPE-EXCLUDE-01 (2026-08-07): repos de trabalho da SEGAPE/MEC.
+    # Paridade com o emoji_guardian. Emoji e DADO nesses repos (o glifo e o valor
+    # da coluna descricao_cumprimento do painel do FUNDEB), e o codigo e de outra
+    # equipe. Aqui o risco e maior que no guardian: o `ga` roda este sanitizer
+    # sobre arquivos JA STAGED, ou seja, no instante do commit.
+    "/Projetos_segape/",
+    # SANITIZER-MNEMO-EXCLUDE-01 (2026-08-14): repositorio publico proprio.
+    # Aqui a redacao de identidade faz o oposto do que deveria: o handle do
+    # dono num README publico e informacao necessaria, nao vazamento. Com ele
+    # redigido, o `git clone https://github.com/[REDACTED]/Mnemo` que abre as
+    # instrucoes de instalacao nao roda -- e o commit sai com o defeito calado,
+    # porque o auto-fix re-stageia sem perguntar. O que protege este repo e o
+    # hook proprio dele, em .githooks/pre-commit, que bloqueia em vez de
+    # reescrever, mais o .gitignore de biometria.
+    "/Mnemo/",
 )
 
 EXCLUDED_NAMES = {
@@ -171,7 +186,13 @@ def is_excluded(filepath: str) -> bool:
     name_lower = path.name.lower()
     if any(name_lower.endswith(s) for s in EXCLUDED_NAME_SUFFIXES):
         return True
-    path_str = str(path)
+    # Caminho ABSOLUTO para comparar com EXCLUDED_PATH_SUBSTRINGS. O hook do
+    # git passa os arquivos como caminho relativo a raiz do repositorio
+    # (`git diff --cached --name-only` devolve "README.md", nao o caminho
+    # inteiro), entao comparar com a string crua nunca casava nenhuma entrada
+    # -- a isencao por caminho ficava inerte justamente no momento em que ela
+    # importa, que e o commit. Medido em 14/08/2026.
+    path_str = os.path.abspath(str(path))
     if any(s in path_str for s in EXCLUDED_PATH_SUBSTRINGS):
         return True
     if path.name in EXCLUDED_NAMES:
@@ -211,6 +232,49 @@ def get_git_identity() -> list[str]:
     return terms
 
 
+# SANITIZER-STAGED-LINES-ONLY-01 (2026-08-03): num arquivo versionado que ja
+# existia, so limpa emoji nas linhas que VOCE adicionou ou alterou neste commit.
+# A politica "zero emoji" vale para o que voce escreve; reescrever linha alheia
+# num repositorio de outra equipe contamina o diff e vira "arquivo fora do escopo"
+# na review. Caso real: em SEGAPE/pipelines, um commit de 3 colunas novas no
+# schema.yml levou junto a descricao de uma coluna cujo CONTEUDO e emoji
+# ("Icone representativo (emoji) ... (<glifo> Habilitado, <glifo> Inabilitado)"),
+# que ninguem daquela equipe pediu para mudar.
+#
+# Arquivo novo, fora de git, ou diff indisponivel: sem restricao, limpa tudo.
+def _linhas_adicionadas(filepath: str) -> "set[int] | None":
+    """Numeros de linha (1-based, no arquivo em disco) adicionados ou alterados
+    no diff staged. None quando nao ha restricao a aplicar."""
+    import subprocess
+
+    alvo_abs = str(Path(filepath).resolve())
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--cached", "-U0", "--", alvo_abs],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(Path(alvo_abs).parent),
+        )
+        if proc.returncode != 0:
+            return None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    if not proc.stdout.strip():
+        return None  # sem diff staged: nao limita (arquivo novo ou nao staged)
+
+    alvo: set[int] = set()
+    for linha in proc.stdout.splitlines():
+        if not linha.startswith("@@"):
+            continue
+        m = re.search(r"\+(\d+)(?:,(\d+))?", linha)
+        if not m:
+            continue
+        inicio = int(m.group(1))
+        qtd = int(m.group(2)) if m.group(2) is not None else 1
+        alvo.update(range(inicio, inicio + qtd))
+    return alvo or None
+
+
 def sanitize_file(filepath: str, identity_terms: list[str]) -> dict[str, int]:
     report: dict[str, int] = {
         "emojis": 0,
@@ -232,8 +296,23 @@ def sanitize_file(filepath: str, identity_terms: list[str]) -> dict[str, int]:
 
     original = content
 
-    content, n = _strip_emojis_preserving_allowed(content)
-    report["emojis"] = n
+    # SANITIZER-STAGED-LINES-ONLY-01: emoji e limpo so nas linhas que voce
+    # adicionou/alterou. Secrets e identidade continuam varrendo o arquivo
+    # inteiro: sao protecao ativa, e vazar credencial ou nome numa linha alheia
+    # e pior que carregar uma linha a mais no diff.
+    _alvo = _linhas_adicionadas(filepath)
+    if _alvo is None:
+        content, n = _strip_emojis_preserving_allowed(content)
+        report["emojis"] = n
+    else:
+        _linhas = content.split("\n")
+        _total = 0
+        for _i, _linha in enumerate(_linhas):
+            if (_i + 1) in _alvo:
+                _linhas[_i], _k = _strip_emojis_preserving_allowed(_linha)
+                _total += _k
+        content = "\n".join(_linhas)
+        report["emojis"] = _total
 
     for pattern in SECRET_PATTERNS:
         content, n = pattern.subn("[REDACTED]", content)
@@ -259,8 +338,18 @@ def sanitize_file(filepath: str, identity_terms: list[str]) -> dict[str, int]:
     if ext not in safe_config_ext and Path(filepath).name not in safe_names:
         for term in identity_terms:
             if term in content:
+                # Dono de repositorio publico em URL (github.com/<user>/...) nao
+                # e vazamento: e o endereco do proprio projeto. Redigir ali
+                # quebra badge de CI que nao renderiza e `git clone` que ninguem
+                # consegue copiar. O termo segue redigido em toda outra posicao.
+                guarda = "\x00GH_OWNER_GUARD\x00"
+                url_re = re.compile(
+                    r"(github\.com/)" + re.escape(term) + r"(?=[/\"\'\s)\]]|$)"
+                )
+                content = url_re.sub(r"\1" + guarda, content)
                 pattern = re.compile(re.escape(term))
                 content, n = pattern.subn("[REDACTED]", content)
+                content = content.replace(guarda, term)
                 report["identity"] += n
 
     if content != original:
