@@ -1,0 +1,118 @@
+#!/bin/bash
+# Aurora - watchdog do mount LAN (sshfs) entre as duas máquinas da casa.
+# Roda como user unit via aurora-lan-mount-watchdog.timer (a cada 2min).
+#
+# PROBLEMA (incidente 12/08/2026): mesmo com o peer no ar e o daemon sshfs vivo,
+# o canal pode ficar pendurado — as requisições FUSE param na fila e TUDO que
+# tocar o ponto entra em D-state, imune até a kill -9. Sem watchdog isso só é
+# descoberto quando o gerenciador de arquivos trava, e o conserto é manual.
+#
+# CRITÉRIO (a parte delicada): fila > 0 NÃO basta para declarar travamento —
+# durante uma cópia grande é normal a fila ficar cheia. O critério é fila > 0 em
+# TODAS as amostras E nenhum byte lido/escrito pelo sshfs entre elas. Cópia viva
+# move bytes; mount pendurado não move nenhum. Sem essa segunda condição o
+# watchdog mataria transferências legítimas no meio.
+#
+# Tudo que ele lê é hang-safe: /proc/self/mountinfo, /sys/fs/fuse/connections/*
+# e /proc/<pid>/io são texto servido pelo kernel. Ele nunca faz stat/statfs no
+# ponto de montagem — é justamente isso que congela num mount morto, e seria
+# irônico o watchdog virar mais um processo preso em D.
+#
+# Idempotente e single-instance (flock): rodar duas vezes não faz mal.
+
+set -u
+
+# Sobrescrevíveis só para teste (ver "TESTE" no fim deste arquivo); em produção
+# valem os defaults, que dão uma janela de 40s antes de qualquer decisão.
+AMOSTRAS="${AURORA_WD_AMOSTRAS:-3}"    # leituras da fila antes de decidir
+INTERVALO="${AURORA_WD_INTERVALO:-20}" # segundos entre leituras
+
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/aurora-lan-mount-watchdog.lock" 2>/dev/null || exit 0
+flock -n 9 || exit 0
+
+# Espelha __lan_ponto() de functions/remoto.zsh: a pasta leva o nome do SISTEMA
+# remoto, não o da pessoa. Ponto desconhecido é ignorado (não é nosso).
+unit_do_ponto() {
+    case "${1##*/}" in
+        Spellbook-OS) echo "aurora-conectar-andre.service" ;;
+        Andromeda-OS) echo "aurora-conectar-maria.service" ;;
+        *)            echo "" ;;
+    esac
+}
+
+# PID do daemon que serve este ponto. O sshfs recebe o mountpoint como argumento
+# próprio, então a comparação é exata (-x), sem risco de casar ponto parecido.
+pid_do_ponto() {
+    local ponto="$1" p
+    for p in $(pgrep -x sshfs 2>/dev/null); do
+        if tr '\0' '\n' < "/proc/$p/cmdline" 2>/dev/null | grep -qxF "$ponto"; then
+            echo "$p"
+            return
+        fi
+    done
+}
+
+# Bytes que o daemon já leu/escreveu. É o sinal de "está trabalhando".
+io_total() {
+    local pid="$1"
+    [[ -n "$pid" && -r "/proc/$pid/io" ]] || { echo 0; return; }
+    awk '/^rchar:|^wchar:/ {s+=$2} END {print s+0}' "/proc/$pid/io" 2>/dev/null || echo 0
+}
+
+# Campos 3 (major:minor) e 5 (mountpoint) do mountinfo. O minor é o número da
+# conexão em /sys/fs/fuse/connections — é esse mapeamento que permite ler a fila
+# de um mount sem tocá-lo.
+mapfile -t MOUNTS < <(awk '/ fuse\.sshfs /{print $3" "$5}' /proc/self/mountinfo 2>/dev/null)
+
+(( ${#MOUNTS[@]} )) || exit 0
+
+for entrada in "${MOUNTS[@]}"; do
+    majmin="${entrada%% *}"
+    ponto="${entrada#* }"
+    conn="/sys/fs/fuse/connections/${majmin#*:}/waiting"
+    [[ -r "$conn" ]] || continue
+
+    unit="$(unit_do_ponto "$ponto")"
+    [[ -n "$unit" ]] || continue
+
+    pid="$(pid_do_ponto "$ponto")"
+    fila=0
+    io_ant=""
+    travado=1
+
+    for (( i = 1; i <= AMOSTRAS; i++ )); do
+        fila="$(cat "$conn" 2>/dev/null || echo 0)"
+        if (( fila == 0 )); then
+            travado=0
+            break
+        fi
+        io_now="$(io_total "$pid")"
+        if [[ -n "$io_ant" && "$io_now" != "$io_ant" ]]; then
+            travado=0          # bytes andaram: transferência viva, não travamento
+            break
+        fi
+        io_ant="$io_now"
+        (( i < AMOSTRAS )) && sleep "$INTERVALO"
+    done
+
+    (( travado )) || continue
+
+    echo "TRAVADO: $ponto — fila parada em $fila, sshfs(${pid:-morto}) sem I/O por $(( (AMOSTRAS - 1) * INTERVALO ))s. Reciclando $unit."
+    systemctl --user restart "$unit"
+    sleep 3
+
+    if grep -qF " $ponto " /proc/self/mountinfo 2>/dev/null; then
+        echo "OK: $ponto remontado."
+    else
+        echo "PENDENTE: $ponto não voltou — peer provavelmente fora da rede. O gate de rede da unit segura a remontagem até ele aparecer."
+    fi
+done
+
+# TESTE (reproduz o travamento sem esperar ele acontecer):
+#   pid=$(pgrep -x sshfs | head -1)
+#   kill -STOP $pid                                    # daemon para de responder
+#   setsid sh -c 'ls ~/Remotos/Andromeda-OS >/dev/null' &   # enche a fila
+#   cat /sys/fs/fuse/connections/<minor>/waiting        # confirma fila > 0
+#   AURORA_WD_INTERVALO=2 ~/.config/zsh/aurora/aurora-lan-mount-watchdog
+#   kill -CONT $pid 2>/dev/null                        # se o daemon ainda existir
+# Esperado: o script imprime TRAVADO, recicla a unit e o ponto volta a montar.

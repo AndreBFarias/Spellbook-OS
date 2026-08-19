@@ -1,0 +1,10 @@
+[Unit]
+Description=Aurora - watchdog do mount LAN (sshfs): recicla o ponto quando a fila FUSE fica pendurada
+
+[Service]
+Type=oneshot
+# O script amostra por 40s antes de decidir; o teto evita sobreposicao com o timer.
+TimeoutStartSec=120
+ExecStart=%h/.config/zsh/aurora/aurora-lan-mount-watchdog
+StandardOutput=journal
+StandardError=journal

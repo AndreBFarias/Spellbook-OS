@@ -82,17 +82,48 @@ __lan_unit_instalar() {
     local ponto_nome="$(__lan_ponto "$alvo")"
     local unit_dir="$HOME/.config/systemd/user"
     mkdir -p "$unit_dir"
+
+    # Backoff exponencial so existe no systemd 254+. Nas versoes antigas os tres
+    # knobs sao ignorados com warning no journal, entao aqui a versao decide:
+    # a MeowSystem roda 255 (ganha o backoff), a nitro-5 roda 249 (intervalo fixo).
+    local sdver="${$(systemctl --version 2>/dev/null | head -1 | awk '{print $2}')%%[^0-9]*}"
+    local backoff="RestartSec=30"
+    if [[ -n "$sdver" ]] && (( sdver >= 254 )); then
+        backoff=$'RestartSec=15\nRestartSteps=8\nRestartMaxDelaySec=10min'
+    fi
+
     cat >"$unit_dir/aurora-conectar-$alvo.service" <<EOF
 [Unit]
 Description=Ritual da Aurora: SSD remoto '$alvo' montado em ~/Remotos/$ponto_nome (sshfs)
+# Nunca desistir de reconectar, por mais falhas seguidas que haja (peer desligado).
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
+# GATE DE REDE — 12/08/2026. Precisa vir ANTES de todo o resto e o motivo e medido.
+# Sem ele, com o peer fora da rede o servico remonta em loop (8.036 restarts em 3
+# dias, medido na MeowSystem) e cada ciclo cria um mount FUSE cujo backend ja esta
+# morto: na janela em que ele existe, QUALQUER open() sob o ponto bloqueia em D.
+# 'timeout 2' não e decorativo: getent num host morto leva 5s cravados (o timeout
+# do mdns4_minimal), e sem teto o próprio gate viraria a espera que ele evita.
+# 'ahostsv4' evita a rodada AAAA. Com o peer ligado, o mDNS responde em ms.
+ExecStartPre=/usr/bin/timeout 2 /usr/bin/getent ahostsv4 $host
+# Limpa mount preso / "transport endpoint is not connected" de uma queda anterior
+# (o '-' faz o systemd ignorar quando não ha nada montado).
+ExecStartPre=-/usr/bin/fusermount3 -u -z %h/Remotos/$ponto_nome
 ExecStartPre=/bin/mkdir -p %h/Remotos/$ponto_nome
-ExecStart=/usr/bin/sshfs -f $usuario@$host:/ %h/Remotos/$ponto_nome -o BatchMode=yes,ConnectTimeout=10,StrictHostKeyChecking=accept-new,IdentityFile=%h/.ssh/id_ed25519_lan,reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,idmap=user,follow_symlinks
-ExecStop=/bin/fusermount3 -u -z %h/Remotos/$ponto_nome
+# SEM 'reconnect' — 12/08/2026. Era ele que, com o peer fora da rede, mantinha o
+# sshfs vivo e PENDURADO (D-state) para sempre: nautilus, df e dialogos de arquivo
+# travavam sem kill possivel. Sem reconnect + ServerAlive rapido (queda detectada
+# em ~15s), o sshfs SAI ao perder o peer: o ponto vira erro imediato (EIO) em vez
+# de travar, e o Restart abaixo remonta quando ele voltar.
+# yes: exige host em known_hosts (evita MITM). Use ssh-keyscan na 1a conexao.
+ExecStart=/usr/bin/sshfs -f $usuario@$host:/ %h/Remotos/$ponto_nome -o BatchMode=yes,ConnectTimeout=5,StrictHostKeyChecking=yes,IdentityFile=%h/.ssh/id_ed25519_lan,ServerAliveInterval=5,ServerAliveCountMax=3,idmap=user,follow_symlinks
+ExecStop=/usr/bin/fusermount3 -u -z %h/Remotos/$ponto_nome
+# Limpeza tambem quando o processo morre sozinho (peer caiu), não so no stop explicito.
+ExecStopPost=-/usr/bin/fusermount3 -u -z %h/Remotos/$ponto_nome
 Restart=always
-RestartSec=60
+$backoff
 
 [Install]
 WantedBy=default.target
@@ -156,7 +187,9 @@ __conectar_ssd() {
     else
         __warn "A unit nao montou em 15s — tentando sshfs direto..."
         mkdir -p "$ponto"
-        if sshfs "$alvo:/" "$ponto" -o reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,idmap=user,follow_symlinks; then
+        # Sem 'reconnect' pelo mesmo motivo da unit (ver __lan_unit_instalar): com
+        # reconnect o sshfs fica vivo e pendurado em D quando o peer some.
+        if sshfs "$alvo:/" "$ponto" -o ServerAliveInterval=5,ServerAliveCountMax=3,idmap=user,follow_symlinks; then
             __ok "SSD de '$alvo' montado em $ponto."
         else
             __err "Falhou. Diagnostico: journalctl --user -u $unit -n 20"
