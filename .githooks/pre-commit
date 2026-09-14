@@ -58,6 +58,15 @@ for _f in $(git diff --cached --name-only --diff-filter=ACM 2>/dev/null); do
 
     # 1) o caminho: pasta de credencial, ou extensao que quase sempre e chave
     case "$_f" in
+        # EXCECAO: o .zshrc da RAIZ deste repo e versionado POR DESIGN — e o
+        # ponto de entrada do Spellbook-OS e esta no git desde 2026-05. O padrao
+        # `.zshrc*` mais abaixo existe para barrar .zshrc de OUTRA origem (o home
+        # de outra maquina, um backup com secret inline), mas casava tambem este,
+        # e desde 31/07/2026 tornou o arquivo IMPOSSIVEL de commitar. Nao e
+        # afrouxamento: o `continue` e que seria pulado, e este ramo cai direto
+        # nas verificacoes de CONTEUDO abaixo, que seguem valendo para ele.
+        .zshrc)
+            ;;
         *Segredos/*|*Credenciais/*|*.key|*.pem|*.p12|*.pfx|*.jks|\
         *.git-credentials|*.zsh_secrets|*id_rsa*|*id_ed25519*|\
         *credentials.json|*service-account*.json|*senhas.yml|*senhas.yaml|\

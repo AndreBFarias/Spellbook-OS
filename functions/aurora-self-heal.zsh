@@ -116,10 +116,11 @@ aurora-self-heal() {
     fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
   fi
 
-  # Aurora 2.3: editor padrão de texto (gnome-text-editor estilo Notepad)
-  if [ ! -f /usr/share/applications/org.gnome.TextEditor.desktop ] \
-     || [ "$(xdg-mime query default text/plain 2>/dev/null)" != "org.gnome.TextEditor.desktop" ]; then
-    issues+=("gnome-text-editor não é o padrão de text/plain (editor estilo Notepad)")
+  # Editor padrão de texto: gedit (tematizado Dracula). Escolha do dono em
+  # 2026-08-18 — ver o cabeçalho de aurora-editor-apply.sh.
+  if [ -f /usr/share/applications/org.gnome.gedit.desktop ] \
+     && [ "$(xdg-mime query default text/plain 2>/dev/null)" != "org.gnome.gedit.desktop" ]; then
+    issues+=("Gedit não é o padrão de text/plain")
     fixes_user+=("$aurora/aurora-editor-apply.sh")
   fi
 

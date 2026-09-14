@@ -46,6 +46,12 @@ if ! declare -F _ai_mention_in_text >/dev/null 2>&1; then
     _ai_mention_in_text() {
         printf '%s\n' "$1" | grep -qiE "$_AI_FALLBACK_RE" 2>/dev/null
     }
+    # No fallback o assunto ja e estrito (nada e preservado), entao a variante
+    # do assunto e a mesma funcao -- mas precisa EXISTIR, senao o gate [4/4]
+    # chama funcao inexistente e o hook falha aberto.
+    _ai_mention_in_subject() {
+        _ai_mention_in_text "$1"
+    }
     _ai_mention_scrub_text() {
         # Mesma guarda do _lib.sh: nao reescrever identificador tecnico. E \< \>
         # vira \b porque o perl nao entende a fronteira do GNU -- deixar passar
@@ -72,7 +78,10 @@ ${BODY}"
 fi
 
 # [4/4] Verificar se subject menciona IA (BLOQUEIA -- subject e intencional)
-if _ai_mention_in_text "$SUBJECT"; then
+# _ai_mention_in_subject e nao _ai_mention_in_text: no assunto o hifen nao
+# protege o token, senao o nome de qualquer ferramenta escrito em kebab passa
+# pelo gate (ver _AI_KEEP_TOKEN_ASSUNTO em _lib.sh).
+if _ai_mention_in_subject "$SUBJECT"; then
     echo "  [BLOQUEIO] Subject da mensagem menciona ferramenta de IA"
     echo "    Remova qualquer referencia a IA do subject"
     BLOCKED=1

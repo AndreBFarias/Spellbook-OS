@@ -80,15 +80,28 @@ SECRET_RE='(sk-[a-zA-Z0-9]{20,}|sk-ant-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|gh
 
 _AI_KEEP_TOKEN='(`[^`\n]*`|\S*/\S*|[A-Za-z0-9]+(?:[-._][A-Za-z0-9]+)+)'
 
+# No ASSUNTO o hifen NAO protege. Corpo e assunto tem contratos diferentes por
+# desenho -- o corpo e reescrito (scrub), o assunto e BLOQUEADO -- entao a lista
+# de tokens preservados tambem difere: no corpo, preservar `<x>-desktop` evita
+# que a frase "reescreveu <x>-desktop como agente-desktop" saia do hook dizendo
+# "agente-desktop como agente-desktop"; no assunto, preservar o mesmo token
+# desligaria o gate para qualquer nome de ferramenta escrito em kebab, que e
+# justamente a forma como esses produtos se chamam. O underscore continua
+# protegido nos dois: `\<`/`\>` do GNU tratam `_` como letra e `-` como
+# fronteira, entao identificador snake_case e nome de variavel de ambiente
+# seguem passando no assunto.
+_AI_KEEP_TOKEN_ASSUNTO='(`[^`\n]*`|\S*/\S*|[A-Za-z0-9]+(?:[._][A-Za-z0-9]+)+)'
+
 # Verdadeiro (0) quando o TEXTO menciona ferramenta de IA de um jeito que o
 # projeto proibe. Uso: `if _ai_mention_in_text "$MSG"; then ...`
 _ai_mention_in_text() {
     local texto="$1"
+    local keep="${2:-$_AI_KEEP_TOKEN}"
     # Mesma guarda da substituicao: o que _ai_mention_scrub_text preserva nao
     # pode BLOQUEAR aqui, senao "corrige claude-desktop" no assunto vira commit
     # impossivel enquanto o mesmo texto no corpo passa intacto -- o pior defeito
     # possivel, gate e scrub discordando sobre o mesmo texto.
-    texto=$(printf '%s\n' "$texto" | perl -CSD -pe "s{$_AI_KEEP_TOKEN}{ }g" 2>/dev/null)
+    texto=$(printf '%s\n' "$texto" | perl -CSD -pe "s{$keep}{ }g" 2>/dev/null)
     if printf '%s\n' "$texto" | grep -qiE "$AI_MENTION_RE" 2>/dev/null; then
         return 0
     fi
@@ -96,6 +109,12 @@ _ai_mention_in_text() {
         return 1
     fi
     printf '%s\n' "$texto" | grep -qiE "$AI_MENTION_CURSOR_RE" 2>/dev/null
+}
+
+# Verdadeiro (0) quando o ASSUNTO menciona ferramenta de IA. Mesma logica, so
+# muda o conjunto protegido -- ver _AI_KEEP_TOKEN_ASSUNTO.
+_ai_mention_in_subject() {
+    _ai_mention_in_text "$1" "$_AI_KEEP_TOKEN_ASSUNTO"
 }
 
 # Devolve o TEXTO com as mencoes substituidas por "agente", preservando o

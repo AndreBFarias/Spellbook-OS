@@ -420,41 +420,16 @@ cca-ghostty() {
     return 0
 }
 
-# Propósito: Claude Code com permissões completas. Detecta terminal e relança em
-# Ghostty automaticamente se terminal atual não suportar OSC 9 (push notif).
+# Propósito: Claude Code com permissões completas, sempre in-place.
+# Notificação vai pelo canal do sistema (settings.json), não por OSC 9.
 # Uso: cca [args]
-# Variantes: cca-here (força in-place), cca-ghostty (força relançamento), cca-tmux (tmux).
+# Variantes: cca-here (idêntica), cca-tmux (dentro de tmux).
 cca() {
     if ! command -v claude &> /dev/null; then
-        echo "[ERRO] Claude Code não instalado. Rode: npm install -g @anthropic-ai/claude-code"
+        echo "[ERRO] Claude Code não instalado. Rode: curl -fsSL https://claude.ai/install.sh | bash"
         return 1
     fi
     typeset -f sync_claude_symlinks > /dev/null && sync_claude_symlinks --quiet 2>/dev/null
-
-    # Terminal já suporta OSC 9? Roda in-place.
-    if __cca_terminal_compativel; then
-        __cca_run "$@"
-        return $?
-    fi
-
-    # Terminal incompatível: tenta relançar em Ghostty (instalado por install.sh).
-    local launch_cmd
-    launch_cmd=$(__cca_ghostty_exec)
-    if [ -n "$launch_cmd" ]; then
-        echo "[cca] Terminal atual (${TERM_PROGRAM:-${TERM:-?}}) não suporta OSC 9 — relançando em Ghostty..."
-        __cca_spawn_ghostty "$launch_cmd" "$@"
-        return 0
-    fi
-
-    # Nem Ghostty instalado: roda in-place com aviso forte.
-    cat >&2 <<'EOF'
-[cca][AVISO] Terminal atual não suporta OSC 9 e Ghostty/Kitty não estão instalados.
-Se push notificações vazarem caracteres tipo ]9; ou ^[]777; no TTY, edite
-~/.claude/settings.json setando:
-  "preferredNotifChannel": "system"
-  "agentPushNotifEnabled": false
-Ou instale Ghostty: bash ~/.config/zsh/install.sh --update
-EOF
     __cca_run "$@"
 }
 

@@ -325,10 +325,24 @@ _step_deps() {
 
     local pkgs=(zsh fzf git python3-pip rsync tree jq pv tmux qrencode)
 
+    # Clipboard e digitação sintética sob Wayland. Em sessão COSMIC o cosmic-term
+    # é cliente Wayland nativo e o xclip/xsel (X11) NÃO enxergam o clipboard dele:
+    # sem wl-clipboard, colar imagem no agente Code falha silenciosamente, porque
+    # o próprio binário do CC chama `wl-paste --type image/png` por baixo.
+    # Inofensivos sob X11 (ficam instalados e sem uso). Ver leva-03 da Migração-OS.
+    if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]] || [[ "${XDG_CURRENT_DESKTOP:-}" == *COSMIC* ]]; then
+        pkgs+=(wl-clipboard wtype)
+    fi
+
     local mgr
     mgr=$(_detect_pkg_manager)
     if [[ "$mgr" == "apt" ]]; then
         pkgs+=(whiptail)
+        # Diagnóstico de webcam (`v4l2-ctl --list-devices`). Não é dependência de
+        # nada: entra porque toda investigação de "a câmera não funciona" começa
+        # perguntando o que o v4l enxerga, e não ter a ferramenta custa uma ida
+        # ao apt no meio do diagnóstico. Só existe com esse nome no apt.
+        pkgs+=(v4l-utils)
     fi
 
     for pkg in "${pkgs[@]}"; do
@@ -696,8 +710,25 @@ _step_secrets_vault() {
     fi
 
     local passphrase=""
+
+    # Sem TTY (automação, CI, `./install.sh </dev/null`, execução por agente) não
+    # há a quem perguntar. Pular aqui NÃO é perda: os credentials já vivem em
+    # disco e a Etapa 9 os preserva — o vault é rede de recuperação, não fonte.
+    #
+    # Isto não é zelo, é conserto de bug medido em 2026-09-14: sob `set -e`, um
+    # `read` que encontra EOF retorna 1 e ABORTA O INSTALL INTEIRO aqui, na etapa
+    # 10 de 20. As dez etapas seguintes — hooks git, Aurora, ZDOTDIR, fastfetch,
+    # topgrade, ghostty, validação — simplesmente não rodavam, e o script saía
+    # sem dizer que tinha desistido.
+    if [[ ! -t 0 ]]; then
+        _info "Sem terminal interativo — vault pulado (credentials em disco já valem)"
+        return 0
+    fi
+
     echo -n "  Senha do vault (Enter para pular): "
-    read -rs passphrase
+    # `|| true`: Ctrl+D no prompt também devolve 1, e desistir da senha não pode
+    # derrubar o resto da instalação.
+    read -rs passphrase || true
     echo
 
     if [[ -z "$passphrase" ]]; then
@@ -902,22 +933,37 @@ _step_hooks() {
     _run mkdir -p "$hooks_dest"
     _run mkdir -p "$log_dir"
 
-    # Copiar hooks + _lib.sh
+    # Instalar hooks + _lib.sh
+    #
+    # Em 18/08/2026 os hooks efetivos viraram SYMLINK para os do repo, para matar
+    # o drift entre fonte e efetivo (um `cp` esquecido deixava o hook em produção
+    # divergente do versionado por semanas). O `cp` abaixo segue o symlink, vê que
+    # origem e destino são o MESMO arquivo e sai com erro — e sob `set -e` isso
+    # abortava o install na etapa 11, engolindo as nove etapas seguintes.
+    # Medido em 2026-09-14. Se já aponta para a fonte, não há nada a fazer.
     local hook_files=(_lib.sh pre-commit commit-msg pre-push post-commit)
     for hook in "${hook_files[@]}"; do
-        if [[ -f "$hooks_source/$hook" ]]; then
-            _run cp "$hooks_source/$hook" "$hooks_dest/$hook"
-            _run chmod +x "$hooks_dest/$hook"
-            _ok "$hook instalado"
-        else
+        if [[ ! -f "$hooks_source/$hook" ]]; then
             _warn "$hook não encontrado em $hooks_source"
+            continue
         fi
+        if [[ "$hooks_dest/$hook" -ef "$hooks_source/$hook" ]]; then
+            _ok "$hook já aponta para o repo (symlink)"
+            continue
+        fi
+        _run cp "$hooks_source/$hook" "$hooks_dest/$hook"
+        _run chmod +x "$hooks_dest/$hook"
+        _ok "$hook instalado"
     done
 
     # Copiar commit template
     if [[ -f "$hooks_source/commit-template" ]]; then
-        _run cp "$hooks_source/commit-template" "$template_dest"
-        _ok "commit-template instalado"
+        if [[ "$template_dest" -ef "$hooks_source/commit-template" ]]; then
+            _ok "commit-template já aponta para o repo"
+        else
+            _run cp "$hooks_source/commit-template" "$template_dest"
+            _ok "commit-template instalado"
+        fi
     fi
 
     # Configurar commit.template no gitconfig global

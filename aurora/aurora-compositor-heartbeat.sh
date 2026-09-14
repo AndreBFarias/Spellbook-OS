@@ -40,6 +40,17 @@ log() { logger -t "$LOG_TAG" "$*" 2>/dev/null; }
 [ -e "$HOME/.config/aurora-no-hb" ] || [ -e /etc/aurora/no-compositor-hb ] && { log "kill-switch ativo -> heartbeat desativado"; exit 0; }
 
 # --- so X11 ----------------------------------------------------------------
+# Duas checagens, e a segunda existe por causa do default da primeira. O
+# `${XDG_SESSION_TYPE:-x11}` assume X11 quando a variavel NÃO CHEGA no processo,
+# o que acontece sempre que este script e lancado por nohup a partir de um
+# contexto que não a exporta. Sob COSMIC isso faz o heartbeat rodar, pingar um
+# org.gnome.Shell que não existe, contar 3 falhas e disparar o aurora-gpu-revive
+# — que sob Wayland derruba a sessão inteira. Presenca do cosmic-comp e fato
+# observavel, não depende de ambiente herdado.
+if pgrep -x cosmic-comp >/dev/null 2>&1; then
+  log "cosmic-comp em execução (sessão COSMIC/Wayland) -> heartbeat desativado"
+  exit 0
+fi
 if [ "${XDG_SESSION_TYPE:-x11}" != "x11" ]; then
   log "sessão ${XDG_SESSION_TYPE:-?} (não-X11) -> heartbeat desativado"
   exit 0

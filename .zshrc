@@ -26,6 +26,10 @@ fi
 [ -f "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_sprint.zsh" ] && source "${ZDOTDIR:-$HOME/.config/zsh}/cca/aliases_sprint.zsh"
 
 # --- 5. FERRAMENTAS ESPECÍFICAS ---
+# Google Cloud SDK (gcloud, bq, gsutil). O path.zsh.inc do próprio SDK faz
+# export PATH cru e duplica a cada source, então entra pelo helper idempotente
+[[ -d "$HOME/google-cloud-sdk/bin" ]] && __add_to_path_once "$HOME/google-cloud-sdk/bin"
+
 # Pyenv (lazy-load: só inicializa na 1ª invocação)
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && __add_to_path_once "$PYENV_ROOT/bin"
@@ -55,7 +59,10 @@ fi
 # --- 7.2. AURORA SELF-HEAL (detecta drift das configs persistentes, cache 1h) ---
 if [[ -o interactive && -z "${AURORA_SELF_HEAL_DONE:-}" ]]; then
     export AURORA_SELF_HEAL_DONE=1
-    typeset -f aurora-self-heal-cached > /dev/null && aurora-self-heal-cached
+    # Silencioso: o relatório de drift vai pro log, não polui a abertura do
+    # terminal. Ver com: cat ~/.cache/aurora-self-heal.log
+    typeset -f aurora-self-heal-cached > /dev/null \
+        && aurora-self-heal-cached >>"$HOME/.cache/aurora-self-heal.log" 2>&1
 fi
 
 # --- 99. SPELLBOOK SYNC (ao fechar terminal) ---

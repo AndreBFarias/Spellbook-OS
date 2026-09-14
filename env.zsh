@@ -107,14 +107,10 @@ if [[ -o interactive && -z "$TMUX" ]]; then
         '
         echo
     fi
-    # Aviso ao final do boot quando o SSD remoto 'maria' não está montado.
-    # Checar /proc/mounts é hang-safe: statfs no mountpoint de um sshfs morto
-    # congela o shell em estado D (incidente 2026-07-23).
-    if ! grep -q '/Remotos/Andromeda-OS fuse.sshfs' /proc/mounts 2>/dev/null; then
-        printf '\e[38;2;255;184;108m[AVISO] maria (Andromeda-OS) offline — ~/Remotos/Andromeda-OS não está montado.\e[0m\n'
-        printf '\e[2m  Favor baixar manualmente os arquivos .xlsx, .pdf e .docx que precisar.\e[0m\n'
-        printf '\e[2m  Quando a maria voltar: systemctl --user start aurora-conectar-maria.service\e[0m\n'
-    fi
+    # O aviso de 'maria offline' foi removido em 2026-09-11: a unit
+    # aurora-conectar-maria.service já remonta sozinha quando o peer volta, e o
+    # watchdog recicla o ponto quando o canal apodrece. Avisar em toda abertura
+    # de terminal era ruído sobre algo que se conserta sem a pessoa.
 fi
 
 # --- 5. PROMPT COM CORES DE FUNDO ---

@@ -512,6 +512,25 @@ if [ -x "$AURORA_REPO/aurora-thermal-apply.sh" ]; then
   "$AURORA_REPO/aurora-thermal-apply.sh" | sed 's/^/[bootstrap] /' || warn "thermal-apply retornou erro (não bloqueia)"
 fi
 
+# 6h. leva-03 da Migração-OS (2026-09-14): o que a migração para COSMIC quebrou
+# no uso diário — clipboard Wayland (wl-clipboard/wtype), atalhos custom do
+# compositor (Print/Gradia/Alt+F2/paste universal) e o acesso da webcam nos
+# Flatpaks. Ver o cabeçalho de aurora-cosmic-apply.sh: cada item traz a medição
+# que o justifica. Idempotente; reconstrói do zero se /usr/local for limpo.
+if [ -x "$AURORA_REPO/aurora-cosmic-apply.sh" ]; then
+  "$AURORA_REPO/aurora-cosmic-apply.sh" | sed 's/^/[bootstrap] /' || warn "cosmic-apply retornou erro (não bloqueia)"
+fi
+
+# 6i. Travamento de tela no resume (2026-09-11 e 2026-09-14): o notebook é muxless,
+# o HDMI externo está cabeado na RTX 3050, e o driver falha ao revalidar as superfícies
+# de scanout ao acordar — `nvidia-modeset: Invalid request parameters, planePitch` vira
+# `Protocol error 1 on wp_linux_drm_syncobj_manager_v1`, que derruba TODOS os clientes
+# Wayland de uma vez (duas sessões do agente perdidas em 14/09). Desliga a suspensão por
+# ociosidade e tira a dGPU do D3cold. Idempotente; `--revert` desfaz.
+if [ -x "$AURORA_REPO/aurora-suspend-nvidia-apply.sh" ]; then
+  "$AURORA_REPO/aurora-suspend-nvidia-apply.sh" | sed 's/^/[bootstrap] /' || warn "suspend-nvidia-apply retornou erro (não bloqueia)"
+fi
+
 # 7. Sunset do ritual antigo (so se ainda ativo)
 if [ -f /etc/systemd/system/ritual-aurora-root.service ]; then
   sudo -n systemctl disable ritual-aurora-root.service 2>/dev/null || true

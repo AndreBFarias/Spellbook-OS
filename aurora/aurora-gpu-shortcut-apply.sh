@@ -79,7 +79,12 @@ Comment=Auto-recupera o display travado (hang silencioso do compositor)
 EOF
     log "autostart do heartbeat criado: $HB_AUTOSTART"
   fi
-  if [ -n "${DISPLAY:-}" ] && ! pgrep -f "aurora-compositor-heartbeat.sh" >/dev/null 2>&1; then
+  # `$DISPLAY` nao serve para decidir isto: sob COSMIC o XWayland o define, e a
+  # condicao passa numa sessão onde o heartbeat não tem o que pingar. Ver o
+  # cabecalho do heartbeat: rodar ali termina em MODE2 reset e sessão derrubada.
+  if pgrep -x cosmic-comp >/dev/null 2>&1; then
+    log "sessão COSMIC/Wayland -> heartbeat do compositor NÃO iniciado (so faz sentido no X11)"
+  elif [ -n "${DISPLAY:-}" ] && ! pgrep -f "aurora-compositor-heartbeat.sh" >/dev/null 2>&1; then
     nohup "$HB" >/dev/null 2>&1 & disown 2>/dev/null || true
     log "heartbeat do compositor iniciado"
   fi
