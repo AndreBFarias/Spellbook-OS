@@ -1,24 +1,41 @@
 #!/bin/bash
 # Aurora - editor de texto padrão do sistema.
-# [2026-08-18] O dono optou pelo gedit: ele recebe o tema Dracula, e o
-# gnome-text-editor duplicava a entrada "Text Editor" no menu. O pacote
-# gnome-text-editor foi removido com apt purge -- este script NÃO o reinstala e
-# NÃO devolve text/plain para ele.
+#
+# [2026-08-18] A versão anterior tinha "org.gnome.gedit.desktop" escrito no corpo,
+# por decisão da época (gedit recebia o tema Dracula).
+# [2026-09-15] O gedit foi removido na leva-04 e este script virou uma instrução
+# para um programa que não existe: ele saía 0 dizendo "não instalado", calado,
+# enquanto o self-heal continuava chamando-o de hora em hora. Pior: se o gedit
+# voltasse por uma dependência qualquer, este script tomaria text/plain do
+# COSMIC Edit de volta, contra a regra do dono ("na duplicidade o COSMIC vence").
+#
+# Agora quem escolhe é o aurora-menu-doctor.py, com a mesma política que ele usa
+# para repor qualquer default órfão. Nenhum nome de editor mora aqui — trocar o
+# editor padrão é instalar o editor, não editar este arquivo.
+#
 # Idempotente. Roda na sessão do usuário (chamado pelo aurora-bootstrap.sh).
 set -u
 
-DESKTOP="org.gnome.gedit.desktop"
+DOCTOR="$HOME/.config/zsh/aurora/aurora-menu-doctor.py"
 log() { printf '[Editor] %s\n' "$*"; }
 
-if [ ! -f "/usr/share/applications/$DESKTOP" ]; then
-  log "Gedit não instalado -- padrão de text/plain não alterado"
+[ -x "$DOCTOR" ] || { log "aurora-menu-doctor.py ausente — padrão não alterado"; exit 0; }
+
+desejado="$("$DOCTOR" --melhor-para text/plain 2>/dev/null)" || desejado=""
+if [ -z "$desejado" ]; then
+  log "nenhum editor instalado declara text/plain — padrão não alterado"
   exit 0
 fi
 
-if [ "$(xdg-mime query default text/plain 2>/dev/null)" != "$DESKTOP" ]; then
-  xdg-mime default "$DESKTOP" text/plain 2>/dev/null \
-    && log "Gedit definido como padrão de text/plain" \
-    || log "Falha ao definir o gedit como padrão de text/plain"
+atual="$(xdg-mime query default text/plain 2>/dev/null)"
+if [ "$atual" = "$desejado" ]; then
+  exit 0
+fi
+
+if xdg-mime default "$desejado" text/plain 2>/dev/null; then
+  log "text/plain: $atual → $desejado"
+else
+  log "falha ao definir $desejado como padrão de text/plain"
 fi
 
 exit 0

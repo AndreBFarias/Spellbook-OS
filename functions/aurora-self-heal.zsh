@@ -116,11 +116,15 @@ aurora-self-heal() {
     fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
   fi
 
-  # Editor padrão de texto: gedit (tematizado Dracula). Escolha do dono em
-  # 2026-08-18 — ver o cabeçalho de aurora-editor-apply.sh.
-  if [ -f /usr/share/applications/org.gnome.gedit.desktop ] \
-     && [ "$(xdg-mime query default text/plain 2>/dev/null)" != "org.gnome.gedit.desktop" ]; then
-    issues+=("Gedit não é o padrão de text/plain")
+  # Editor padrão de texto. Nenhum nome de editor aqui: quem responde qual é o
+  # preferido VIVO é o menu-doctor, com a mesma política que ele usa para repor
+  # qualquer default órfão. A versão anterior perguntava por gedit, que saiu na
+  # leva-04 — a condição virou sempre-falsa e a guarda morreu calada (2026-09-15).
+  local editor_quer
+  editor_quer="$("$aurora/aurora-menu-doctor.py" --melhor-para text/plain 2>/dev/null)"
+  if [ -n "$editor_quer" ] \
+     && [ "$(xdg-mime query default text/plain 2>/dev/null)" != "$editor_quer" ]; then
+    issues+=("editor padrão de text/plain não é $editor_quer")
     fixes_user+=("$aurora/aurora-editor-apply.sh")
   fi
 
@@ -137,16 +141,19 @@ aurora-self-heal() {
     fi
   fi
 
-  # Guardas dos .desktop (perm 644 + Exec PhotoGIMP gimp-3.0→gimp + órfãos
-  # NoDisplay apontando p/ Flatpak desinstalado) e tracker-extract-3 mascarado.
-  # Incidentes 2026-06-22; applier é idempotente e também limpa órfãos ao rodar.
-  local apps_dir="$HOME/.local/share/applications"
-  if [ -d "$apps_dir" ]; then
-    if find "$apps_dir" -maxdepth 1 -type f -name '*.desktop' ! -perm -044 2>/dev/null | grep -q .; then
-      issues+=(".desktop com permissão restritiva (launcher do Pop não abre o app)")
-      fixes_user+=("$aurora/aurora-desktop-guards-apply.sh")
-    elif [ -f "$apps_dir/org.gimp.GIMP.desktop" ] && grep -q -- '--command=gimp-3\.0' "$apps_dir/org.gimp.GIMP.desktop" 2>/dev/null; then
-      issues+=("PhotoGIMP com Exec gimp-3.0 (inexistente no GIMP 3.2+, não abre)")
+  # Menu de lançamento. Uma pergunta só, ao doctor: ele varre os diretórios XDG,
+  # resolve o Exec através dos wrappers e confere o mimeapps.list. ~0,12s.
+  #
+  # Antes havia aqui uma lista de sintomas conhecidos (permissão 600, Exec do
+  # PhotoGIMP). O problema de uma lista assim é que ela só pega o que já
+  # aconteceu: quando a leva-04 removeu 20 aplicativos, os 20 lançadores ficaram
+  # no menu e nenhuma das condições disparou. O doctor pergunta "o alvo existe?",
+  # que vale para o próximo app removido sem ninguém vir editar isto aqui.
+  if [ -x "$aurora/aurora-menu-doctor.py" ]; then
+    local menu_laudo
+    menu_laudo="$("$aurora/aurora-menu-doctor.py" --check --quiet 2>/dev/null; echo $?)"
+    if [ "$menu_laudo" != "0" ]; then
+      issues+=("menu de lançamento com drift (lançador órfão, permissão ou associação morta)")
       fixes_user+=("$aurora/aurora-desktop-guards-apply.sh")
     fi
   fi
