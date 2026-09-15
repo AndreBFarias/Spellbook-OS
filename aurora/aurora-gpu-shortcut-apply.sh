@@ -12,6 +12,21 @@ MARK="# Aurora 2.3 - botao de pânico GPU (Ctrl+Alt+0)"
 
 log() { printf '[gpu-shortcut] %s\n' "$*"; }
 
+# --- Sob COSMIC este script inteiro não tem alvo -------------------------------
+# O xbindkeys faz XGrabKey no X server. Sob cosmic-comp a tecla so chegaria com o
+# foco numa janela XWayland, cenario raro demais para chamar de botão de pânico —
+# e o Ctrl+Alt+0 foi retirado do compositor em 2026-09-14 porque o
+# aurora-gpu-revive faz MODE2 reset no amdgpu, que sob Wayland derruba a sessão.
+# O substituto e a escalada do Alt+F2 (aurora-reiniciar-casca.sh), cujo 3o aperto
+# dispara o mesmo revive de forma deliberada.
+#
+# Sem esta guarda o script RECRIA ~/.xbindkeysrc e o autostart a cada bootstrap,
+# desfazendo a limpeza toda vez que o install.sh roda.
+if pgrep -x cosmic-comp >/dev/null 2>&1; then
+  log "sessão COSMIC/Wayland -> xbindkeys não se aplica (o substituto e o Alt+F2, 3o aperto)"
+  exit 0
+fi
+
 # 1. xbindkeys instalado?
 if ! command -v xbindkeys >/dev/null 2>&1; then
   log "instalando xbindkeys..."
