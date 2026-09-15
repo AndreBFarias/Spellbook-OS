@@ -1273,85 +1273,91 @@ _step_validate() {
     _info "Validando instalação..."
 
     grep -q "ZDOTDIR" "$HOME/.zshenv" 2>/dev/null \
-        || { _warn "ZDOTDIR não está em ~/.zshenv"; ((erros++)); }
+        || { _warn "ZDOTDIR não está em ~/.zshenv"; erros=$((erros + 1)); }
 
     [[ -f "$ZDOTDIR_TARGET/.oh-my-zsh/oh-my-zsh.sh" ]] \
-        || { _warn "Oh My Zsh não encontrado em $ZDOTDIR_TARGET/.oh-my-zsh/"; ((erros++)); }
+        || { _warn "Oh My Zsh não encontrado em $ZDOTDIR_TARGET/.oh-my-zsh/"; erros=$((erros + 1)); }
 
     bash -n "$ZDOTDIR_TARGET/install.sh" 2>/dev/null \
-        || { _warn "Sintaxe do install.sh inválida"; ((erros++)); }
+        || { _warn "Sintaxe do install.sh inválida"; erros=$((erros + 1)); }
 
     [[ -f "$ZDOTDIR_TARGET/cca/aliases_cca.zsh" ]] \
-        || { _warn "cca/aliases_cca.zsh não encontrado — comando cca indisponível"; ((erros++)); }
+        || { _warn "cca/aliases_cca.zsh não encontrado — comando cca indisponível"; erros=$((erros + 1)); }
 
     command -v tmux &>/dev/null \
-        || { _warn "tmux não instalado — cca-tmux indisponível"; ((erros++)); }
+        || { _warn "tmux não instalado — cca-tmux indisponível"; erros=$((erros + 1)); }
 
-    # Ghostty: snap nativo ou via flatpak (legado, snap é o caminho oficial)
-    if command -v ghostty &>/dev/null; then
-        : # OK
-    else
-        _warn "ghostty não instalado — terminal recomendado para Claude Code (evita vazamento OSC 9)"
-        ((erros++))
-    fi
-
-    # Ghostty config symlink
-    if [[ -L "$HOME/.config/ghostty/config" ]] && [[ "$(readlink -f "$HOME/.config/ghostty/config")" == "$(readlink -f "$ZDOTDIR_TARGET/ghostty/config")" ]]; then
-        : # OK
-    elif [[ -f "$ZDOTDIR_TARGET/ghostty/config" ]]; then
-        _warn "~/.config/ghostty/config não está symlinkado ao repo — rode install.sh --update"
-        ((erros++))
+    # Ghostty: só é cobrado de quem o usa.
+    #
+    # [2026-09-15] Antes daqui saía um aviso e um ++erros sempre que o ghostty
+    # não estivesse instalado. Com a etapa de instalação removida da sequência,
+    # a validação passou a reprovar o install por não ter feito o que ela mesma
+    # não manda mais fazer — reclamando de um programa que o dono não quer.
+    #
+    # O critério agora é o canal de notificação: o vazamento OSC 9 que esta
+    # checagem existe para prevenir só acontece quando preferredNotifChannel é
+    # "ghostty". Voltar o settings.json para "ghostty" traz o aviso junto.
+    if grep -q '"preferredNotifChannel": *"ghostty"' "$HOME/.claude/settings.json" 2>/dev/null; then
+        if ! command -v ghostty &>/dev/null; then
+            _warn "preferredNotifChannel=ghostty mas o ghostty não está instalado — risco de vazamento OSC 9"
+            erros=$((erros + 1))
+        elif [[ -f "$ZDOTDIR_TARGET/ghostty/config" ]] \
+             && ! { [[ -L "$HOME/.config/ghostty/config" ]] \
+                    && [[ "$(readlink -f "$HOME/.config/ghostty/config")" == "$(readlink -f "$ZDOTDIR_TARGET/ghostty/config")" ]]; }; then
+            _warn "~/.config/ghostty/config não está symlinkado ao repo"
+            erros=$((erros + 1))
+        fi
     fi
 
     # Aurora 2.x: services do bootstrap
     for s in aurora-root.service aurora-watchdog.timer earlyoom.service; do
         systemctl is-active --quiet "$s" 2>/dev/null \
-            || { _warn "$s inativo após install"; ((erros++)); }
+            || { _warn "$s inativo após install"; erros=$((erros + 1)); }
     done
     if systemctl --user is-active --quiet aurora-user.service 2>/dev/null; then
         : # OK
     else
         _warn "aurora-user.service inativo (talvez fora de sessão gráfica)"
-        ((erros++))
+        erros=$((erros + 1))
     fi
     systemctl --user is-active --quiet claude.slice 2>/dev/null \
-        || { _warn "claude.slice inativo"; ((erros++)); }
+        || { _warn "claude.slice inativo"; erros=$((erros + 1)); }
 
     # Aurora 2.1: ollama-vram-watchdog (só checa se ollama instalado)
     if [[ -f /etc/systemd/system/ollama.service ]] || [[ -f /lib/systemd/system/ollama.service ]]; then
         systemctl is-active --quiet ollama-vram-watchdog.timer 2>/dev/null \
-            || { _warn "ollama-vram-watchdog.timer inativo"; ((erros++)); }
+            || { _warn "ollama-vram-watchdog.timer inativo"; erros=$((erros + 1)); }
     fi
 
     # Aurora 2.1 (Round C): aurora-health.timer
     if [[ -f /etc/systemd/system/aurora-health.timer ]]; then
         systemctl is-active --quiet aurora-health.timer 2>/dev/null \
-            || { _warn "aurora-health.timer inativo (monitor SMART/thermal/disk)"; ((erros++)); }
+            || { _warn "aurora-health.timer inativo (monitor SMART/thermal/disk)"; erros=$((erros + 1)); }
     fi
 
     [[ -d "$ZDOTDIR_TARGET/kca" ]] \
-        || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; ((erros++)); }
+        || { _warn "kca/ não encontrado — comandos kimi indisponíveis"; erros=$((erros + 1)); }
 
     [[ -d "$ZDOTDIR_TARGET/functions" ]] \
-        || { _warn "functions/ não encontrado — funções do Spellbook indisponíveis"; ((erros++)); }
+        || { _warn "functions/ não encontrado — funções do Spellbook indisponíveis"; erros=$((erros + 1)); }
 
     [[ -d "$ZDOTDIR_TARGET/scripts" ]] \
-        || { _warn "scripts/ não encontrado — scripts auxiliares indisponíveis"; ((erros++)); }
+        || { _warn "scripts/ não encontrado — scripts auxiliares indisponíveis"; erros=$((erros + 1)); }
 
     [[ -f "$ZDOTDIR_TARGET/aliases.zsh" ]] \
-        || { _warn "aliases.zsh não encontrado"; ((erros++)); }
+        || { _warn "aliases.zsh não encontrado"; erros=$((erros + 1)); }
 
     [[ -f "$ZDOTDIR_TARGET/functions.zsh" ]] \
-        || { _warn "functions.zsh não encontrado — loader de funções ausente"; ((erros++)); }
+        || { _warn "functions.zsh não encontrado — loader de funções ausente"; erros=$((erros + 1)); }
 
     [[ -d "$ZDOTDIR_TARGET/.git" ]] \
-        || { _warn "Spellbook-OS não é um repositório git — sync automático indisponível"; ((erros++)); }
+        || { _warn "Spellbook-OS não é um repositório git — sync automático indisponível"; erros=$((erros + 1)); }
 
     git -C "$ZDOTDIR_TARGET" remote get-url origin &>/dev/null \
-        || { _warn "Remote 'origin' não configurado — push/pull indisponíveis"; ((erros++)); }
+        || { _warn "Remote 'origin' não configurado — push/pull indisponíveis"; erros=$((erros + 1)); }
 
     [[ -f "$ZDOTDIR_TARGET/functions/spellbook-sync.zsh" ]] \
-        || { _warn "spellbook-sync.zsh não encontrado — sync bidirecional indisponível"; ((erros++)); }
+        || { _warn "spellbook-sync.zsh não encontrado — sync bidirecional indisponível"; erros=$((erros + 1)); }
 
     if [[ $erros -eq 0 ]]; then
         _ok "Validação pós-instalação: tudo OK"
