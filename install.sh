@@ -1569,7 +1569,13 @@ main() {
     _step_deploy
     _step_deps
     _step_fonts
-    _step_ghostty
+    # [2026-09-15] _step_ghostty e _step_ghostty_config_symlink saíram da
+    # sequência: o dono deixou de usar o Ghostty e o snap foi removido em
+    # 2026-09-14. Enquanto estavam aqui, o install tentava reinstalá-lo a cada
+    # --update e o briefing de sessão pedia a instalação toda vez que um terminal
+    # abria. As funções continuam definidas mais abaixo — recolocar a chamada
+    # basta, se um dia voltar. Ver também preferredNotifChannel em
+    # ~/.claude/settings.json, que precisa voltar para "ghostty" junto.
     _step_encoding_tools
     _step_omz
     _step_tui
@@ -1585,7 +1591,6 @@ main() {
     _step_zshenv
     _step_fastfetch_symlink
     _step_topgrade_symlink
-    _step_ghostty_config_symlink
     _step_chsh
     _step_validate
     _step_manifest
