@@ -77,6 +77,9 @@ RE_APPID = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+){2,}$")
 # — o mimeinfo.cache tinha `.aurora-orphan-bak-org.gimp.GIMP.desktop`, herdado do
 # aurora-desktop-guards, que guarda os órfãos dentro do próprio applications/
 # desde 2026-06-22.
+# O mapa de StartupWMClass vive no MeowSystem, junto dos outros mapas de ícone.
+WMCLASS_MAP = Path.home()/"Desenvolvimento/MeowSystem/assets/icones/wmclass.map"
+
 QUARENTENA_REL = "aurora-menu-quarentena"
 QUARENTENA_LEGADA_REL = "applications/.aurora-orphan-bak"
 
@@ -218,6 +221,53 @@ def _flatpak_ok(resto: list[str]) -> bool:
     return True
 
 
+def _flatpak_id_do_exec(linha: str) -> str | None:
+    """O app-id do Flatpak que este Exec lança, se for um."""
+    toks = [x.strip("\"'") for x in (linha or "").split()]
+    if not toks or Path(toks[0]).name != "flatpak":
+        return None
+    for x in toks[1:]:
+        if RE_APPID.match(x):
+            return x
+    return None
+
+
+_WAYLAND_CACHE: dict[str, bool] = {}
+
+
+def _usa_wayland(appid: str) -> bool:
+    """O Flatpak tem socket wayland? Então sob COSMIC o app_id é minúsculo.
+
+    É o que separa um StartupWMClass suspeito de um legítimo: `Boxy SVG` não
+    pode ser app_id de Wayland, mas `com.meowsystem.Painel` pode.
+    """
+    if appid in _WAYLAND_CACHE:
+        return _WAYLAND_CACHE[appid]
+    try:
+        r = subprocess.run(["flatpak", "info", "--show-permissions", appid],
+                           capture_output=True, text=True, timeout=15)
+        _WAYLAND_CACHE[appid] = "wayland" in r.stdout
+    except (OSError, subprocess.SubprocessError):
+        _WAYLAND_CACHE[appid] = False
+    return _WAYLAND_CACHE[appid]
+
+
+def ler_wmclass_map() -> dict[str, str]:
+    """desktop-id -> StartupWMClass correto, conferido a olho."""
+    if not WMCLASS_MAP.is_file():
+        return {}
+    fora = {}
+    for linha in WMCLASS_MAP.read_text(encoding="utf-8", errors="replace").splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or ":" not in linha:
+            continue
+        alvo, _, valor = linha.partition(":")
+        alvo, valor = alvo.strip(), valor.strip()
+        if alvo and valor:
+            fora[alvo] = valor
+    return fora
+
+
 def alvo_existe(c: dict[str, str]) -> bool:
     """O programa que este .desktop chama ainda existe?
 
@@ -336,6 +386,35 @@ def diagnosticar() -> Laudo:
                     laudo.add("permissao", str(arq),
                               f"modo {modo:o} — o launcher não consegue ler", True)
 
+    # StartupWMClass: o que o dock usa para casar JANELA com .desktop.
+    corrigir = ler_wmclass_map()
+    # Só o .desktop que VENCE a precedência XDG: é ele que o dock lê. O mesmo
+    # id em dois diretórios apareceria duas vezes, e um deles nem está em uso.
+    for did, arq in sorted(vivos.items()):
+            c = campos(arq)
+            if c.get("Type", "Application") != "Application":
+                continue
+            atual = c.get("StartupWMClass")
+            quer = corrigir.get(did)
+            if quer and atual != quer:
+                # Corrigível: o valor certo foi observado e está no mapa.
+                laudo.add("wmclass_errado", str(arq),
+                          f"{c.get('Name')}: declara {atual!r}, a janela usa {quer!r}",
+                          data_home() in arq.parents or arq.parent == meu)
+            elif atual and not quer:
+                # Suspeito: Flatpak em Wayland não pode ter app_id com espaço
+                # ou maiúscula. Só avisa — o valor certo se observa, não se deduz.
+                appid = _flatpak_id_do_exec(c.get("Exec", ""))
+                # O app-id reverse-DNS É um app_id de Wayland válido, maiúsculas
+                # e tudo: `md.obsidian.Obsidian` está certo. O sinal de erro é o
+                # valor ser OUTRA coisa com cara de WM_CLASS do X11.
+                parece_x11 = (" " in atual or atual != atual.lower()) and atual != appid
+                if appid and parece_x11 and _usa_wayland(appid):
+                    laudo.add("wmclass_suspeito", str(arq),
+                              f"{c.get('Name')}: {atual!r} tem espaço ou maiúscula, "
+                              f"mas o app roda em Wayland (app_id é minúsculo). "
+                              f"Abra o app e veja o nome no tooltip do dock.", False)
+
     # mimeapps.list: associações para desktop-ids que não existem mais.
     for lista in (Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "mimeapps.list",
                   meu / "mimeapps.list"):
@@ -428,7 +507,35 @@ def corrigir(laudo: Laudo) -> list[str]:
             acoes.append(f"removido diretório vazio {legada.name}")
         vivos = mapa_vivos()  # o mapa mudou; releia antes de escolher substitutos
 
-    # 3. mimeapps.list: tira os ids mortos. Quando a linha é um DEFAULT e fica
+    # 3. StartupWMClass: escreve o valor observado, preservando o resto do arquivo.
+    for p_ in laudo.por_tipo("wmclass_errado"):
+        if not p_["corrigivel"]:
+            continue
+        arq = Path(p_["alvo"])
+        did = next((desktop_id(arq, r) for r in dirs_applications() if r in arq.parents), arq.name)
+        quer = ler_wmclass_map().get(did)
+        if not quer:
+            continue
+        linhas, posto = [], False
+        for linha in arq.read_text(encoding="utf-8", errors="replace").splitlines():
+            if linha.startswith("StartupWMClass="):
+                linhas.append("StartupWMClass=" + quer); posto = True
+            else:
+                linhas.append(linha)
+        if not posto:
+            # Sem a chave, entra logo depois do [Desktop Entry] — no fim do
+            # arquivo ela cairia dentro de um [Desktop Action] e não valeria.
+            saida = []
+            for linha in linhas:
+                saida.append(linha)
+                if not posto and linha.strip() == "[Desktop Entry]":
+                    saida.append("StartupWMClass=" + quer); posto = True
+            linhas = saida
+        if posto:
+            arq.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+            acoes.append(f"StartupWMClass: {arq.name} -> {quer}")
+
+    # 4. mimeapps.list: tira os ids mortos. Quando a linha é um DEFAULT e fica
     #    sem ninguém, promove um app vivo em vez de deixar o mimetype órfão —
     #    senão o dono perde a associação e descobre isso ao clicar num arquivo.
     for lista in {Path(p["alvo"].rsplit(":", 1)[0]) for p in laudo.por_tipo("mime_morto")}:
@@ -483,6 +590,8 @@ ROTULOS = {
     "campo_faltando": "lançadores sem Name= ou Exec=",
     "permissao": "lançadores que o menu não consegue ler",
     "mime_morto": "associações de arquivo para app removido",
+    "wmclass_errado": "janelas que o dock não casa com o app (StartupWMClass)",
+    "wmclass_suspeito": "StartupWMClass que provavelmente não casa sob Wayland",
     "cache_velho": "cache do menu desatualizado",
 }
 
@@ -502,10 +611,16 @@ def imprimir(laudo: Laudo) -> None:
             print(f"   {marca} {p['alvo']}")
             print(f"       {p['detalhe']}")
         print()
-    fora = [p for p in laudo.problemas if not p["corrigivel"]]
+    fora = [p for p in laudo.problemas
+            if not p["corrigivel"] and p["tipo"] != "wmclass_suspeito"]
     if fora:
-        print(f"  ! {len(fora)} fora de {data_home()}/applications — território do "
-              f"dpkg/flatpak.\n    O doctor não mexe: corrija removendo o pacote.")
+        print(f"  ! {len(fora)} fora de {data_home()} — território do dpkg/flatpak.\n"
+              f"    O doctor não mexe: corrija removendo o pacote.")
+    susp = laudo.por_tipo("wmclass_suspeito")
+    if susp:
+        print(f"  ! os {len(susp)} suspeitos acima não são corrigidos sozinhos: o valor\n"
+              f"    certo se observa, não se deduz. Abra o app, leia o nome que o dock\n"
+              f"    mostra no tooltip da janela, e escreva a linha em\n    {WMCLASS_MAP}")
 
 
 def main() -> int:
