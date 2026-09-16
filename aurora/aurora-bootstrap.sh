@@ -30,6 +30,30 @@ err() { printf '[bootstrap][ERR] %s\n' "$*" >&2; exit 1; }
 # Sanity check
 [ -d "$AURORA_REPO" ] || err "Repo não encontrado: $AURORA_REPO"
 
+# DENTRO DE UM CONTAINER, NÃO HÁ NADA PARA FAZER — 2026-09-15
+#   O distrobox compartilha a HOME, então este script existe dentro do container
+#   pelo mesmo caminho que existe no host. O `topgrade` atualiza os containers, e
+#   lá dentro ele chegava aqui e tentava aplicar a máquina INTEIRA: units de
+#   systemd num sistema cujo PID 1 não é systemd, kernelstub que não existe,
+#   divert do Chrome, módulo ec_sys, lsmod que nem está no PATH.
+#
+#   O resultado era uma parede de WARN a cada `topgrade` — "System has not been
+#   booted with systemd as init system", "Failed to connect to bus: Host is
+#   down", "Falha ao iniciar aurora-root.service" — que davam a entender que a
+#   máquina estava quebrada quando os cinco serviços estavam `active` no host.
+#   Pior que o ruído: o divert do Chrome e o `install` em /etc rodavam de
+#   verdade dentro do container, mexendo num sistema de arquivos que não é o que
+#   este script foi escrito para tratar.
+#
+#   `/run/.containerenv` é do podman (distrobox usa podman aqui) e
+#   `/run/host/...` é a marca do distrobox. `$container` cobre systemd-nspawn e
+#   toolbox. Qualquer um serve: o que este script aplica só faz sentido no host.
+if [ -e /run/.containerenv ] || [ -e /.dockerenv ] || [ -d /run/host ] \
+   || [ -n "${container:-}" ] || [ -n "${CONTAINER_ID:-}" ]; then
+  log "dentro de um container (${CONTAINER_ID:-container}) — nada a aplicar, o Aurora é do host"
+  exit 0
+fi
+
 # Garante env de user dbus/runtime para systemctl --user funcionar fora de sessão gráfica
 # (cron, sudo -i, ssh non-interactive, apt postinvoke hook, etc).
 if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
