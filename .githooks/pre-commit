@@ -402,6 +402,17 @@ _PERL_SKIP_LINE='!/ia-artifact:manter/'
 
 AI_COUNT=0
 for file in $FILES; do
+    # .patch/.diff FICAM DE FORA DESTE GATE [2026-09-19]
+    #   Um patch e ARTEFATO: o conteudo dele ja passou por aqui no commit em que
+    #   o codigo entrou. Reescrever palavra dentro de um diff muda as linhas de
+    #   contexto e de adicao, e o `git apply` deixa de reconhecer o arquivo.
+    #   Medido: o `cosmic-comp-menu-clique-curto.patch` teve "o menu nasce
+    #   EMBAIXO do cursor" reescrito para "EMBAIXO do agente" — "Cursor" esta na
+    #   lista por ser nome de editor —, e a partir dali o patch parou de aplicar
+    #   na arvore de fonte do compositor. E a mesma familia do caso ja registrado
+    #   acima, do `cursor: pointer` que virou `agente: pointer` em 13 linhas de
+    #   CSS: a palavra tem outros donos, e dentro de um diff ela e dado.
+    case "$file" in *.patch|*.diff) continue ;; esac
     if [ -f "$file" ]; then
         _AI_RANGES=$(_ranges_staged "$file")
         [ -z "$_AI_RANGES" ] && continue

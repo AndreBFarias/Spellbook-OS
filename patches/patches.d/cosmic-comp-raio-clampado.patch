@@ -3,7 +3,7 @@
 @@ -25,6 +25,34 @@
  use std::sync::Mutex;
  use wayland_backend::server::GlobalId;
-
+ 
 +// ── AURORA-COSMIC-RADIUS-PATCH ──────────────────────────────────────────────
 +// O QUE ESTE PATCH FAZ: o compositor CLAMPA o raio de canto de uma layer
 +// surface em vez de matar o cliente com `post_error`. Sem ele, um raio maior
@@ -34,9 +34,9 @@
 +
  type ToplevelHookId = Mutex<Option<(HookId, Weak<CosmicCornerRadiusToplevelV1>)>>;
  type LayerHookId = Mutex<Option<(HookId, Weak<CosmicCornerRadiusLayerV1>)>>;
-
+ 
 @@ -655,10 +683,12 @@
-
+ 
  fn layer_radius_hook<D: 'static>(_state: &mut D, _dh: &DisplayHandle, surface: &WlSurface) {
      with_states(surface, |surface_data| {
 -        let corners = *surface_data
@@ -54,7 +54,7 @@
              .get::<CacheablePadding>()
 @@ -687,41 +717,24 @@
          };
-
+ 
          let empty = Padding::default();
 +        // Padding que nao cabe na caixa: nao ha raio a validar neste commit.
 +        // Antes isto era post_error(PaddingTooLarge), fatal para o cliente.
@@ -75,7 +75,7 @@
 -            }
              return;
          };
-
+ 
 -        if corners.0.as_ref().is_some_and(|corners| {
 -            let half_min_dim = (padded_box.size.w.min(padded_box.size.h) / 2) as u32;
 -            corners.top_right > half_min_dim

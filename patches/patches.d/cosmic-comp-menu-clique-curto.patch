@@ -17,7 +17,7 @@
 #           handle.unset_grab(...);        // fecha o menu
 #       }
 #
-#   O menu nasce EMBAIXO do agente. Ou seja: no instante em que ele abre, um dos
+#   O menu nasce EMBAIXO do cursor. Ou seja: no instante em que ele abre, um dos
 #   itens ja esta com `pointer_entered = true` (na foto dela era o "Fazer captura
 #   de tela"). O `Released` do MESMO clique que abriu o menu chega milissegundos
 #   depois, encontra `selected == true`, e fecha.
@@ -38,7 +38,7 @@
 #   Nao basta pular so o `unset_grab`: o `PointerTarget::button` logo acima ja
 #   repassa o evento ao iced, e o `button` do iced dispara o `on_press` no
 #   RELEASE. Sem engolir, o clique curto ATIVARIA o item que estivesse sob o
-#   agente — trocar "o menu some" por "o menu executa Minimizar sozinho" seria
+#   cursor — trocar "o menu some" por "o menu executa Minimizar sozinho" seria
 #   pior do que o defeito.
 #
 #   250ms e o limiar. E o mesmo numero que o GTK usa para separar clique de
@@ -91,7 +91,7 @@ index dafbd6c..6a053a7 100644
  }
 
 +/// AURORA-COSMIC-MENU-PATCH — o menu de janela para de fechar no release do
-+/// clique que o abriu. O menu nasce EMBAIXO do agente, entao um item ja esta com
++/// clique que o abriu. O menu nasce EMBAIXO do cursor, entao um item ja esta com
 +/// `pointer_entered` quando o release do botao direito chega, e o ramo
 +/// `selected && Released` do `button()` fechava o menu antes de ela ver o que
 +/// havia dentro. Ver o cabecalho do .patch.
@@ -129,7 +129,7 @@ index dafbd6c..6a053a7 100644
 +        // Engolir inteiro, e nao apenas pular o `unset_grab` la embaixo, porque
 +        // o `PointerTarget::button` repassa o evento ao iced e o `button` do
 +        // iced dispara o `on_press` NO RELEASE: sem isto, o clique curto
-+        // acionaria o item que estivesse sob o agente — trocar "o menu some" por
++        // acionaria o item que estivesse sob o cursor — trocar "o menu some" por
 +        // "o menu minimiza a janela sozinho" seria pior do que o defeito.
 +        if event.state == ButtonState::Released && self.nascimento.elapsed() < CLIQUE_CURTO {
 +            return;
