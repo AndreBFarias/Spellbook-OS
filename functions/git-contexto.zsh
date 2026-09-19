@@ -22,8 +22,16 @@ __resolver_identidade() {
         fi
     done
 
-    REPLY_NAME="${ZSH_GIT_NAME_PESSOAL}"
-    REPLY_EMAIL="${ZSH_GIT_EMAIL_PESSOAL}"
+    # REDE DE SEGURANÇA (2026-09-15, mediação vinda do Andromeda-OS). Estas duas
+    # linhas não tinham valor padrão enquanto a do SSH, logo abaixo, sempre teve.
+    # No MeowSystem o config.local.zsh sumiu num upgrade e o fallback passou a
+    # devolver string vazia: o __definir_contexto_git gravou `name =` / `email =`
+    # em branco no .git/config de um repositório, e a chave vazia sobrescreve a
+    # global — commit e push mortos ali. O git ACEITA a chave vazia:
+    # `git config --get user.name` volta vazio com rc=0, então nem quem testa o
+    # rc percebe. Aqui o arquivo existe, então isto é prevenção, não conserto.
+    REPLY_NAME="${ZSH_GIT_NAME_PESSOAL:-$(git config --global user.name 2>/dev/null)}"
+    REPLY_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email 2>/dev/null)}"
     REPLY_SSH="${ZSH_SSH_ALIAS_PESSOAL:-github.com-personal}"
     REPLY_CONTEXT="Pessoal"
     return 0
@@ -31,12 +39,47 @@ __resolver_identidade() {
 
 # --- Funções de contexto git ---
 
+# AUTO-REPARO (2026-09-15): remove a marca deixada por uma gravação de
+# identidade vazia. A detecção tem de ser pela PRESENÇA da chave com valor
+# vazio, nunca pelo rc: `git config --get` devolve string vazia com rc=0.
+# Sem a chave, o repositório volta a herdar a identidade global, que é o estado
+# correto de um repositório sem override.
+__limpar_identidade_vazia() {
+    local achou=0 chave
+    for chave in user.name user.email; do
+        if git config --local --get "$chave" >/dev/null 2>&1 \
+           && [ -z "$(git config --local --get "$chave" 2>/dev/null)" ]; then
+            git config --local --unset-all "$chave" 2>/dev/null && achou=1
+        fi
+    done
+    if [ "$achou" -eq 1 ]; then
+        __warn "Identidade local VAZIA encontrada no .git/config e removida."
+        return 1
+    fi
+    return 0
+}
+
 __definir_contexto_git() {
     local user_name="$1"
     local user_email="$2"
 
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         __warn "Sem repositório git. Execute 'git init' e reabra o santuário."
+        return 1
+    fi
+
+    # Roda ANTES da guarda: mesmo sem identidade para escrever, o repositório
+    # tem de sair daqui sem a chave vazia.
+    __limpar_identidade_vazia
+
+    # GUARDA (2026-09-15): escrever vazio nunca é a intenção de quem chamou, é
+    # sempre um defeito. Sem isto o `git config --local user.name ""` grava a
+    # chave vazia, que sobrescreve a global e trava commit e push naquele
+    # repositório até alguém rodar `--unset-all` à mão.
+    if [ -z "$user_name" ] || [ -z "$user_email" ]; then
+        __err "Identidade vazia — nada gravado no .git/config deste repositório."
+        echo -e "  ${D_COMMENT}Falta ${D_YELLOW}config.local.zsh${D_RESET}${D_COMMENT} (ZSH_GIT_NAME_PESSOAL / ZSH_GIT_EMAIL_PESSOAL)${D_RESET}"
+        echo -e "  ${D_COMMENT}ou a tag de path correspondente em ZSH_IDENTITY_TAGS.${D_RESET}"
         return 1
     fi
 
@@ -56,6 +99,15 @@ __fixar_remote_ssh() {
     local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null)
     [[ -z "$remote_url" ]] && return 0
+
+    # OPT-OUT POR REPOSITÓRIO (2026-09-15). Reescrever o `origin` é ação visível
+    # e, no limite, manda push para o lugar errado. Quando o repositório quiser
+    # decidir sozinho:
+    #     git config --local andromeda.remote-fixo true
+    # Ligada, esta função não toca no remote. `--unset` devolve o automático.
+    if [[ "$(git config --local --get andromeda.remote-fixo 2>/dev/null)" == "true" ]]; then
+        return 0
+    fi
 
     local alias_correto
     alias_correto=$(__resolver_alias_ssh)
@@ -84,7 +136,11 @@ __fixar_remote_ssh() {
 
 __aplicar_contexto_git_automatico() {
     __resolver_identidade "$(pwd)"
-    __definir_contexto_git "$REPLY_NAME" "$REPLY_EMAIL"
+    # Identidade que falhou não dá autoridade para reescrever o remote. Antes, o
+    # __definir_contexto_git falhava e o __fixar_remote_ssh mexia no origin
+    # assim mesmo — agravado por o alias SSH ter valor padrão e as identidades
+    # não terem.
+    __definir_contexto_git "$REPLY_NAME" "$REPLY_EMAIL" || return 1
     __fixar_remote_ssh
 }
 
@@ -177,7 +233,7 @@ __sinc_preservadora() {
 sincronizar_repositorio() {
     __verificar_dependencias "git" "fzf" "rsync" || return 1
 
-    local repos=$(find "$DEV_DIR" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
+    local repos=$(find "$DEV_DIR/" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
 
     local seleção=$(echo "$repos" | fzf --multi --height=60% \
         --prompt="  Sincronizar > " \
@@ -209,7 +265,7 @@ sincronizar_todos_os_repositorios() {
 
     if [[ "$reply" != "y" ]]; then echo -e "  ${D_COMMENT}Cancelado.${D_RESET}"; return 0; fi
 
-    local repos=$(find "$DEV_DIR" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
+    local repos=$(find "$DEV_DIR/" -maxdepth 4 -name ".git" -type d -prune | sed 's/\/\.git//' | sort)
 
     while read -r repo_path; do
         __cd "$repo_path" || continue

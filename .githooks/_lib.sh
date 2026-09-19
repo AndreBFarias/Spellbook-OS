@@ -202,12 +202,35 @@ _hook_validate_identity() {
     current_name=$(git config --get user.name)
     current_email=$(git config --get user.email)
 
-    if [[ "$current_name" != "$EXPECTED_NAME" || "$current_email" != "$EXPECTED_EMAIL" ]]; then
-        echo "  [BLOQUEIO] Identidade incorreta para contexto $CONTEXT"
-        echo "    Esperado: $EXPECTED_NAME <$EXPECTED_EMAIL>"
-        echo "    Atual:    $current_name <$current_email>"
+    # O EMAIL E A IDENTIDADE; O NOME E UM ROTULO (2026-09-15, mediacao do
+    # Andromeda-OS). O gate bloqueava quando nome OU email divergiam. Mas a
+    # convencao daqui e `user.name` = login do GitHub (`AndreBFarias`,
+    # `andrefariasmec`) -- o que o santuario grava e o que o `gh auth switch`
+    # compara -- enquanto o `user.name` GLOBAL costuma ser o nome de exibicao,
+    # herdado por todo repo sem override. O mesmo repo passava ou nao dependendo
+    # de alguem ja ter rodado o santuario nele.
+    # O que o gate existe para impedir e commit caindo na CONTA errada, e quem
+    # decide isso e o email. Entao: email diverge, BLOQUEIA; so o nome diverge,
+    # AVISA e libera -- o santuario converge o nome na proxima passagem.
+    if [[ -z "$current_name" || -z "$current_email" ]]; then
+        echo "  [BLOQUEIO] Identidade VAZIA neste repo ($CONTEXT)"
+        echo "    O .git/config tem user.name/user.email sem valor."
+        echo "    Corrija com: git config --local --unset-all user.name"
+        echo "                 git config --local --unset-all user.email"
+        return 1
+    fi
+
+    if [[ "$current_email" != "$EXPECTED_EMAIL" ]]; then
+        echo "  [BLOQUEIO] Email de contexto errado para $CONTEXT"
+        echo "    Esperado: <$EXPECTED_EMAIL>"
+        echo "    Atual:    <$current_email>"
         echo "    Corrija com: santuario <projeto>"
         return 1
+    fi
+
+    if [[ "$current_name" != "$EXPECTED_NAME" ]]; then
+        echo "  [aviso] nome divergente em $CONTEXT: '$current_name' (canonico: '$EXPECTED_NAME')"
+        echo "          mesma conta, commit liberado. 'santuario <projeto>' alinha."
     fi
     return 0
 }

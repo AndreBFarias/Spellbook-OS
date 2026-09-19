@@ -39,18 +39,40 @@ CURRENT_NAME=$(git config --get user.name)
 CURRENT_EMAIL=$(git config --get user.email)
 
 # [1/4] Validacao de identidade
-if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" || "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
-    echo "[pre-push] BLOQUEADO: Identidade incorreta para contexto $CONTEXT"
-    echo "  Esperado: $EXPECTED_NAME <$EXPECTED_EMAIL>"
-    echo "  Atual:    $CURRENT_NAME <$CURRENT_EMAIL>"
-    _hook_log "pre-push" "BLOQUEADO: identidade incorreta" 2>/dev/null
+# TERCEIRA COPIA DA MESMA REGRA (2026-09-15, mediacao do Andromeda-OS). A regra
+# de identidade vivia aqui, no pre-commit e no _lib.sh, e as tres podiam
+# divergir. Agora e uma so: o EMAIL decide (e ele que manda o commit para uma
+# conta ou para outra), o nome so avisa. O porque completo esta no comentario do
+# _hook_validate_identity em _lib.sh.
+if [[ -z "$CURRENT_NAME" || -z "$CURRENT_EMAIL" ]]; then
+    echo "[pre-push] BLOQUEADO: Identidade VAZIA neste repo ($CONTEXT)"
+    echo "  O .git/config tem user.name/user.email sem valor."
+    echo "  Corrija com: git config --local --unset-all user.name"
+    echo "               git config --local --unset-all user.email"
+    _hook_log "pre-push" "BLOQUEADO: identidade vazia" 2>/dev/null
     exit 1
+fi
+if [[ "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
+    echo "[pre-push] BLOQUEADO: Email de contexto errado para $CONTEXT"
+    echo "  Esperado: <$EXPECTED_EMAIL>"
+    echo "  Atual:    <$CURRENT_EMAIL>"
+    _hook_log "pre-push" "BLOQUEADO: email de contexto incorreto" 2>/dev/null
+    exit 1
+fi
+if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" ]]; then
+    echo "[pre-push] aviso: nome divergente em $CONTEXT: '$CURRENT_NAME' (canonico: '$EXPECTED_NAME')"
 fi
 
 # [2/4] Validacao de alias SSH
 REMOTE_URL=$(git remote get-url origin 2>/dev/null)
 
-if [[ -n "$REMOTE_URL" && "$REMOTE_URL" != git@${EXPECTED_SSH_ALIAS}:* ]]; then
+# UMA DECISAO, DOIS LADOS QUE A RESPEITAM (2026-09-15). O `andromeda.remote-fixo`
+# desliga a reescrita do origin feita pelo __fixar_remote_ssh. Se este gate nao
+# conhecesse a mesma chave, liga-la seria armadilha: o remote ficaria como o repo
+# pediu e o push morreria aqui. Quem desliga a reescrita assume o remote.
+REMOTE_FIXO=$(git config --local --get andromeda.remote-fixo 2>/dev/null)
+
+if [[ "$REMOTE_FIXO" != "true" && -n "$REMOTE_URL" && "$REMOTE_URL" != git@${EXPECTED_SSH_ALIAS}:* ]]; then
     echo "[pre-push] BLOQUEADO: Remote URL nao usa alias SSH correto para contexto $CONTEXT"
     echo "  Esperado: git@${EXPECTED_SSH_ALIAS}:..."
     echo "  Atual:    $REMOTE_URL"

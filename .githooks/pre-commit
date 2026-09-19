@@ -132,12 +132,24 @@ else
         EXPECTED_EMAIL="${ZSH_GIT_EMAIL_PESSOAL:-$(git config --global user.email)}"
     fi
 
-    if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" || "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
-        echo "  [BLOQUEIO] Identidade incorreta para contexto $CONTEXT"
-        echo "    Esperado: $EXPECTED_NAME <$EXPECTED_EMAIL>"
-        echo "    Atual:    $CURRENT_NAME <$CURRENT_EMAIL>"
+    # Mesma regra do _lib.sh (2026-09-15): o email decide, o nome so avisa. Se
+    # as duas copias divergirem, o comportamento do gate passa a depender de o
+    # _lib.sh ter carregado ou nao -- que e o pior tipo de gate.
+    if [[ -z "$CURRENT_NAME" || -z "$CURRENT_EMAIL" ]]; then
+        echo "  [BLOQUEIO] Identidade VAZIA neste repo ($CONTEXT)"
+        echo "    Corrija com: git config --local --unset-all user.name"
+        echo "                 git config --local --unset-all user.email"
+        exit 1
+    fi
+    if [[ "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]]; then
+        echo "  [BLOQUEIO] Email de contexto errado para $CONTEXT"
+        echo "    Esperado: <$EXPECTED_EMAIL>"
+        echo "    Atual:    <$CURRENT_EMAIL>"
         echo "    Corrija com: santuario <projeto>"
         exit 1
+    fi
+    if [[ "$CURRENT_NAME" != "$EXPECTED_NAME" ]]; then
+        echo "  [aviso] nome divergente em $CONTEXT: '$CURRENT_NAME' (canonico: '$EXPECTED_NAME')"
     fi
 fi
 
