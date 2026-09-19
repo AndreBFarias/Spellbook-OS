@@ -15,7 +15,8 @@ __add_to_path_once() {
 }
 
 # --- 1. TEMA E OH MY ZSH ---
-ZSH_THEME="agnoster"
+# Vazio de propósito: quem desenha o prompt é o starship (seção 5).
+ZSH_THEME=""
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME/.config/zsh}/.zcompdump"
 __add_to_path_once "/snap/bin"
 __add_to_path_once "$HOME/.local/bin"
@@ -96,7 +97,7 @@ if [[ -o interactive && -z "$TMUX" ]]; then
     fi
     if command -v fastfetch >/dev/null 2>&1; then
         printf '\033c'
-        fastfetch --pipe false | sed -E $'
+        meow-fetch --pipe false | sed -E $'
             s/\\[Discrete\\]/\e[38;2;255;184;108m(Dedicada)\e[0m/g;
             s/\\[Integrated\\]/\e[38;2;255;184;108m(Integrada)\e[0m/g;
             s/\\[AC Connected\\]/\e[38;2;255;184;108m(Conectado)\e[0m/g;
@@ -113,15 +114,42 @@ if [[ -o interactive && -z "$TMUX" ]]; then
     # de terminal era ruído sobre algo que se conserta sem a pessoa.
 fi
 
-# --- 5. PROMPT COM CORES DE FUNDO ---
-# Prompt: usuário@hostname com fundo colorido
+# --- 5. PROMPT (starship) ---
+# O prompt é desenhado pelo starship, com o preset OFICIAL catppuccin-powerline.
+# A configuração é do MeowSystem e mora em ~/.config/starship.toml — fora deste
+# repositório de propósito, porque ~/.config/zsh é território do Ritual da
+# Aurora. Quem instala e confere aquele arquivo é o `scripts/prompt.sh` de lá;
+# aqui só se liga a chave.
+#
+# O `colors` continua: é ele que define $fg/$bg, e o fallback abaixo os usa.
 autoload -U colors && colors
 
-# Fundo azul para usuário@hostname, fundo escuro para diretório
-export PS1='%{$bg[blue]%}%{$fg[white]%} %n@%m %{$reset_color%}%{$bg[black]%}%{$fg[cyan]%} %~ %{$reset_color%} '
+# O GUARDA NÃO É ZELO. Sem ele, um shell aberto numa máquina onde o starship
+# ainda não foi instalado (ou saiu do PATH, ou o cargo foi limpo) imprimiria um
+# erro a cada abertura E ficaria sem prompt nenhum, porque a linha do PS1 antigo
+# não existe mais. O `else` devolve exatamente o prompt de antes desta mudança.
+if command -v starship >/dev/null 2>&1; then
+    eval "$(starship init zsh)"
+else
+    # Fundo azul para usuário@hostname, fundo escuro para diretório
+    export PS1='%{$bg[blue]%}%{$fg[white]%} %n@%m %{$reset_color%}%{$bg[black]%}%{$fg[cyan]%} %~ %{$reset_color%} '
+fi
 
 # --- 6. SEGREDOS E AJUSTES FINAIS ---
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
+# A paleta do fzf, para TODO fzf — e não só para os que já a tinham.
+#
+# Este hex é o mesmo de `functions/mec.zsh` (__MEC_FZF_COLOR), copiado sem uma
+# vírgula de diferença. Ele já existe em cinco lugares deste repositório e em
+# nenhum deles alcança o fzf do dia a dia: o Ctrl+R, o Ctrl+T, o Alt+C e todo
+# `fzf` chamado na unha rodavam sem cor nenhuma.
+#
+# ISTO NÃO SUBSTITUI OS CINCO. O fzf lê o FZF_DEFAULT_OPTS primeiro e a linha de
+# comando depois, e a última opção repetida vence — então tudo que já passa o
+# próprio `--color=` continua exatamente como estava. O que muda é só o que não
+# passava nada.
+export FZF_DEFAULT_OPTS="--color=bg+:#45475A,fg+:#CDD6F4,hl:#CBA6F7,hl+:#F5C2E7,pointer:#A6E3A1,marker:#A6E3A1,prompt:#CBA6F7,header:#6C7086,border:#6C7086"
 export FZF_OMZ_DEFAULT_COMPLETION=1
 
 if [ -f "$HOME/.env" ]; then
