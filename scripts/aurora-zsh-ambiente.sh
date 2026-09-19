@@ -172,12 +172,30 @@ fi
 # ganhar sem ninguem perceber. O symlink do npm chegou a ser recriado as 10:15
 # daquele mesmo dia, entao isso acontece.
 # So AVISA: desinstalar pacote npm por conta própria e decisao, não reparo.
-CLAUDE_BIN=$(command -v agente 2>/dev/null || true)
-if [ -n "$CLAUDE_BIN" ]; then
-    case "$CLAUDE_BIN" in
+# O NOME DO BINARIO NÃO APARECE LITERAL AQUI, E ISSO E DEFENSIVO (2026-09-18).
+# A versao anterior deste bloco fazia `command -v <nome>`. O gate [3/6] do
+# pre-commit, que reescreve mencoes a ferramenta nas linhas novas, trocou o
+# ARGUMENTO do command -v por um termo generico -- um binario que não existe.
+# A checagem virou no-op silencioso: `command -v` devolvia vazio, o `if` nunca
+# entrava, e este script anunciava "OK" para sempre. E exatamente o defeito que
+# ele existe para pegar, criado pela própria guarda de anonimato.
+# A saida não e brigar com o gate: e não depender de nome escrito. O nome vem
+# do estado real do disco -- o symlink de ~/.local/bin cujo alvo mora em
+# ~/.local/share/<nome>/versions/<versao>, que e a forma do build nativo.
+AGENTE_NOME=""
+for _lnk in "$HOME/.local/bin"/*; do
+    [ -L "$_lnk" ] || continue
+    case "$(readlink -f "$_lnk" 2>/dev/null)" in
+        "$HOME/.local/share/"*/versions/*) AGENTE_NOME="${_lnk##*/}"; break ;;
+    esac
+done
+AGENTE_NO_PATH=""
+[ -n "$AGENTE_NOME" ] && AGENTE_NO_PATH=$(command -v "$AGENTE_NOME" 2>/dev/null || true)
+if [ -n "$AGENTE_NO_PATH" ]; then
+    case "$AGENTE_NO_PATH" in
         *"/.nvm/"*|*"/node_modules/"*)
-            aviso "o 'agente' do PATH e o do npm ($CLAUDE_BIN), sombreando o nativo"
-            echo "    O build nativo vive em ~/.local/bin/claude. Para devolver a ele:"
+            aviso "o '$AGENTE_NOME' do PATH e o do npm ($AGENTE_NO_PATH), sombreando o nativo"
+            echo "    O build nativo vive em $HOME/.local/bin/$AGENTE_NOME. Para devolver a ele:"
             echo "      npm uninstall -g @anthropic-ai/claude-code"
             ;;
     esac
