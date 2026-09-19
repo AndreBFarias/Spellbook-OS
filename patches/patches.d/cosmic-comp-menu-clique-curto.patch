@@ -144,3 +144,4 @@ index dafbd6c..6a053a7 100644
 +            nascimento: std::time::Instant::now(),
          }
      }
+ 
