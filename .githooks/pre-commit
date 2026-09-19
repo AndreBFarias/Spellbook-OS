@@ -228,6 +228,19 @@ filter_files() {
             *.pt|*.onnx|*.safetensors|*.gguf) continue ;;
             *.lock|package-lock.json|yarn.lock|poetry.lock|Pipfile.lock) continue ;;
             *.min.js|*.min.css|*.map) continue ;;
+            # DIFF E SINTAXE, NAO TEXTO [2026-09-19]
+            #   Num diff unificado o PRIMEIRO caractere de cada linha e o
+            #   operador: ' ' contexto, '+' adicao, '-' remocao. Uma linha de
+            #   contexto VAZIA e um espaco sozinho — e o auto-fix de whitespace
+            #   (`sed 's/[[:space:]]*$//'`) a transformava em linha vazia,
+            #   quebrando o patch inteiro.
+            #   Medido: ao commitar
+            #   MeowSystem/src/applets/now-playing/0001-meow-capa-cor-controles.patch,
+            #   o `git apply` seguinte respondeu `error: patch corrompido na
+            #   linha 992` e o build do applet parou. O conteudo de um .patch ja
+            #   passou pelo hook no commit em que o codigo entrou; aqui ele e
+            #   artefato, e artefato nao se formata.
+            *.patch|*.diff) continue ;;
             my-mailmap|.mailmap|.env|.env.*) continue ;;
             *)
                 # PFL7560-FIX-EXCEPTION (2026-07-06, autorizado pelo dono):
@@ -455,6 +468,9 @@ if [[ "$HAS_FRAMEWORK" == false ]]; then
     # [4/6] Whitespace: trailing spaces + newline final (auto-fix + re-stage)
     WS_COUNT=0
     for file in $FILES; do
+        # O [4/6] nao passava pela lista de excecoes do bloco acima: ele itera
+        # $FILES cru. Um .patch chegava aqui inteiro e saia corrompido.
+        case "$file" in *.patch|*.diff) continue ;; esac
         if [ -f "$file" ]; then
             CHANGED=0
             if grep -qP '[\t ]+$' "$file" 2>/dev/null; then
