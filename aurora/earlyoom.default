@@ -3,8 +3,24 @@
 # -m 5: kill quando RAM disponivel < 5%
 # -M 1048576 (1GB): kill quando RAM+swap < 1GB
 # --avoid: protege Claude e infraestrutura
+#
+# CORRIGIDO EM 17/09/2026. A lista protegia `gnome-shell` e `mutter`, que NAO
+# EXISTEM nesta maquina desde a migracao para COSMIC em 11/09 -- e nao protegia
+# o `cosmic-comp`, que e o compositor E a tela de login ao mesmo tempo
+# (/usr/bin/cosmic-greeter-start e literalmente `exec cosmic-comp cosmic-greeter`).
+# Ou seja: sob pressao de memoria, o earlyoom estava autorizado a matar a sessao
+# grafica inteira, e protegia dois nomes mortos.
+#
+# Entraram: cosmic-comp, cosmic-session, cosmic-greeter, cosmic-panel, greetd e
+# Xwayland. Sairam: gnome-shell e mutter.
+#
+# ATENCAO A QUEM FOR MEXER: este arquivo tem DUAS copias que precisam bater.
+# A de /etc/default/earlyoom e a que vale; a de ~/.config/zsh/aurora/earlyoom.default
+# e a FONTE, e o `aurora-self-heal` reinstala a fonte por cima da /etc de hora em
+# hora. Corrigir so o /etc nao resolve: a proxima passagem do self-heal devolve o
+# conteudo antigo, e o sintoma volta dias depois sem culpado.
 # --prefer: prioriza matar comilões primeiro
 # --prefer: nativos + Flatpaks descartaveis (comm <=15 chars, case-sensitive).
 # Discord (maiusculo) = Flatpak; discord (minusculo) = nativo possivel.
 # Fora de --prefer (estado nao salvo): gimp, krita, obs, onlyoffice, obsidian, thunderbird.
-EARLYOOM_ARGS="-r 60 -m 5 -M 1048576 --avoid '^(systemd|systemd-.*|Xorg|gnome-shell|mutter|cca|agente|node|tmux:.*|sshd|NetworkManager|python.*main\.py|python.*luna|venv_tts.*python|ollama|product-oom-watchdog)$' --prefer '^(chrome|chromium|firefox|slack|zoom|electron|discord|Discord|teams|code|agente|VSCodeHelper|msedge|waterfox|spotify|telegram-deskto|zapzap)$'"
+EARLYOOM_ARGS="-r 60 -m 5 -M 1048576 --avoid '^(systemd|systemd-.*|Xorg|Xwayland|cosmic-comp|cosmic-session|cosmic-greeter|cosmic-panel|greetd|cca|agente|node|tmux:.*|sshd|NetworkManager|python.*main\.py|python.*luna|venv_tts.*python|ollama|product-oom-watchdog)$' --prefer '^(chrome|chromium|firefox|slack|zoom|electron|discord|Discord|teams|code|agente|VSCodeHelper|msedge|waterfox|spotify|telegram-deskto|zapzap)$'"
