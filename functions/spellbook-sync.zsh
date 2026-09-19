@@ -182,13 +182,22 @@ spellbook_sync_pull() {
     fi
 
     # Commit mudanças locais pendentes
+    # [2026-09-17] A guarda de 2026-07-31 renomeou `__spellbook_auto_commit` para
+    # `__spellbook_auto_commit_original` e criou o wrapper `_guardado`, mas esta
+    # chamada ficou com o nome antigo -- que não existe mais em lugar nenhum.
+    # Resultado: rc=127 (command not found), `had_local` nunca virava true, e a
+    # maquina de estados sempre descia para o ramo "Offline" da linha ~205.
     local had_local=false
-    if __spellbook_auto_commit; then
+    if __spellbook_auto_commit_guardado; then
         had_local=true
     fi
 
-    # Verificar conectividade (timeout 2s)
-    if ! timeout 2 git -C "$dir" ls-remote --exit-code origin HEAD &>/dev/null 2>&1; then
+    # Verificar conectividade
+    # [2026-09-17] Era `timeout 2`, e o `ls-remote` real contra o github leva ~2,6s
+    # desta maquina (5 de 5 medicoes deram rc=124). O probe reprovava uma rede
+    # perfeita e cravava "Offline" no cache do fastfetch a cada terminal aberto.
+    # 8s da folga para a latencia real sem pendurar a abertura do shell.
+    if ! timeout 8 git -C "$dir" ls-remote --exit-code origin HEAD &>/dev/null 2>&1; then
         if [[ "$had_local" == true ]]; then
             echo -e "  ${D_COMMENT}Spellbook: commit local salvo (sem rede)${D_RESET}"
             __spellbook_status_cache_write "Commit local salvo (sem rede)"

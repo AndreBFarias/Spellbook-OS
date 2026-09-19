@@ -13,6 +13,11 @@ source "${ZDOTDIR:-$HOME/.config/zsh}/config.local.zsh" 2>/dev/null || true
 # --- Diretorio de logs ---
 HOOK_LOG_DIR="$HOME/.local/share/spellbook"
 HOOK_LOG_FILE="$HOOK_LOG_DIR/hooks.log"
+# Teto do log. [2026-09-17] Nao havia rotacao nenhuma: o arquivo crescia desde
+# 2026-03-20 e chegou a 8,2 MB / 192.448 linhas. A causa do volume era o zshexit
+# sem guarda de interatividade (corrigido no .zshrc na mesma data), mas um log
+# sem teto continua sendo um defeito por si so. Mantemos UMA geracao anterior.
+HOOK_LOG_MAX_BYTES="${HOOK_LOG_MAX_BYTES:-2097152}"   # 2 MiB
 
 # --- Regexes centralizados ---
 
@@ -154,9 +159,25 @@ _hook_log() {
     repo_name=$(_hook_repo_name)
 
     mkdir -p "$HOOK_LOG_DIR" 2>/dev/null
+    _hook_log_rotacionar
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] [$hook_name] [$repo_name] $message" >> "$HOOK_LOG_FILE" 2>/dev/null
+}
+
+# Roda o log quando passa do teto. Uma geracao so, comprimida: o conteudo antigo
+# e diagnostico, nao registro que alguem va auditar linha a linha.
+# Silencioso de proposito -- isto roda dentro de um hook de git, e qualquer saida
+# aqui polui o `git push` de quem esta trabalhando.
+_hook_log_rotacionar() {
+    [[ -f "$HOOK_LOG_FILE" ]] || return 0
+    local tamanho
+    tamanho=$(stat -c '%s' "$HOOK_LOG_FILE" 2>/dev/null) || return 0
+    [[ "$tamanho" -gt "$HOOK_LOG_MAX_BYTES" ]] || return 0
+    mv -f "$HOOK_LOG_FILE" "$HOOK_LOG_FILE.1" 2>/dev/null || return 0
+    gzip -f "$HOOK_LOG_FILE.1" 2>/dev/null &
+    disown 2>/dev/null || true
+    return 0
 }
 
 _hook_repo_name() {

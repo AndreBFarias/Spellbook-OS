@@ -66,7 +66,16 @@ if [[ -o interactive && -z "${AURORA_SELF_HEAL_DONE:-}" ]]; then
 fi
 
 # --- 99. SPELLBOOK SYNC (ao fechar terminal) ---
+# Guarda de interatividade [2026-09-17]: sem o `-o interactive`, TODA sessao zsh
+# nao-interativa disparava um push ao sair -- inclusive cada chamada da ferramenta
+# Bash do agente Code, medido em ~1 push a cada 2s. Consequencias medidas:
+#   1. o push herdava o stdout de um shell ja morto; o `echo` da .githooks/pre-push:308
+#      escrevia nesse descritor orfao e recebia EIO ("echo: erro de escrita");
+#   2. ~/.local/share/spellbook/hooks.log crescia sem teto (8,2 MB / 192.448 linhas
+#      em 17/09/2026), porque o hook roda mesmo quando o push e no-op.
+# O pull da secao 7 ja tinha essa guarda desde sempre; o push nao tinha.
 zshexit() {
+    [[ -o interactive ]] || return 0
     fc -A 2>/dev/null  # flush history pendente do shell pro $HISTFILE antes do push
     typeset -f spellbook_sync_push > /dev/null && spellbook_sync_push 2>/dev/null
 }
