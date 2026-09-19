@@ -168,6 +168,43 @@ MANAGED = [
         "action": 'Spawn("/usr/local/bin/claude-paste-image.sh")',
         "desc": "Paste universal — texto ou imagem->path (leva-03, fallback do Ctrl+V)",
     },
+    # --- 2026-09-18 — avancar e voltar o papel de parede ---------------------
+    #
+    # O DONO PROCUROU ISTO NO MENU DO BOTÃO DIREITO DA AREA DE TRABALHO. Nao
+    # esta la, e nunca esteve: quem desenha aquele menu e o cosmic-files, o
+    # binario e BYTE A BYTE IDENTICO ao da outra maquina da casa (sha256
+    # 42813e2dc4443da1c6b329f9b3640bcd23f5062889dec3acae08f0be45b6fb8d, pacote
+    # 1.8.0~1788375747~24.04~089ad2b nas duas), e a unica string de fundo que
+    # ele tem e `change-wallpaper` ("Alterar o plano de fundo..."). Nao houve
+    # regressao nem perda: o item não existe no COSMIC.
+    #
+    # O comando existe desde sempre, so não tinha tecla: `meow wallpaper
+    # próximo|anterior` (wallpaper.sh:2704-2705). Ele fixa a imagem por 30 min
+    # e o carrossel volta sozinho depois — ou na hora, com `meow wallpaper
+    # carrossel`.
+    #
+    # POR QUE Ctrl+Alt+seta, e não a combinacao obvia: as setas com Super estao
+    # TODAS tomadas pelos defaults do COSMIC — Super (Focus), Super+Shift
+    # (Move), Super+Ctrl (workspace), Super+Alt (SwitchOutput) e
+    # Super+Shift+Alt (MoveToOutput). Conferido em
+    # /usr/share/cosmic/.../v1/defaults: `Ctrl+Alt`+seta não aparece uma vez.
+    #
+    # O alvo e ~/.local/bin/meow (o CLI que o MeowSystem instala) e não um
+    # script deste repo, entao ele NÃO esta em ORPHAN_PREFIXES: se o MeowSystem
+    # sair da maquina, a trava de X_OK aborta o apply e avisa, em vez de este
+    # script apagar um atalho que o dono pos.
+    {
+        "mods": ["Ctrl", "Alt"],
+        "key": "Right",
+        "action": 'Spawn("/home/andrefarias/.local/bin/meow wallpaper próximo")',
+        "desc": "Próximo papel de parede (fixa por 30m)",
+    },
+    {
+        "mods": ["Ctrl", "Alt"],
+        "key": "Left",
+        "action": 'Spawn("/home/andrefarias/.local/bin/meow wallpaper anterior")',
+        "desc": "Papel de parede anterior (fixa por 30m)",
+    },
 ]
 
 # Prefixos cujos Spawn orfaos podem ser removidos com seguranca: e onde ESTE
