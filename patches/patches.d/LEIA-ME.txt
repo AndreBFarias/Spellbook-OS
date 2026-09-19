@@ -1,0 +1,72 @@
+patches.d/ — a SÉRIE de patches do cosmic-comp. Criado em 30/08/2026.
+
+================================================================================
+O QUE ESTE DIRETÓRIO É
+================================================================================
+    Até 29/08/2026 o `aurora-cosmic-comp-ws.sh` aplicava UM `.patch` só, num
+    caminho literal (`$PATCH_INSTALADO`). O `cosmic-comp-raio-clampado.patch`
+    existia, aplicava limpo, o README dizia que estava em produção — e NUNCA
+    entrou em binário nenhum, porque não havia onde declará-lo. Este diretório é
+    o "onde".
+
+    O arquivo `series` declara, uma linha por patch:
+
+        <classe>  <arquivo .patch>  <marcador-base>
+
+    `req` = obrigatório: se ele não aplicar, o build aborta e NADA é instalado.
+    `opt` = opcional: se ele não aplicar, o build segue sem aquele efeito.
+
+    O marcador é o BASE, sem versão. O sufixo (`-3.67`, `-1`) sai do build, e a
+    comparação é sempre por prefixo. O `series` explica o resto do formato.
+
+================================================================================
+ONDE O SCRIPT PROCURA, NESTA ORDEM
+================================================================================
+    1. /usr/local/share/aurora/patches.d/          (a cópia instalada, de root)
+    2. $HOME/.config/zsh/patches/patches.d/        (esta)
+    3. ~vitoriamaria/.config/zsh/patches/patches.d/
+
+    A (3) existe porque o self-heal roda como unit de SISTEMA: o `$HOME` dele é
+    /root, e sem essa terceira tentativa um build automático não acharia a série
+    enquanto o `install_if_diff` do self-heal não tivesse copiado para (1).
+
+    Se NENHUMA existir, o script cai no comportamento antigo — o patch único de
+    workspace — e diz isso no registro. Degradação suave, nunca silenciosa.
+
+================================================================================
+QUEM É DONO DE CADA ARQUIVO
+================================================================================
+    cosmic-comp-sem-workspace-vazio.patch
+        Da Aurora. A cópia canônica é a de ~/.config/zsh/patches/, que continua
+        LÁ (o self-heal a instala em /usr/local/share/aurora/). Esta aqui é `cp`,
+        não `mv`: mover teria deixado o `--build` morto na janela entre os dois
+        passos, e um `apt upgrade` caindo nessa janela devolveria o workspace
+        fantasma sem causa aparente.
+
+    cosmic-comp-raio-clampado.patch
+        A CÓPIA CANÔNICA É A DO REPO DO MEOW:
+            /mnt/Apate/Desenvolvimento/MeowSystem/patches/cosmic-comp-raio-clampado.patch
+        Quem for editar, edita LÁ e copia para cá. O `meow doctor` acusa
+        divergência entre as duas — é ele que impede que este diretório vire uma
+        bifurcação silenciosa do patch.
+
+================================================================================
+AS DUAS ARMADILHAS QUE VALEM PARA QUALQUER PATCH NOVO AQUI
+================================================================================
+    1. O MARCADOR PRECISA DE `#[used]` NO LADO RUST. Sem ele o linker descarta o
+       `static &str` e o marcador não aparece no binário — o `--ensure` deixa de
+       reconhecer o build e reinstala para sempre. Por isso o `compilar()` roda
+       `strings` no binário RECÉM-BUILDADO e aborta sem instalar quando falta o
+       marcador de um `req`.
+
+    2. `make VENDOR=1` APAGA O `vendor/` PATCHADO ANTES DE COMPILAR, e não avisa.
+       Um patch daqui que mexa em crate vendorizada (o libcosmic, por exemplo —
+       os botões de janela à esquerda) some sem erro nenhum: o build funciona e o
+       binário sai sem o efeito. Patch em `src/` está a salvo; patch em `vendor/`
+       precisa de outro caminho.
+
+    E a que vale para o diretório inteiro: /usr/bin/cosmic-greeter-start é
+    literalmente `exec cosmic-comp cosmic-greeter`. Um patch daqui que não
+    compile, ou que compile e não suba, tira o desktop DELA E A TELA DE LOGIN
+    JUNTO. O procedimento de volta, em 6 passos, está na PRIMEIRA seção de
+    docs/pesquisas/2026-08-29-modo-leitura-e-botoes.md, no repo do Meow.

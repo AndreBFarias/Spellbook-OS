@@ -1,0 +1,107 @@
+--- a/src/wayland/protocols/corner_radius.rs
++++ b/src/wayland/protocols/corner_radius.rs
+@@ -25,6 +25,34 @@
+ use std::sync::Mutex;
+ use wayland_backend::server::GlobalId;
+
++// ── AURORA-COSMIC-RADIUS-PATCH ──────────────────────────────────────────────
++// O QUE ESTE PATCH FAZ: o compositor CLAMPA o raio de canto de uma layer
++// surface em vez de matar o cliente com `post_error`. Sem ele, um raio maior
++// que metade da menor dimensão da barra derruba o `cosmic-panel` inteiro — a
++// topbar e a dock somem juntas, e o supervisor tem de repô-las.
++//
++// REESCRITO EM 01/09/2026, contra o cosmic-comp 0.1~1788196388~24.04~a830784.
++// O upstream reescreveu `layer_radius_hook` nessa versão: ele deixou de medir
++// pelo `bbox_from_surface_tree` (a caixa do frame ANTERIOR) e passou a medir
++// pelo tamanho do último `configure` que o cliente reconheceu — o que é mais
++// correto, e é a metade do problema que este patch já resolvia por acaso.
++// O que o upstream NÃO mudou é a outra metade, que é a que importa: um raio
++// grande continua sendo `post_error(RadiusTooLarge)`, e `post_error` num
++// cliente Wayland é fatal. Então o clamp continua valendo, agora por cima da
++// medida nova.
++//
++// O patch anterior parou de aplicar exatamente aqui (hunk 2 FAILED at 690,
++// medido no build automático de 01/09/2026 às 16:50) — e o build seguiu sem
++// ele porque a série o declara `opt`, que é o comportamento certo: melhor uma
++// barra com raio de fábrica que uma sessão que não sobe.
++// O `#[used]` é o que impede o linker de descartar um static que ninguém lê —
++// e é a marca de texto por onde o `--ensure` reconhece este build. Sem ele o
++// binário compila igual e sai SEM o marcador: medido em 01/09/2026, o primeiro
++// build deste patch reescrito deu `grep -a` vazio para RADIUS e o `--ensure`
++// teria recompilado em laço, uma vez por ciclo do self-heal, para sempre.
++#[used]
++static AURORA_RADIUS_PATCH: &str = "AURORA-COSMIC-RADIUS-PATCH-2";
++
+ type ToplevelHookId = Mutex<Option<(HookId, Weak<CosmicCornerRadiusToplevelV1>)>>;
+ type LayerHookId = Mutex<Option<(HookId, Weak<CosmicCornerRadiusLayerV1>)>>;
+
+@@ -655,10 +683,12 @@
+
+ fn layer_radius_hook<D: 'static>(_state: &mut D, _dh: &DisplayHandle, surface: &WlSurface) {
+     with_states(surface, |surface_data| {
+-        let corners = *surface_data
+-            .cached_state
+-            .get::<CacheableCorners>()
+-            .pending();
++        // AURORA-COSMIC-RADIUS-PATCH: clampa em vez de derrubar o cliente.
++        // Ver o comentario do static AURORA_RADIUS_PATCH no topo do arquivo.
++        //
++        // O `corners` do upstream era lido AQUI, por copia, so para comparar.
++        // Ele sai: precisamos do emprestimo MUTAVEL la embaixo, e ter os dois
++        // no mesmo escopo nao compila.
+         let padding = *surface_data
+             .cached_state
+             .get::<CacheablePadding>()
+@@ -687,41 +717,24 @@
+         };
+
+         let empty = Padding::default();
++        // Padding que nao cabe na caixa: nao ha raio a validar neste commit.
++        // Antes isto era post_error(PaddingTooLarge), fatal para o cliente.
+         let Some(padded_box) = pad_rect(
+             Rectangle::from_size(size),
+             padding.0.as_ref().unwrap_or(&empty),
+         ) else {
+-            if let Some(hook) = surface_data.data_map.get::<LayerHookId>() {
+-                let hook_ref = hook.lock().unwrap();
+-                if let Some((_, obj)) = hook_ref.as_ref()
+-                    && let Ok(obj) = obj.upgrade()
+-                {
+-                    obj.post_error(
+-                        cosmic_corner_radius_layer_v1::Error::PaddingTooLarge as u32,
+-                        format!("{obj:?} padding too large"),
+-                    );
+-                }
+-            }
+             return;
+         };
+
+-        if corners.0.as_ref().is_some_and(|corners| {
+-            let half_min_dim = (padded_box.size.w.min(padded_box.size.h) / 2) as u32;
+-            corners.top_right > half_min_dim
+-                || corners.top_left > half_min_dim
+-                || corners.bottom_right > half_min_dim
+-                || corners.bottom_left > half_min_dim
+-        }) && let Some(hook) = surface_data.data_map.get::<LayerHookId>()
+-        {
+-            let hook_ref = hook.lock().unwrap();
+-            if let Some((_, obj)) = hook_ref.as_ref()
+-                && let Ok(obj) = obj.upgrade()
+-            {
+-                obj.post_error(
+-                    cosmic_corner_radius_layer_v1::Error::RadiusTooLarge as u32,
+-                    format!("{obj:?} corner radius too large"),
+-                );
+-            }
++        // E aqui o coracao: em vez de post_error(RadiusTooLarge), corta.
++        let half_min_dim = (padded_box.size.w.min(padded_box.size.h) / 2) as u32;
++        let mut cached = surface_data.cached_state.get::<CacheableCorners>();
++        let pending = cached.pending();
++        if let Some(corners) = pending.0.as_mut() {
++            corners.top_left = corners.top_left.min(half_min_dim);
++            corners.top_right = corners.top_right.min(half_min_dim);
++            corners.bottom_right = corners.bottom_right.min(half_min_dim);
++            corners.bottom_left = corners.bottom_left.min(half_min_dim);
+         }
+     });
+ }

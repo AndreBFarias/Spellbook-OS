@@ -1,0 +1,692 @@
+# cosmic-comp-modo-leitura.patch — a tela passa a obedecer a dois números.
+#
+# ============================================================================
+# O QUE ESTE PATCH ENTREGA
+# ============================================================================
+#   Duas chaves novas em `~/.config/cosmic/com.system76.CosmicComp/v1/`:
+#
+#       leitura_temperatura   Kelvin. 0 = desligado; a faixa útil é 1000..6500,
+#                             que é a tabela WHITEPOINTS do redshift inteira.
+#                             6500 K é o neutro, então o topo também apaga.
+#       leitura_textura       0.0 .. 1.0. Papel: faixa dinâmica comprimida,
+#                             dessaturação e grão estático.
+#
+#   Depois de UM logout, escrever nelas muda a tela no quadro seguinte:
+#
+#       printf '3500' > ~/.config/cosmic/com.system76.CosmicComp/v1/leitura_temperatura
+#       printf '0.4'  > ~/.config/cosmic/com.system76.CosmicComp/v1/leitura_textura
+#       printf '0'    > .../leitura_temperatura   # desliga
+#
+#   Não há protocolo Wayland envolvido, nem `cosmic-randr`, nem gamma de KMS:
+#   medido em 29/08/2026 que nada disso existe nesta pilha (o smithay
+#   vendorizado não tem `gamma_control`, `strings /usr/bin/cosmic-comp | grep -c
+#   GAMMA_LUT` dá 0, e o compositor detém o DRM master). Recompilar é o único
+#   caminho, e isso não vale procurar de novo.
+#
+# ============================================================================
+# O RISCO, EM VOZ ALTA — LEIA ANTES DE APLICAR
+# ============================================================================
+#   `/usr/bin/cosmic-greeter-start` é literalmente `exec cosmic-comp
+#   cosmic-greeter`: o greeter É o mesmo binário. O `init_shaders` compila o
+#   `offscreen.frag` de forma ansiosa na subida do device, e o drop-in
+#   `99-aurora-espera-output.conf` zerou o teto de tentativas do greetd. Um GLSL
+#   inválido aqui não tira só o desktop dela — tira a TELA DE LOGIN junto, em
+#   laço infinito e silencioso. Só TTY (Ctrl+Alt+F2) ou ssh.
+#
+#   Por isso este patch tem um portão próprio, e ele NÃO é opcional:
+#
+#       cc -O1 -o /tmp/gate ~/.config/zsh/scripts/aurora-glsl-gate.c -lEGL -lGLESv2
+#       /tmp/gate <árvore>/src/backend/render/shaders/offscreen.frag
+#
+#   Ele abre EGL no device NVIDIA e COMPILA E LINKA as SEIS variantes que o
+#   smithay liga na subida ([], [NO_ALPHA], [EXTERNAL], cada uma com e sem
+#   DEBUG_FLAGS). Linkar é obrigatório, e não preciosismo: medido em 30/08/2026
+#   que um fragment com varyings demais COMPILA limpo e falha só no
+#   `glLinkProgram`. Rodado sobre este shader: 6/6.
+#
+#   O procedimento de volta, em 6 passos, está na PRIMEIRA seção de
+#   `docs/pesquisas/2026-08-29-modo-leitura-e-botoes.md` no repo do Meow.
+#   Ele é para ser lido ANTES, e guardado FORA desta máquina.
+#
+# ============================================================================
+# A ESCOLHA DE DESENHO QUE EVITA A ARMADILHA MAIS CARA
+# ============================================================================
+#   O bloco novo do shader NÃO entra na região do `color_mode`. Aquelas três
+#   linhas são as âncoras do `aurora-night-light.py` (`find_block`), que o
+#   self-heal roda de hora em hora e depois de todo apt, e que REESCREVE tudo
+#   entre elas com padding de espaços. Um modo de leitura morando ali seria
+#   apagado em silêncio — e o shader resultante AINDA COMPILARIA: os sliders
+#   parariam de fazer efeito sem um erro em lugar nenhum.
+#
+#   Conferido no binário deste build (30/08/2026): a janela do night light
+#   continua com 195 bytes, exatamente como antes, e o patcher velho continua
+#   funcionando sobre ela.
+#
+#   CONSEQUÊNCIA CONHECIDA E ACEITA: enquanto o night light estiver aplicado E
+#   o filtro "Escala de cinza" ligado, a temperatura é multiplicada DUAS vezes
+#   (uma no bloco do greyscale, outra aqui). Aposentar o night light é a etapa 4
+#   do plano, e é o que resolve; até lá, usar um dos dois de cada vez.
+#
+# ============================================================================
+# AS DOZE EDIÇÕES, E POR QUE NENHUMA PODE SAIR
+# ============================================================================
+#   cosmic-comp-config/src/lib.rs
+#     as duas chaves no `CosmicCompConfig` e os defaults 0 / 0.0.
+#
+#   src/config/mod.rs
+#     o marcador `#[used] static AURORA_READING_MODE` (sem `#[used]` o linker o
+#     descarta e o `--ensure` reinstala o mesmo binário para sempre);
+#     a tabela WHITEPOINTS e `leitura_tint()` — Kelvin vira RGB no lado Rust,
+#     UMA vez, e não com `log()`/`pow()` por pixel em tela cheia;
+#     `is_noop()` passando a exigir `== 0` e `<= 0.0` — SEM ISSO o passe inteiro
+#     de postprocess é PULADO e nada aparece, sem erro nenhum;
+#     `ScreenFilter { inverted: false, ..Default::default() }`, senão o crate
+#     nem compila;
+#     o braço `"leitura_temperatura" | "leitura_textura"` do `config_changed`,
+#     que chama `update_screen_filter` NA MÃO (o valor não chega ao renderer
+#     sozinho);
+#     a cópia `cosmic_conf -> ScreenFilter` no fim do `Config::load`, senão um
+#     valor escrito com ela deslogada só valeria no login DEPOIS do seguinte.
+#
+#   src/backend/render/mod.rs
+#     os dois `UniformName` no `compile_custom_texture_shader`;
+#     e os dois `Uniform::new` no caminho winit/x11 — que NÃO roda nesta
+#     máquina, mas onde a omissão daria TELA PRETA: o smithay só seta os
+#     uniforms que a chamada passa, e o default do GL é zero.
+#
+#   src/backend/kms/surface/mod.rs
+#     os dois `Uniform::new` NOS DOIS vetores — o da tela E o do CURSOR (é aqui
+#     que a sessão dela desenha);
+#     e `set_screen_filter` passando a chamar `schedule_render()`: medido que o
+#     outro lado do canal só guarda o filtro e limpa texturas, sem enfileirar
+#     quadro — sem isso o slider trava numa tela parada.
+#
+# ============================================================================
+# COMO CONFERIR QUE ENTROU
+# ============================================================================
+#     strings -a /usr/bin/cosmic-comp | grep AURORA-READING-MODE
+#     ./bin/meow doctor            # a linha `patches`
+#
+#   E lembrar da armadilha 4 do patches/LEIA-ME.txt: dry-run limpo NÃO é prova.
+#   O `patch` do GNU usa fuzz 2 e casa contexto inventado. Só o marcador no
+#   binário E o efeito na tela respondem "o patch faz o que promete?".
+#
+# ============================================================================
+# PROCEDÊNCIA
+# ============================================================================
+#   Escrito em 30/08/2026 (etapa 1 de docs/pesquisas/2026-08-29-modo-leitura-e-
+#   botoes.md). Diff contra cosmic-comp 0.1~1787767625~24.04~5c93094 com o
+#   `cosmic-comp-sem-workspace-vazio.patch` e o `cosmic-comp-raio-clampado.patch`
+#   já aplicados — os três são disjuntos por hunk, e este aplica igual numa
+#   árvore de fábrica.
+#
+#   Classe na `series`: `opt`, DE PROPÓSITO. Se um dia ele não aplicar, o build
+#   tem de seguir e entregar o compositor com workspace e raio: perder o modo de
+#   leitura é aceitável, perder o desktop não.
+#
+#   Marcador-base declarado na série: AURORA-READING-MODE (sem versão).
+#
+# ============================================================================
+# REBASE PARA O a557859 — 16/09/2026
+# ============================================================================
+#   Escrito contra o `5c93094`. No `a557859` os vizinhos das duas primeiras
+#   ancoras mudaram dentro do `CosmicCompConfig` (o `cursor_shake_to_find` e o
+#   `activation_policy` sairam de perto), e os hunks 1, 2 e 5 so passavam com
+#   fuzz 3 — ou seja, o patch(1) jogando fora o contexto e enfiando as linhas
+#   onde sobrasse.
+#
+#   AQUI O FUZZ DEU CERTO POR SORTE, E ISSO NAO E GARANTIA
+#     Conferido a mao: os dois campos caíram dentro do `struct` (que fecha na
+#     linha 136) e os dois defaults dentro do `impl Default` (138-187). Estava
+#     certo. Mas o mesmo fuzz 3, no patch do menu, pos uma linha dentro da
+#     assinatura de outra funcao — e ali o compilador pegou. Um hunk de valor
+#     default que caia no struct errado nao quebra build nenhum: ele so faz a
+#     tela ficar diferente do que a chave diz, meses depois, sem culpado.
+#
+#   Os hunks abaixo saem de um `git diff` sobre a arvore do `a557859` e aplicam
+#   SEM fuzz. Medido depois: compila, e o `AURORA-READING-MODE-1` esta dentro do
+#   binario — pela primeira vez, nas duas maquinas.
+#
+diff --git a/cosmic-comp-config/src/lib.rs b/cosmic-comp-config/src/lib.rs
+index 510927f..7755499 100644
+--- a/cosmic-comp-config/src/lib.rs
++++ b/cosmic-comp-config/src/lib.rs
+@@ -104,6 +104,27 @@ pub struct CosmicCompConfig {
+     pub xwayland_eavesdropping: XwaylandEavesdropping,
+     /// The threshold before windows snap themselves to output edges
+     pub edge_snap_threshold: u32,
++    /// MODO DE LEITURA (Aurora/MeowSystem, 30/08/2026) -- temperatura de cor da
++    /// tela, em KELVIN. `0` = DESLIGADO. A faixa util e 1000..6500, que e
++    /// exatamente a tabela WHITEPOINTS do redshift/colorramp.c que o
++    /// aurora-night-light.py ja carrega; 6500 K e o neutro, entao o topo do
++    /// slider tambem apaga o efeito. Ela escolheu a faixa INTEIRA em 29/08/2026
++    /// ("se e um slider por que nao da pra comportar todos?"), e cortar em 1700
++    /// ou 2500 seria decidir por ela o que e quente demais.
++    ///
++    /// A chave viva e
++    /// `~/.config/cosmic/com.system76.CosmicComp/v1/leitura_temperatura`, e
++    /// escrever nela muda a tela no QUADRO SEGUINTE: o ConfigWatchSource deste
++    /// namespace ja existe (Config::load) e os uniforms sao remontados a cada
++    /// quadro. Nada de deslogar.
++    pub leitura_temperatura: u32,
++    /// MODO DE LEITURA -- textura de papel: `0.0` sem papel, `1.0` papel cheio.
++    /// Comprime a faixa dinamica, dessatura e poe grao estatico.
++    ///
++    /// O TETO do 1.0 NAO mora aqui: sao as constantes `MEOW_PAPEL_*` no
++    /// offscreen.frag. Ela ainda nao fixou esse teto (e gosto, nao engenharia),
++    /// e la ele e uma linha.
++    pub leitura_textura: f32,
+     pub accessibility_zoom: ZoomConfig,
+     pub appearance_settings: AppearanceConfig,
+     /// Hide the cursor after this many seconds of pointer inactivity (None disables)
+@@ -143,6 +164,15 @@ impl Default for CosmicCompConfig {
+             focus_follows_cursor: false,
+             cursor_follows_focus: false,
+             focus_follows_cursor_delay: 250,
++            // OS DOIS NASCEM DESLIGADOS, e isso nao e detalhe: sem chave no
++            // disco (maquina nova, ou a chave apagada) o `get_entry` cai neste
++            // Default. Se o default fosse "quente", um apt upgrade seguido de
++            // relogin acordaria a tela dela ambar sem ninguem ter pedido -- e o
++            // sintoma pareceria defeito de monitor, nao configuracao.
++            // Com 0/0.0 o `is_noop()` do ScreenFilter continua verdadeiro e o
++            // passe de postprocess inteiro e PULADO: custo zero de GPU.
++            leitura_temperatura: 0,
++            leitura_textura: 0.0,
+             descale_xwayland: XwaylandDescaling::Fractional,
+             xwayland_eavesdropping: XwaylandEavesdropping::default(),
+             edge_snap_threshold: 0,
+diff --git a/src/backend/kms/surface/mod.rs b/src/backend/kms/surface/mod.rs
+index cbc8938..8af7b99 100644
+--- a/src/backend/kms/surface/mod.rs
++++ b/src/backend/kms/surface/mod.rs
+@@ -402,6 +402,20 @@ impl Surface {
+         let _ = self
+             .thread_command
+             .send(ThreadCommand::UpdateScreenFilter(config));
++        // MODO DE LEITURA (Aurora/MeowSystem, 30/08/2026) — sem isto o slider
++        // trava numa tela parada.
++        //
++        // MEDIDO no fonte de hoje: o UpdateScreenFilter do outro lado do canal
++        // cai em `update_screen_filter()` (linha ~1460), que so GUARDA o filtro
++        // e limpa as texturas de postprocess — ninguem enfileira quadro. Para os
++        // filtros de acessibilidade isso passa despercebido, porque quem os liga
++        // e um clique que ja sujou a tela. O modo de leitura nao: ele muda por
++        // uma chave escrita por um timer, com a tela quieta, e a cor so
++        // apareceria no proximo dano — que pode nunca vir num desktop parado.
++        //
++        // `schedule_render()` e nao `queue_redraw()`: aquele respeita o dpms e
++        // nao acende a tela apagada as 18h so porque o agendador escreveu.
++        self.schedule_render();
+     }
+
+     pub fn adaptive_sync_support(&self) -> Result<VrrSupport> {
+@@ -1902,6 +1916,17 @@ fn postprocess_elements<'a>(
+                         .map(|val| val as u8 as f32)
+                         .unwrap_or(0.),
+                 ),
++                // MODO DE LEITURA — ESTE E O CURSOR, e os dois uniforms tem de
++                // entrar aqui TAMBEM (30/08/2026).
++                //
++                // O mesmo programa e usado nos dois elementos, e o smithay so
++                // seta o que a chamada passa: esquecer o cursor deixaria o
++                // ponteiro dela com `leitura_temp` = 0, ou seja um quadrado
++                // PRETO andando pela tela. E o grao usa gl_FragCoord (espaco de
++                // framebuffer) justamente para casar nos dois — com v_coords o
++                // grao inteiro seria desenhado dentro de 24 px de cursor.
++                Uniform::new("leitura_temp", screen_filter.leitura_tint()),
++                Uniform::new("leitura_textura", screen_filter.leitura_textura_clamp()),
+             ],
+         ));
+     }
+@@ -1936,6 +1961,12 @@ fn postprocess_elements<'a>(
+                     .map(|val| val as u8 as f32)
+                     .unwrap_or(0.),
+             ),
++            // MODO DE LEITURA — ESTA E A TELA. E aqui que a sessao dela desenha:
++            // a maquina roda o backend KMS, nao o winit. Os uniforms sao
++            // remontados a cada quadro, e e por isso que os dois numeros valem A
++            // QUENTE, sem deslogar, depois que o binario estiver instalado.
++            Uniform::new("leitura_temp", screen_filter.leitura_tint()),
++            Uniform::new("leitura_textura", screen_filter.leitura_textura_clamp()),
+         ],
+     ));
+
+diff --git a/src/backend/render/mod.rs b/src/backend/render/mod.rs
+index 9ad6158..0f44c40 100644
+--- a/src/backend/render/mod.rs
++++ b/src/backend/render/mod.rs
+@@ -421,6 +421,23 @@ pub fn init_shaders(renderer: &mut GlesRenderer) -> Result<(), GlesError> {
+         &[
+             UniformName::new("invert", UniformType::_1f),
+             UniformName::new("color_mode", UniformType::_1f),
++            // MODO DE LEITURA (Aurora/MeowSystem, 30/08/2026).
++            //
++            // ESTA CHAMADA E O RISCO INTEIRO DA ETAPA. O
++            // compile_custom_texture_shader linka SEIS programas aqui mesmo, na
++            // subida do device ([], [NO_ALPHA], [EXTERNAL], cada um com e sem
++            // DEBUG_FLAGS — ver texture_program no smithay vendorizado), e o
++            // init_shaders propaga o erro. Como /usr/bin/cosmic-greeter-start e
++            // `exec cosmic-comp cosmic-greeter`, um GLSL invalido nao tira so o
++            // desktop: tira a TELA DE LOGIN junto. Por isso nenhum binario vai
++            // para /usr/bin sem passar no aurora-glsl-gate, que linka as mesmas
++            // seis variantes no mesmo driver NVIDIA antes do build.
++            //
++            // `leitura_temp` e _3f e nao _1f de proposito: o Kelvin ja vem
++            // convertido em RGB pelo lado Rust (ScreenFilter::leitura_tint), e
++            // no shader vira uma multiplicacao de tres ALU sem `if`.
++            UniformName::new("leitura_temp", UniformType::_3f),
++            UniformName::new("leitura_textura", UniformType::_1f),
+         ],
+     )?;
+     let clipping_shader = renderer.compile_custom_texture_shader(
+@@ -1377,6 +1394,21 @@ where
+                                 .map(|val| val as u8 as f32)
+                                 .unwrap_or(0.),
+                         ),
++                        // MODO DE LEITURA — este caminho e o winit/x11, e NAO
++                        // roda na maquina dela (a sessao e KMS). Mesmo assim os
++                        // dois uniforms entram aqui, e por um motivo medido: o
++                        // smithay so seta os uniforms que a chamada PASSA (ver o
++                        // laco `for uniform in additional_uniforms` em
++                        // gles/mod.rs). Um uniform declarado e nao passado fica
++                        // no default do GL, que e ZERO — e `color.rgb *=
++                        // vec3(0,0,0)` e uma TELA PRETA. Deixar de fora "porque
++                        // nao roda aqui" seria plantar uma tela preta para quem
++                        // um dia rodar o cosmic-comp aninhado para depurar.
++                        Uniform::new("leitura_temp", screen_filter.filter.leitura_tint()),
++                        Uniform::new(
++                            "leitura_textura",
++                            screen_filter.filter.leitura_textura_clamp(),
++                        ),
+                     ],
+                 );
+                 constrain_render_elements(
+diff --git a/src/backend/render/shaders/offscreen.frag b/src/backend/render/shaders/offscreen.frag
+index d95859c..bd281e2 100644
+--- a/src/backend/render/shaders/offscreen.frag
++++ b/src/backend/render/shaders/offscreen.frag
+@@ -23,6 +23,72 @@ uniform float tint;
+ uniform float invert;
+ uniform float color_mode;
+
++// ======================= HUNK A ==========================================
++// MODO DE LEITURA (Aurora/MeowSystem, 30/08/2026) -- os DOIS uniforms novos.
++//
++// POR QUE A TEMPERATURA CHEGA COMO vec3 E NAO COMO KELVIN:
++//   Converter Kelvin -> RGB dentro do shader custa log() e pow() POR PIXEL, em
++//   tela cheia, todo quadro. E a conta e sempre a mesma. O lado Rust ja faz a
++//   interpolacao UMA vez, com a tabela de whitepoints do redshift/colorramp.c
++//   que o aurora-night-light.py ja carrega (1000K..6500K), e manda o resultado
++//   pronto em ScreenFilter::leitura_tint().
++//   vec3(1.0, 1.0, 1.0) = 6500K = neutro = modo de leitura DESLIGADO.
++uniform vec3 leitura_temp;
++
++// 0.0 = sem papel .. 1.0 = papel cheio. E o "Textura" do print do HyperOS:
++// faixa dinamica comprimida + dessaturacao + grao.
++uniform float leitura_textura;
++
++// ---------------------------------------------------------------------------
++// O TETO DA TEXTURA MORA AQUI, E SO AQUI.
++//
++// ELA AINDA NAO FIXOU ESTES NUMEROS (30/08/2026) -- e decisao de gosto, nao de
++// engenharia, e a folha dela vence. Sao quatro linhas, e trocar qualquer uma
++// exige rebuild do compositor (o GLSL e include_str! no binario). Enquanto o
++// slider da etapa 3 nao existe, este e o unico lugar onde o "100%" e definido.
++//
++//   MEOW_PAPEL_TINTA     onde o PRETO para. 0.118 = o preto vira tinta, nunca
++//                        buraco. Baixar aproxima de tela; subir apaga o texto.
++//   MEOW_PAPEL_GANHO     de quanto o BRANCO desce. tinta+ganho = o branco final:
++//                        (0.933, 0.913, 0.864) -- papel levemente amarelado,
++//                        porque R > G > B. Somar 1.0 aos tres devolveria tela.
++//   MEOW_PAPEL_DESSATURA quanto da cor sai. 0.30 = tira o exagero e mantem o
++//                        "Cores totais" do print dela.
++//   MEOW_PAPEL_GRAO      amplitude do grao no papel. 0.085 da ~4 niveis de 255,
++//                        a MESMA ordem do passo de quantizacao de 8 bits, entao
++//                        ele funciona como dither e MATA banding em vez de criar.
++const vec3  MEOW_PAPEL_TINTA     = vec3(0.118, 0.113, 0.104);
++const vec3  MEOW_PAPEL_GANHO     = vec3(0.815, 0.800, 0.760);
++const float MEOW_PAPEL_DESSATURA = 0.30;
++const float MEOW_PAPEL_GRAO      = 0.085;
++// ---------------------------------------------------------------------------
++
++// Grao pseudoaleatorio a partir da coordenada de PIXEL do framebuffer.
++//
++// SEM TEMPO E SEM UNIFORM: para uma dada coordenada o valor e SEMPRE o mesmo.
++// Tres coisas caem de graca disso:
++//   1) nao chuvisca entre quadros;
++//   2) nao anda quando a janela anda;
++//   3) sobrevive ao damage tracking, porque a regiao redesenhada recalcula
++//      exatamente os mesmos valores. Um grao com termo temporal deixaria uma
++//      costura visivel na borda da regiao suja, e forcaria dano de tela cheia
++//      todo quadro -- o mesmo erro que o applet conta-gotas ja cobra em CPU.
++//
++// POR QUE COM sin(), CONTRARIANDO O CONSELHO DE SHADERTOY: medido nesta
++// maquina (RTX 4060, driver 580.173.02), o sin() e 1,5x a 2x MAIS BARATO que o
++// hash "sem seno" do Hoskins, porque na NVIDIA o seno e uma instrucao da SFU e
++// nao disputa o caminho ALU do resto do shader. O conselho de nunca usar sin
++// em hash nasceu de GPU movel com mediump, e nao vale aqui.
++//
++// PRECISAO: a spec da GLSL ES 1.00 declara gl_FragCoord como mediump; na NVIDIA
++// de desktop mediump E fp32. Se um dia isto rodar em GPU movel, trocar por:
++//       vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
++//       p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z);
++float meow_grao(vec2 p) {
++    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
++}
++// ===================== FIM DO HUNK A ======================================
++
+ void main() {
+     vec4 color = texture2D(tex, v_coords);
+
+@@ -83,6 +149,78 @@ void main() {
+         color.rgb += correction;
+     }
+
++    // ======================= HUNK B ======================================
++    // MODO DE LEITURA. Mora AQUI por dois motivos, os dois deliberados:
++    //
++    //   1) DEPOIS da cadeia do color_mode. As strings
++    //      `    if (color_mode == 1.0) {` e `    } else if (color_mode >= 2.0) {`
++    //      sao as ANCORAS do aurora-night-light.py (find_block): ele acha o
++    //      bloco por elas e REESCREVE tudo que houver entre as duas, com padding
++    //      de espacos, de hora em hora pelo self-heal e depois de todo apt. Se o
++    //      modo de leitura morasse la dentro seria apagado EM SILENCIO -- e o
++    //      shader resultante ainda compilaria. Os sliders dela parariam de fazer
++    //      efeito sem nenhum erro em lugar nenhum: a pior classe de falha.
++    //      Deixando aquela regiao byte a byte igual ao upstream, o patcher velho
++    //      continua fazendo o que sempre fez (util na janela entre um apt
++    //      upgrade e o rebuild) e NUNCA encosta aqui.
++    //
++    //   2) ANTES do `color.rgb *= color.a`, porque toda a conta abaixo pressupoe
++    //      cor NAO pre-multiplicada -- que e o estado em que o
++    //      `color.rgb /= color.a` la em cima deixou tudo.
++    //
++    // GLSL ES 1.00, conferido: so fract, sin, dot, floor, mix, clamp e
++    // gl_FragCoord. Nenhum texelFetch, nenhum inverse(), nenhum operador de
++    // bit, nenhum laco de contagem variavel, nenhum switch -- tudo isso e
++    // proibido ou inexistente em #version 100.
++
++    // (1) TEXTURA / PAPEL
++    if (leitura_textura > 0.0) {
++        float t = clamp(leitura_textura, 0.0, 1.0);
++
++        // Faixa dinamica de PAPEL, nao de tela: o preto sobe e vira TINTA e o
++        // branco desce e vira PAPEL levemente amarelado. E essa compressao que
++        // tira o brilho de painel e faz a tela parecer uma pagina -- e ela vem
++        // ANTES do grao de proposito, porque o grao tem de modular o papel, nao
++        // a imagem crua.
++        vec3 papel = MEOW_PAPEL_TINTA + MEOW_PAPEL_GANHO * color.rgb;
++
++        // Papel colorido nunca satura como um painel. Mantem a cor e so tira o
++        // exagero.
++        float tinta = dot(papel, vec3(0.2126, 0.7152, 0.0722));
++        papel = mix(papel, vec3(tinta), MEOW_PAPEL_DESSATURA);
++
++        color.rgb = mix(color.rgb, papel, t);
++
++        // Grao em duas oitavas: uma fina (o poro) e uma a ~1/3 de escala (a
++        // fibra). Uma oitava so ja funciona e custa metade; tres dao fibra mais
++        // rica e custam mais -- e escolha de gosto, nao de correcao.
++        //
++        // TEM de ser gl_FragCoord.xy, e nao v_coords: o MESMO programa, com os
++        // MESMOS uniforms, e aplicado a DOIS elementos -- a textura de tela
++        // cheia E a textura do CURSOR. v_coords vai de 0..1 DENTRO de cada
++        // elemento, entao o grao inteiro seria desenhado dentro de um cursor de
++        // 24 px. gl_FragCoord e espaco de framebuffer e casa nos dois.
++        vec2 pix = floor(gl_FragCoord.xy);
++        float g = (meow_grao(pix) + meow_grao(floor(pix * 0.34) + 11.0)) * 0.5 - 0.5;
++
++        // MULTIPLICATIVO, nao aditivo: papel modula a REFLETANCIA, entao o grao
++        // aparece no branco e some na tinta -- que e o comportamento real de uma
++        // pagina, e de quebra nao serrilha o texto.
++        color.rgb *= 1.0 + g * (MEOW_PAPEL_GRAO * t);
++        color.rgb = clamp(color.rgb, 0.0, 1.0);
++    }
++
++    // (2) TEMPERATURA
++    // SEM `if`, de proposito. Com o modo desligado o lado Rust manda
++    // vec3(1.0, 1.0, 1.0) e isto vira uma multiplicacao neutra: tres ALU, mais
++    // barato que um desvio e sem divergencia entre fragmentos.
++    //
++    // Vem DEPOIS do papel, tambem de proposito: assim a luz quente amornece
++    // tambem o branco do papel. Na ordem inversa o papel sairia frio com o
++    // resto quente, e a tela ficaria com duas temperaturas brigando.
++    color.rgb *= leitura_temp;
++    // ===================== FIM DO HUNK B =================================
++
+     // re-multiply
+     color.rgb *= color.a;
+
+diff --git a/src/config/mod.rs b/src/config/mod.rs
+index 4d2fad9..65d68b7 100644
+--- a/src/config/mod.rs
++++ b/src/config/mod.rs
+@@ -148,16 +148,122 @@ impl From<CompTransformDef> for Transform {
+     }
+ }
+
++/// MARCADOR DO MODO DE LEITURA (Aurora/MeowSystem, 30/08/2026) — nao remover.
++///
++/// O `aurora-cosmic-comp-ws.sh` decide se o /usr/bin/cosmic-comp instalado e
++/// este build por `strings -a | grep`, nunca por hash: o aurora-night-light.py
++/// reescreve bytes do shader DEPOIS do build, e a partir dai nenhum hash bate.
++/// A `series` declara o marcador-BASE (`AURORA-READING-MODE`, sem versao); o
++/// sufixo desta linha e o que o `--ensure` compara para saber se reinstala.
++///
++/// O `#[used]` e obrigatorio: sem ele o linker descarta um static que ninguem
++/// le, o marcador some do binario, e o `--ensure` reinstala o mesmo artefato a
++/// cada ciclo do self-heal, para sempre.
++#[used]
++static AURORA_READING_MODE: &str = "AURORA-READING-MODE-1";
++
++/// Whitepoints do redshift/gammastep (`colorramp.c`), 1000 K a 6500 K em passos
++/// de 500 K. Copia literal da tabela que o `aurora-night-light.py` ja carrega —
++/// os dois lados TEM de dar a mesma cor para o mesmo numero, senao a tela muda
++/// quando um apt upgrade troca quem esta pintando.
++///
++/// 6500 K = (1, 1, 1) = neutro. Por isso o topo do slider e "desligado".
++const LEITURA_WHITEPOINTS: [(u32, [f32; 3]); 12] = [
++    (1000, [1.00000, 0.18172, 0.00000]),
++    (1500, [1.00000, 0.42101, 0.00000]),
++    (2000, [1.00000, 0.54862, 0.08754]),
++    (2500, [1.00000, 0.64546, 0.28802]),
++    (3000, [1.00000, 0.71760, 0.42107]),
++    (3500, [1.00000, 0.77987, 0.54468]),
++    (4000, [1.00000, 0.82854, 0.64606]),
++    (4500, [1.00000, 0.87325, 0.74112]),
++    (5000, [1.00000, 0.90993, 0.82219]),
++    (5500, [1.00000, 0.94380, 0.89904]),
++    (6000, [1.00000, 0.97481, 0.96759]),
++    (6500, [1.00000, 1.00000, 1.00000]),
++];
++
+ #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+ pub struct ScreenFilter {
+     pub inverted: bool,
+     #[serde(skip_serializing_if = "Option::is_none")]
+     pub color_filter: Option<ColorFilter>,
++    /// MODO DE LEITURA — temperatura em Kelvin, 0 = desligado.
++    ///
++    /// `#[serde(skip)]` DE PROPOSITO: este struct e o conteudo de
++    /// `~/.local/state/cosmic-comp/a11y_screen_filter.ron`, que e ESTADO de
++    /// acessibilidade e e lido UMA vez no boot, sem watcher. Os dois numeros do
++    /// modo de leitura vem do cosmic-config, que TEM watcher e vale a quente —
++    /// gravar tambem no .ron criaria duas fontes de verdade que divergem em
++    /// silencio, e a errada seria a que ganha no login seguinte.
++    #[serde(skip)]
++    pub leitura_temperatura: u32,
++    /// MODO DE LEITURA — textura de papel, 0.0 a 1.0. Ver a nota do campo acima
++    /// sobre o `#[serde(skip)]`.
++    #[serde(skip)]
++    pub leitura_textura: f32,
+ }
+
+ impl ScreenFilter {
+     pub fn is_noop(&self) -> bool {
+-        !self.inverted && self.color_filter.is_none()
++        // OS DOIS TERMOS NOVOS NAO SAO OPCIONAIS. Todo o passe de postprocess
++        // (o offscreen render target, o shader, o blit) e PULADO quando isto
++        // responde `true` — ver `is_noop()` em kms/surface/mod.rs. Sem
++        // acrescentar os dois numeros aqui, escrever 3500 na chave nao pinta um
++        // pixel e nao imprime um erro: a falha muda que custou a etapa inteira.
++        !self.inverted
++            && self.color_filter.is_none()
++            && self.leitura_temperatura == 0
++            && self.leitura_textura <= 0.0
++    }
++
++    /// O multiplicador RGB que vai para o uniform `leitura_temp`.
++    ///
++    /// A CONTA E AQUI, E NAO NO SHADER, porque ela e sempre a mesma: Kelvin ->
++    /// RGB custa log() e pow() por pixel, em tela cheia, todo quadro. Aqui sai
++    /// uma vez por mudanca de config.
++    ///
++    /// `[1.0, 1.0, 1.0]` (neutro) para 0 = desligado, e tambem para qualquer
++    /// valor fora da tabela: um numero absurdo digitado na chave apaga o efeito
++    /// em vez de pintar a tela de uma cor que ninguem pediu.
++    pub fn leitura_tint(&self) -> [f32; 3] {
++        let k = self.leitura_temperatura;
++        if k == 0 {
++            return [1.0, 1.0, 1.0];
++        }
++        let primeiro = LEITURA_WHITEPOINTS[0];
++        let ultimo = LEITURA_WHITEPOINTS[LEITURA_WHITEPOINTS.len() - 1];
++        if k <= primeiro.0 {
++            return primeiro.1;
++        }
++        if k >= ultimo.0 {
++            return ultimo.1;
++        }
++        for par in LEITURA_WHITEPOINTS.windows(2) {
++            let (lo_k, lo) = par[0];
++            let (hi_k, hi) = par[1];
++            if k >= lo_k && k <= hi_k {
++                let f = (k - lo_k) as f32 / (hi_k - lo_k) as f32;
++                return [
++                    lo[0] + (hi[0] - lo[0]) * f,
++                    lo[1] + (hi[1] - lo[1]) * f,
++                    lo[2] + (hi[2] - lo[2]) * f,
++                ];
++            }
++        }
++        [1.0, 1.0, 1.0]
++    }
++
++    /// A textura ja presa em 0.0..1.0. O shader tambem faz `clamp`, mas um NaN
++    /// escrito na chave passaria pelo `clamp` do GLSL e chegaria ao `mix` — e
++    /// `mix(a, b, NaN)` pinta lixo. `f32::clamp` entra em panico com NaN, entao
++    /// o teste e explicito.
++    pub fn leitura_textura_clamp(&self) -> f32 {
++        if self.leitura_textura.is_nan() {
++            0.0
++        } else {
++            self.leitura_textura.clamp(0.0, 1.0)
++        }
+     }
+ }
+
+@@ -327,8 +433,21 @@ impl Config {
+                 .set_screen_filter(filter_conf.color_filter);
+         });
+
++        // MODO DE LEITURA — a ponte do disco para o filtro vivo, no LOGIN.
++        //
++        // Os dois numeros nascem no cosmic-config (`leitura_temperatura`,
++        // `leitura_textura`) e sao consumidos pelo ScreenFilter, que e outra
++        // estrutura. Sem esta copia, um valor escrito com ela DESLOGADA — pelo
++        // agendador das 18h, por exemplo — so valeria no login DEPOIS do
++        // seguinte: o `config_changed` nao dispara para chave que ja estava no
++        // disco antes do compositor subir.
++        let mut dynamic_conf = Self::load_dynamic(&xdg);
++        dynamic_conf.accessibility_filter.1.leitura_temperatura =
++            cosmic_comp_config.leitura_temperatura;
++        dynamic_conf.accessibility_filter.1.leitura_textura = cosmic_comp_config.leitura_textura;
++
+         Config {
+-            dynamic_conf: Self::load_dynamic(&xdg),
++            dynamic_conf,
+             cosmic_conf: cosmic_comp_config,
+             cosmic_helper: config,
+             settings_context,
+@@ -391,9 +510,14 @@ impl Config {
+             };
+         }
+
++        // `..Default::default()` e nao os campos a mao: com dois campos novos no
++        // struct, o literal exaustivo aqui deixaria o CRATE INTEIRO sem compilar
++        // — e o erro apareceria a 4 minutos de build de distancia do lugar que o
++        // causou. Assim, o proximo campo que alguem acrescentar tambem entra de
++        // graca.
+         ScreenFilter {
+             inverted: false,
+-            color_filter: None,
++            ..Default::default()
+         }
+     }
+
+@@ -740,6 +864,18 @@ impl DynamicConfig {
+             &mut self.accessibility_filter.1,
+         )
+     }
++
++    /// MODO DE LEITURA — muda SO os dois numeros novos, SEM persistir.
++    ///
++    /// Nao e o `screen_filter_mut()` de proposito: aquele devolve um
++    /// `PersistenceGuard`, que reescreve o `a11y_screen_filter.ron` quando cai
++    /// do escopo. Os dois campos sao `#[serde(skip)]`, entao o arquivo sairia
++    /// IDENTICO — e ainda assim seria uma escrita em disco por passo do slider
++    /// (o applet da etapa 3 grava com `step(100)`: dezenas de escritas num
++    /// arrasto). Escrita de estado de acessibilidade a 60 Hz e desgaste puro.
++    pub fn screen_filter_leitura_mut(&mut self) -> &mut ScreenFilter {
++        &mut self.accessibility_filter.1
++    }
+ }
+
+ pub fn xkb_config_to_wl(config: &XkbConfig) -> WlXkbConfig<'_> {
+@@ -1015,6 +1151,46 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut
+                     state.update_decorations();
+                 }
+             }
++            // MODO DE LEITURA — os dois numeros que a tela obedece.
++            //
++            // O BRACO PRECISA CHAMAR update_screen_filter() NA MAO. O valor NAO
++            // chega ao renderer sozinho: o cosmic_conf e so a leitura do disco;
++            // quem os uniforms leem e o ScreenFilter do dynamic_conf, e as
++            // superficies do KMS carregam cada uma a SUA copia dele (ver
++            // Surface::new, que recebe o filtro por valor). Sem esta chamada, a
++            // chave muda no disco, o compositor le, e a tela nao mexe.
++            //
++            // AS DUAS CHAVES NO MESMO BRACO, e as duas relidas: o applet e o
++            // agendador podem escrever as duas no mesmo instante, e o
++            // ConfigWatchSource entrega as chaves numa lista — tratar uma sem
++            // reler a outra manda ao renderer um par meio velho.
++            "leitura_temperatura" | "leitura_textura" => {
++                let temperatura = get_config::<u32>(&config, "leitura_temperatura");
++                let textura = get_config::<f32>(&config, "leitura_textura");
++
++                state.common.config.cosmic_conf.leitura_temperatura = temperatura;
++                state.common.config.cosmic_conf.leitura_textura = textura;
++
++                let atual = state.common.config.dynamic_conf.screen_filter();
++                if atual.leitura_temperatura == temperatura && atual.leitura_textura == textura {
++                    // O cosmic-config reemite a chave em toques que nao mudaram
++                    // valor. Repintar a tela por isso seria um quadro extra por
++                    // evento, de graca.
++                    continue;
++                }
++
++                let mut updated = atual.clone();
++                updated.leitura_temperatura = temperatura;
++                updated.leitura_textura = textura;
++
++                if let Err(err) = state.backend.update_screen_filter(&updated) {
++                    warn!(?err, "Failed to apply reading mode");
++                } else {
++                    let filtro = state.common.config.dynamic_conf.screen_filter_leitura_mut();
++                    filtro.leitura_temperatura = temperatura;
++                    filtro.leitura_textura = textura;
++                }
++            }
+             _ => {}
+         }
+     }

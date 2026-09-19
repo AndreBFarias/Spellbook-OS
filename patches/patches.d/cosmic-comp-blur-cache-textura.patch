@@ -1,0 +1,179 @@
+# cosmic-comp-blur-cache-textura.patch — o blur para de alocar textura por frame
+#
+# MARCADOR: AURORA-BLUR-CACHE-1   (base: AURORA-BLUR-CACHE)
+# BASE:     cosmic-comp 0.1~1788962084~24.04~a557859 (commit a557859)
+# DATA:     2026-09-17
+#
+# O QUE ISTO CONSERTA
+#   Em 17/09/2026, as 19:56, a sessao COSMIC inteira caiu nesta maquina. O
+#   coredump do cosmic-comp tem, no topo da thread de render:
+#       #1 cosmic_comp::backend::render::wayland::blur_effect::render_blur
+#       #2 <BlurElement as RenderElement<R>>::capture_framebuffer
+#   e o kernel registrou, no mesmo segundo:
+#       amdgpu 0000:75:00.0: [gfxhub] page fault (src_id:0 ring:24 vmid:5)
+#       Faulty UTCL2 client ID: TCP (0x8) ; PERMISSION_FAULTS: 0x3
+#       ring gfx_0.1.0 timeout, signaled seq=426725, emitted seq=426727
+#   Morreram junto cosmic-applets (4x), cosmic-osd, cosmic-files-applet,
+#   cosmic-app-library e cosmic-workspaces; o greeter voltou 17 s depois.
+#
+#   34 minutos antes, o damage tracker do smithay havia avisado, uma unica vez:
+#       "Duplicated FramebufferEffect element. Re-capturing every frame"
+#
+# OS DOIS HUNKS, E POR QUE SAO DOIS
+#   1. src/backend/render/wayland/blur_effect.rs — A CAUSA DO DANO.
+#      `capture_framebuffer` usa duas texturas e cacheava so uma. A segunda era
+#      criada e destruida a cada chamada. No regime de recaptura por frame isso
+#      vira alocacao/liberacao de textura de GPU a 60 Hz na iGPU, que e o padrao
+#      que produz page fault do Texture Cache Processor por reciclagem de
+#      endereco virtual. Agora a segunda textura vem do mesmo UserDataMap, com a
+#      mesma validacao de tamanho e de contexto GL que a primeira ja tinha.
+#
+#   2. src/wayland/handlers/image_copy_capture/render.rs — UM GATILHO DA
+#      RECAPTURA. O caminho de captura de tela usava `let blur_strength = 9;`
+#      cravado, com um `// TODO` do proprio upstream, contra 1 ou 2 do caminho
+#      normal. Como o BlurState e um por superficie e compartilhado entre os
+#      dois caminhos, a alternancia entre `passes = 4` e `passes = 1` marcava o
+#      estado como sujo toda vez, e `damage_since` passava a reportar a
+#      geometria inteira como dano. Alinhar os dois caminhos remove essa fonte.
+#
+# O QUE ISTO NAO E
+#   Nao e backport: nao existe correcao upstream para colher. O pacote instalado
+#   ja contem todos os commits de blur do master (o ultimo a tocar o arquivo e
+#   e8caf33, de 04/09), e o master esta 3 commits a frente, nenhum em render.
+#   Issues abertas com o mesmo quadro, sem resposta de mantenedor:
+#     pop-os/cosmic-comp#2843  (RTX 4050 + Radeon 680M, MESMO kernel, SIGABRT
+#                               em libgallium 26.1.6 — hardware quase identico)
+#     pop-os/cosmic-comp#2149  (mesmo page fault de amdgpu, Radeon 890M)
+#     pop-os/cosmic-comp#2795  (blur caro com varias janelas)
+#
+# O QUE ISTO NAO PROMETE
+#   O page fault de #2149 e de 03/03/2026, ANTERIOR ao blur existir (mergeado em
+#   09/07/2026 pelo PR #2179). Ou seja: o blur e gatilho demonstrado neste
+#   crash, mas pode nao ser a unica causa raiz da familia de page faults do
+#   amdgpu. Estes dois hunks removem um caminho de alocacao patologico e uma
+#   fonte de recaptura permanente; nao ha promessa de que zerem toda queda.
+#   A medida de controle esta em Migracao-OS/scripts/medir-compositor.sh.
+#
+# ESTETICA: nenhuma mudanca. O efeito de vidro fosco continua identico na tela;
+# o unico visual que muda e o da CAPTURA, que passa a sair com o mesmo blur da
+# tela em vez de um borrao quatro vezes mais forte.
+--- a/src/backend/render/wayland/blur_effect.rs	2026-09-17 20:46:56.489132792 -0300
++++ b/src/backend/render/wayland/blur_effect.rs	2026-09-17 20:47:37.001213081 -0300
+@@ -117,6 +117,51 @@
+
+ type BlurTexture<T> = Mutex<Option<T>>;
+
++// AURORA-BLUR-CACHE — a segunda textura do blur também vem do cache.
++//
++// O QUE ERA, E O QUE CUSTAVA
++//   `capture_framebuffer` usa DUAS texturas: o kawase dual-filter alterna entre
++//   elas a cada passe (`render_blur`, o `let [src_tex, target_tex] = textures`).
++//   A primeira já vinha do `UserDataMap` e era reusada entre frames. A segunda
++//   era criada com `create_buffer` a CADA chamada e descartada no fim — apesar
++//   de o `draw` só ler a primeira, isto é, de a segunda ser puro rascunho.
++//
++//   Isso é barato enquanto a captura é rara. Deixa de ser quando o damage
++//   tracker do smithay entra no regime que ele mesmo anuncia uma única vez por
++//   processo:
++//       "Duplicated FramebufferEffect element. Re-capturing every frame"
++//   A partir daí é uma alocação e uma liberação de textura de GPU por frame.
++//
++//   Medido nesta máquina (Nitro AN515-47, iGPU Radeon 680M) em 17/09/2026: a
++//   sessão inteira caiu com o backtrace da thread de render parado exatamente
++//   em `render_blur` <- `capture_framebuffer`, e o kernel registrou
++//       amdgpu [gfxhub] page fault ... Faulty UTCL2 client ID: TCP (0x8)
++//       PERMISSION_FAULTS: 0x3 ... ring gfx_0.1.0 timeout
++//   TCP é o Texture Cache Processor: a GPU leu um endereço de textura que já
++//   não era dela. É o sintoma clássico de reciclagem de endereço virtual sob
++//   alocação em alta frequência.
++//
++// POR QUE UM NEWTYPE, E NÃO OUTRO ALIAS
++//   O `UserDataMap` do smithay indexa por TypeId. `type BlurOffTexture<T> =
++//   Mutex<Option<T>>` seria o MESMO tipo que `BlurTexture<T>` e cairia no
++//   mesmo slot — as duas texturas viraram uma só, e o blur pinta lixo. Tem de
++//   ser um tipo distinto de verdade.
++#[derive(Debug)]
++struct BlurOffTexture<T>(Mutex<Option<T>>);
++
++impl<T> Default for BlurOffTexture<T> {
++    fn default() -> Self {
++        Self(Mutex::new(None))
++    }
++}
++
++// O marcador que o `aurora-cosmic-comp-ws.sh` procura no binário instalado.
++// `#[used]` é obrigatório: sem ele o linker descarta o static e o verificador
++// do `meow doctor` passa a dizer "FALTA" sobre um patch que está aplicado.
++// O sufixo só pode ter dígito e ponto — a regex do script é `-[0-9][0-9.]*`.
++#[used]
++static AURORA_BLUR_CACHE_PATCH: &str = "AURORA-BLUR-CACHE-1";
++
+ #[derive(Debug)]
+ pub struct BlurState {
+     pub id: Id,
+@@ -407,10 +452,31 @@
+             texture_entry.as_ref().unwrap(),
+         )
+         .unwrap();
+-        let mut off_texture = renderer
+-            .as_mut()
+-            .create_buffer(Fourcc::Abgr8888, tex_size)
+-            .map_err(R::from_gles_error)?;
++        // AURORA-BLUR-CACHE: mesma disciplina da textura de cima — pega do cache,
++        // descarta só se o tamanho mudou ou se ela pertence a outro contexto GL,
++        // e recria apenas nesse caso. Antes, este bloco era um `create_buffer`
++        // incondicional, e a textura morria no fim de cada chamada.
++        let off_ref = cache.get_or_insert_threadsafe(BlurOffTexture::<R::TextureId>::default);
++        let mut off_entry = off_ref.0.lock().unwrap();
++        if off_entry.as_ref().is_some_and(|tex| {
++            tex.size() != tex_size
++                || R::tex_to_gl(&renderer.as_ref().context_id(), off_entry.as_ref().unwrap())
++                    .is_none()
++        }) {
++            off_entry.take();
++        }
++        if off_entry.is_none() {
++            let gl_texture = renderer
++                .as_mut()
++                .create_buffer(Fourcc::Abgr8888, tex_size)
++                .map_err(R::from_gles_error)?;
++            *off_entry = Some(R::tex_from_gl(&renderer.as_ref().context_id(), gl_texture));
++        }
++        let mut off_texture = R::tex_to_gl(
++            &renderer.as_ref().context_id(),
++            off_entry.as_ref().unwrap(),
++        )
++        .unwrap();
+         std::mem::drop(renderer);
+
+         let sync = blit_from_active_fb(gles_frame, src, dst, transform, &mut texture)
+--- a/src/wayland/handlers/image_copy_capture/render.rs	2026-09-17 20:46:56.498175607 -0300
++++ b/src/wayland/handlers/image_copy_capture/render.rs	2026-09-17 20:47:37.003213035 -0300
+@@ -608,7 +608,26 @@
+             .collect();
+
+         let shell = common.shell.read();
+-        let blur_strength = 9; // TODO
++        // AURORA-BLUR-CACHE: o caminho de captura usava `9` cravado, com um
++        // `// TODO` do próprio upstream, enquanto o caminho normal de tela usa
++        // `(theme.cosmic().frosted as u8 + 1)` — isto é, 1 ou 2
++        // (src/backend/render/mod.rs:745).
++        //
++        // POR QUE ISSO IMPORTA MAIS DO QUE PARECE
++        //   Pela tabela BLUR_PARAMS, 9 significa `passes = 4` e 1 significa
++        //   `passes = 1`. E o `BlurState` é UM POR SUPERFÍCIE, compartilhado
++        //   pelos dois caminhos: em `BlurElement::internal`, a comparação
++        //       let dirty = !(... && state.passes == params.passes && ...);
++        //       if dirty { state.commit.increment(); }
++        //   vira `dirty = true` toda vez que os dois caminhos se alternam sobre
++        //   a mesma superfície. Com o commit avançando, `damage_since` reporta a
++        //   geometria INTEIRA como suja, e o elemento é recapturado de novo —
++        //   quadro após quadro, enquanto houver captura viva.
++        //
++        //   Alinhar os dois caminhos faz `state.passes` parar de oscilar. Como
++        //   efeito colateral bom, a captura passa a sair com o mesmo blur que a
++        //   tela mostra, em vez de um borrão quatro vezes mais forte.
++        let blur_strength = (shell.theme().cosmic().frosted as u8 + 1) as usize;
+         let seat = shell.seats.last_active().clone();
+         let pointer = seat.get_pointer().unwrap();
+         let pointer_loc = pointer.current_location().to_i32_round().as_global();

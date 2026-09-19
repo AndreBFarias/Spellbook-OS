@@ -1,0 +1,240 @@
+# cosmic-comp-sem-workspace-vazio.patch — DOIS patches num arquivo só
+#
+# O nome ficou do primeiro. Hoje ele carrega duas coisas, e o cmd_build do
+# aurora-cosmic-comp-ws.sh aplica UM arquivo só — por isso vivem juntos.
+#
+# 1) O WORKSPACE VAZIO (04/08/2026, marcador AURORA-COSMIC-WS-PATCH)
+#    src/shell/mod.rs — ensure_last_empty deixa de criar um workspace vazio
+#    atrás do último alfinetado. Comentário completo dentro do próprio hunk.
+#
+# 2) AS ANIMAÇÕES 1,75x + O FADE DO OVERVIEW (25/08/2026, escolha dela)
+#    Oito durações const, porque o cosmic-comp NÃO tem chave de config de
+#    animação: CosmicCompConfig tem 21 campos e nenhum é de tempo. Fator 1,75:
+#      shell/mod.rs                 ANIMATION_DURATION            200 -> 350
+#      layout/tiling/mod.rs         ANIMATION_DURATION            200 -> 350
+#      layout/tiling/mod.rs         MINIMIZE_ANIMATION_DURATION   320 -> 560
+#      layout/floating/mod.rs       ANIMATION_DURATION            200 -> 350
+#      layout/floating/mod.rs       MINIMIZE_ANIMATION_DURATION   320 -> 560
+#      workspace.rs                 FULLSCREEN_ANIMATION_DURATION 200 -> 350
+#      element/stack/tabs.rs        SCROLL_ANIMATION_DURATION     200 -> 350
+#      element/stack/tabs.rs        TAB_ANIMATION_DURATION        150 -> 260
+#
+#    REGRA QUE NÃO PODE SER QUEBRADA: shell/mod.rs e layout/tiling/mod.rs
+#    recebem o MESMO valor. A curva do slide de workspace lê a duração do
+#    tiling (focus/order.rs:18 e :164) e o fim do slide lê a do shell
+#    (shell/mod.rs:606). Divergir dá salto seco ou refresh faminto.
+#
+#    NÃO tocar em MOUSE_ANIMATION_DELAY / INITIAL_MOUSE_ANIMATION_DELAY
+#    (tiling/mod.rs:84-85): é histerese de arraste, não animação.
+#
+#    Efeito colateral aceito: o zoom de acessibilidade desacelera junto
+#    (shell/zoom.rs:45 importa ANIMATION_DURATION de shell).
+#
+#    E O FADE: o escurecimento das janelas no overview era DEGRAU, não fade.
+#    `duration_since(..).as_millis() / ANIMATION_DURATION.as_millis()` divide
+#    u128 por u128 — inteiro, 0 ou 1 — e só depois faz `as f32`. Oito lugares
+#    (workspace.rs e backend/render/mod.rs, 4 em cada) passam a converter ANTES
+#    de dividir. Alongar a duração sem isso PIORA o degrau, por isso os dois
+#    andam juntos.
+#
+# Um `apt upgrade` do cosmic-comp troca o binário e derruba os DOIS de uma vez.
+# O conserto é humano: aurora-cosmic-comp-ws.sh --build (e depois logout).
+#
+diff --color -u -r limpo/archive/src/backend/render/mod.rs patched/archive/src/backend/render/mod.rs
+--- a/src/backend/render/mod.rs	2026-08-18 08:26:18.000000000 -0300
++++ b/src/backend/render/mod.rs	2026-08-25 18:40:39.188638304 -0300
+@@ -953,15 +953,15 @@
+             Stage::StickyPopups(layout) => {
+                 let alpha = match &overview.0 {
+                     OverviewMode::Started(_, started) => {
+-                        (1.0 - (Instant::now().duration_since(*started).as_millis()
+-                            / ANIMATION_DURATION.as_millis()) as f32)
++                        (1.0 - (Instant::now().duration_since(*started).as_millis() as f32
++                            / ANIMATION_DURATION.as_millis() as f32))
+                             .max(0.0)
+                             * 0.4
+                             + 0.6
+                     }
+                     OverviewMode::Ended(_, ended) => {
+-                        ((Instant::now().duration_since(*ended).as_millis()
+-                            / ANIMATION_DURATION.as_millis()) as f32)
++                        ((Instant::now().duration_since(*ended).as_millis() as f32
++                            / ANIMATION_DURATION.as_millis() as f32))
+                             * 0.4
+                             + 0.6
+                     }
+@@ -978,15 +978,15 @@
+             Stage::Sticky(layout) => {
+                 let alpha = match &overview.0 {
+                     OverviewMode::Started(_, started) => {
+-                        (1.0 - (Instant::now().duration_since(*started).as_millis()
+-                            / ANIMATION_DURATION.as_millis()) as f32)
++                        (1.0 - (Instant::now().duration_since(*started).as_millis() as f32
++                            / ANIMATION_DURATION.as_millis() as f32))
+                             .max(0.0)
+                             * 0.4
+                             + 0.6
+                     }
+                     OverviewMode::Ended(_, ended) => {
+-                        ((Instant::now().duration_since(*ended).as_millis()
+-                            / ANIMATION_DURATION.as_millis()) as f32)
++                        ((Instant::now().duration_since(*ended).as_millis() as f32
++                            / ANIMATION_DURATION.as_millis() as f32))
+                             * 0.4
+                             + 0.6
+                     }
+diff --color -u -r limpo/archive/src/shell/element/stack/tabs.rs patched/archive/src/shell/element/stack/tabs.rs
+--- a/src/shell/element/stack/tabs.rs	2026-08-18 08:26:18.000000000 -0300
++++ b/src/shell/element/stack/tabs.rs	2026-08-25 18:40:39.188297870 -0300
+@@ -127,8 +127,8 @@
+     }
+ }
+
+-const SCROLL_ANIMATION_DURATION: Duration = Duration::from_millis(200);
+-const TAB_ANIMATION_DURATION: Duration = Duration::from_millis(150);
++const SCROLL_ANIMATION_DURATION: Duration = Duration::from_millis(350);
++const TAB_ANIMATION_DURATION: Duration = Duration::from_millis(260);
+
+ impl<Message> Tabs<'_, Message>
+ where
+diff --color -u -r limpo/archive/src/shell/layout/floating/mod.rs patched/archive/src/shell/layout/floating/mod.rs
+--- a/src/shell/layout/floating/mod.rs	2026-08-18 08:26:18.000000000 -0300
++++ b/src/shell/layout/floating/mod.rs	2026-08-25 18:40:39.187759083 -0300
+@@ -49,8 +49,8 @@
+ mod grabs;
+ pub use self::grabs::*;
+
+-pub const ANIMATION_DURATION: Duration = Duration::from_millis(200);
+-pub const MINIMIZE_ANIMATION_DURATION: Duration = Duration::from_millis(320);
++pub const ANIMATION_DURATION: Duration = Duration::from_millis(350);
++pub const MINIMIZE_ANIMATION_DURATION: Duration = Duration::from_millis(560);
+
+ #[derive(Debug, Default)]
+ pub struct FloatingLayout {
+diff --color -u -r limpo/archive/src/shell/layout/tiling/mod.rs patched/archive/src/shell/layout/tiling/mod.rs
+--- a/src/shell/layout/tiling/mod.rs	2026-08-18 08:26:18.000000000 -0300
++++ b/src/shell/layout/tiling/mod.rs	2026-08-25 18:40:39.187045894 -0300
+@@ -79,8 +79,8 @@
+ pub use self::blocker::*;
+ pub use self::grabs::*;
+
+-pub const ANIMATION_DURATION: Duration = Duration::from_millis(200);
+-pub const MINIMIZE_ANIMATION_DURATION: Duration = Duration::from_millis(320);
++pub const ANIMATION_DURATION: Duration = Duration::from_millis(350);
++pub const MINIMIZE_ANIMATION_DURATION: Duration = Duration::from_millis(560);
+ pub const MOUSE_ANIMATION_DELAY: Duration = Duration::from_millis(150);
+ pub const INITIAL_MOUSE_ANIMATION_DELAY: Duration = Duration::from_millis(500);
+
+diff --color -u -r limpo/archive/src/shell/mod.rs patched/archive/src/shell/mod.rs
+--- a/src/shell/mod.rs	2026-08-18 08:26:18.000000000 -0300
++++ b/src/shell/mod.rs	2026-08-25 18:40:39.185926280 -0300
+@@ -11,6 +11,17 @@
+ };
+ use wayland_backend::server::ClientId;
+
++/// MARCADOR DO RITUAL DA AURORA — nao remover.
++///
++/// O self-heal precisa saber se o /usr/bin/cosmic-comp instalado e este build
++/// patchado, e NAO pode usar hash: o aurora-night-light.py reescreve bytes do
++/// shader DEPOIS, e a partir dai nenhum hash bate. Entao o binario carrega uma
++/// string propria, que um `strings | grep` encontra em qualquer estado.
++/// O #[used] e o que impede o compilador/linker de descartar um static que
++/// ninguem le.
++#[used]
++static AURORA_WS_PATCH: &str = "AURORA-COSMIC-WS-PATCH-3.67";
++
+ use crate::{
+     shell::{
+         element::CosmicStack, focus::FocusTarget, grabs::fullscreen_items,
+@@ -117,7 +128,7 @@
+     },
+ };
+
+-const ANIMATION_DURATION: Duration = Duration::from_millis(200);
++const ANIMATION_DURATION: Duration = Duration::from_millis(350);
+ const GESTURE_MAX_LENGTH: f64 = 150.0;
+ const GESTURE_POSITION_THRESHOLD: f64 = 0.5;
+ const GESTURE_VELOCITY_THRESHOLD: f64 = 0.02;
+@@ -638,12 +649,24 @@
+         state: &mut WorkspaceUpdateGuard<State>,
+         xdg_activation_state: &XdgActivationState,
+     ) {
+-        // add empty at the end, if necessary
+-        if self
+-            .workspaces
+-            .last()
+-            .is_none_or(|last| !last.is_empty() || last.pinned)
+-        {
++        // AURORA (Ritual da Aurora, 2026-08-04): NAO criar o workspace vazio extra.
++        //
++        // Upstream original:
++        //     .is_none_or(|last| !last.is_empty() || last.pinned)
++        // Ou seja: se o ULTIMO workspace estiver alfinetado, sempre acrescenta um
++        // vazio depois dele. Como a MeowSystem tem exatamente dois alfinetados
++        // (Meow, o dela; OS, o do assistente) e o ultimo e sempre pinned, o
++        // compositor acrescentava eternamente um terceiro workspace que nao e de
++        // ninguem — visivel como um botao a mais no applet do painel.
++        //
++        // O GUARDA is_empty() FICA, e nao e enfeite: se a lista ficar sem NENHUM
++        // workspace o compositor fica sem chao. Isso nao e hipotetico — em
++        // 04/08/2026 um clique errado no overview zerou o pinned_workspaces.
++        //
++        // CUSTO ACEITO: sem o vazio no fim, nao ha para onde arrastar uma janela
++        // no overview para criar workspace novo. Os workspaces passam a nascer so
++        // pelo pinned_workspaces (aurora-cosmic-workspaces.py), no proximo login.
++        if self.workspaces.is_empty() {
+             self.add_empty_workspace(state);
+         }
+
+diff --color -u -r limpo/archive/src/shell/workspace.rs patched/archive/src/shell/workspace.rs
+--- a/src/shell/workspace.rs	2026-08-18 08:26:18.000000000 -0300
++++ b/src/shell/workspace.rs	2026-08-25 18:40:39.188534483 -0300
+@@ -72,7 +72,7 @@
+     layout::tiling::{Data, NodeDesc},
+ };
+
+-const FULLSCREEN_ANIMATION_DURATION: Duration = Duration::from_millis(200);
++const FULLSCREEN_ANIMATION_DURATION: Duration = Duration::from_millis(350);
+
+ // For stable workspace id, generate random 24-bit integer, as a hex string
+ // Must be compared with existing workspaces work uniqueness.
+@@ -1749,15 +1749,15 @@
+             // floating surfaces
+             let alpha = match &overview.0 {
+                 OverviewMode::Started(_, started) => {
+-                    (1.0 - (Instant::now().duration_since(*started).as_millis()
+-                        / ANIMATION_DURATION.as_millis()) as f32)
++                    (1.0 - (Instant::now().duration_since(*started).as_millis() as f32
++                        / ANIMATION_DURATION.as_millis() as f32))
+                         .max(0.0)
+                         * 0.4
+                         + 0.6
+                 }
+                 OverviewMode::Ended(_, ended) => {
+-                    ((Instant::now().duration_since(*ended).as_millis()
+-                        / ANIMATION_DURATION.as_millis()) as f32)
++                    ((Instant::now().duration_since(*ended).as_millis() as f32
++                        / ANIMATION_DURATION.as_millis() as f32))
+                         * 0.4
+                         + 0.6
+                 }
+@@ -1936,15 +1936,15 @@
+             // floating surfaces
+             let alpha = match &overview.0 {
+                 OverviewMode::Started(_, started) => {
+-                    (1.0 - (Instant::now().duration_since(*started).as_millis()
+-                        / ANIMATION_DURATION.as_millis()) as f32)
++                    (1.0 - (Instant::now().duration_since(*started).as_millis() as f32
++                        / ANIMATION_DURATION.as_millis() as f32))
+                         .max(0.0)
+                         * 0.4
+                         + 0.6
+                 }
+                 OverviewMode::Ended(_, ended) => {
+-                    ((Instant::now().duration_since(*ended).as_millis()
+-                        / ANIMATION_DURATION.as_millis()) as f32)
++                    ((Instant::now().duration_since(*ended).as_millis() as f32
++                        / ANIMATION_DURATION.as_millis() as f32))
+                         * 0.4
+                         + 0.6
+                 }

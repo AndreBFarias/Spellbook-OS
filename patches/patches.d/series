@@ -1,0 +1,88 @@
+# series — a lista de patches que o aurora-cosmic-comp-ws.sh aplica no fonte do
+# cosmic-comp antes de compilar. Criada em 30/08/2026 (Sprint U, item 1).
+#
+# TRÊS CAMPOS, separados por espaço. Linha começada por `#` é comentário; linha
+# em branco é ignorada.
+#
+#   <classe>  <arquivo .patch, relativo a este diretório>  <marcador-base>
+#
+# CLASSE
+#   req  obrigatório. Se o dry-run dele falhar, o build ABORTA e NADA é
+#        instalado — o desktop fica no binário do pacote (feio, mas de pé).
+#   opt  opcional. Se o dry-run falhar, o build segue sem aquele efeito e o
+#        registro diz qual efeito ficou de fora.
+#
+# MARCADOR-BASE
+#   É o marcador SEM a versão. O sufixo (`-3.67`, `-1`) vem do que o build
+#   gravou no binário, e a comparação é sempre por prefixo. Ele serve a três
+#   coisas ao mesmo tempo:
+#     1. idempotência: `grep -q <base> <arquivo-fonte>` é o teste de "já
+#        aplicado". NÃO dá para usar o código de saída do `patch --forward`,
+#        que devolve 1 tanto para "já aplicado" quanto para erro — medido de
+#        novo em 30/08/2026 nesta máquina (rc=1 no dry-run do workspace, que
+#        já estava no fonte; rc=0 no do raio, que não estava);
+#     2. o script descobre o ARQUIVO-FONTE de cada patch procurando qual hunk
+#        ACRESCENTA o marcador, então nada aqui precisa nomear `src/shell/mod.rs`;
+#     3. o `--ensure` concatena todos os marcadores achados no binário para
+#        decidir se reinstala. Sem isso, mudar a SÉRIE não disparava
+#        reinstalação — foi esse o bug de 25/08/2026.
+#
+# A ORDEM DAS LINHAS É A ORDEM DE APLICAÇÃO.
+#
+# CORREÇÃO DE 30/08/2026, à tarde. A frase que estava aqui dizia que os patches
+# mexiam em "arquivos disjuntos (src/shell/* e src/wayland/protocols/
+# corner_radius.rs)". Está ERRADA, e o erro é do tipo que se descobre tarde: o
+# `cosmic-comp-sem-workspace-vazio.patch` também edita
+# `src/backend/render/mod.rs` (dois hunks, o fade do overview), e é exatamente
+# o arquivo que o modo de leitura precisa para os `UniformName`. Medido com
+# `grep '^+++' *.patch`.
+#
+# Na prática os três CONTINUAM aplicando em qualquer ordem — os dois hunks do
+# workspace naquele arquivo trocam 15 linhas por 15 (nenhum deslocamento) e
+# ficam a ~500 linhas dos hunks do modo de leitura. Mas isso é sorte medida, não
+# desenho: quem acrescentar um quarto patch confere `grep '^+++'` antes de
+# assumir disjunção.
+#
+# QUARTO PATCH, 31/08/2026: o `cosmic-comp-menu-clique-curto.patch` toca UM
+# arquivo, `src/shell/grabs/menu/mod.rs`, que nenhum dos outros três encosta —
+# conferido com `grep -h '^+++' *.patch | sort | uniq -c`, que dá 1 para ele.
+#
+# O modo de leitura vem POR ÚLTIMO de propósito: é o único `opt` que pode tirar
+# a TELA DE LOGIN se der errado (o greeter é o mesmo binário), então quanto mais
+# tarde ele encostar na árvore, menos coisa há para desfazer.
+
+# classe  arquivo                                marcador-base
+req       cosmic-comp-sem-workspace-vazio.patch  AURORA-COSMIC-WS-PATCH
+opt       cosmic-comp-raio-clampado.patch        AURORA-COSMIC-RADIUS-PATCH
+opt       cosmic-comp-menu-clique-curto.patch    AURORA-COSMIC-MENU-PATCH
+opt       cosmic-comp-modo-leitura.patch         AURORA-READING-MODE
+
+# QUINTO PATCH, 17/09/2026: o `cosmic-comp-blur-cache-textura.patch`.
+#
+# POR QUE ELE EXISTE
+#   Às 19:56 de 17/09/2026 a sessão inteira caiu no nitro-5, com o backtrace da
+#   thread de render parado em `render_blur` <- `capture_framebuffer` e um
+#   `[gfxhub] page fault` do amdgpu com `Faulty UTCL2 client ID: TCP (0x8)`.
+#   `capture_framebuffer` cacheava uma das duas texturas do kawase e criava a
+#   outra a cada chamada; no regime que o smithay anuncia como "Duplicated
+#   FramebufferEffect element. Re-capturing every frame", isso vira uma
+#   alocação e uma liberação de textura de GPU por quadro. O segundo hunk tira
+#   um gatilho desse regime: o caminho de captura de tela usava
+#   `blur_strength = 9` cravado (um `// TODO` do upstream) contra 1 ou 2 do
+#   caminho normal, e o BlurState é compartilhado entre os dois.
+#
+# CLASSE `opt`, DE PROPÓSITO, E PELO MESMO MOTIVO DO MODO DE LEITURA
+#   Este binário é TAMBÉM a tela de login. Um `req` que falhe o dry-run aborta o
+#   build inteiro e não instala nada — o que é o certo para o patch de workspace,
+#   que a dona considera essencial. Aqui não: se este patch não aplicar numa
+#   versão futura, é melhor o desktop subir sem ele (com o crash de volta, mas
+#   subindo) do que ficar sem build nenhum e sem aviso.
+#
+# ARQUIVOS QUE ELE TOCA — nenhuma colisão com os quatro de cima:
+#   src/backend/render/wayland/blur_effect.rs           (nenhum outro encosta)
+#   src/wayland/handlers/image_copy_capture/render.rs   (nenhum outro encosta)
+#   Conferido com `grep -h '^+++' *.patch | sort | uniq -c` em 17/09/2026.
+#   Atenção para o futuro: src/backend/render/mod.rs é o ÚNICO arquivo tocado
+#   por dois patches (workspace-vazio e modo-leitura) — este não o toca, mas
+#   quem acrescentar um sexto confira antes.
+opt       cosmic-comp-blur-cache-textura.patch   AURORA-BLUR-CACHE

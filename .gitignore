@@ -73,3 +73,7 @@ STATE.md
 .cursor/
 .continue/
 .github/copilot-instructions.md
+
+# Backups de diretorio (.backup-*) -- mesma regra dos *.bak: podem conter
+# config local e PII, e sao sempre superados pelo proprio git.
+.backup-*/
