@@ -690,7 +690,18 @@ def main() -> int:
         print(json.dumps(laudo.problemas, ensure_ascii=False, indent=2))
     elif not args.quiet:
         imprimir(laudo)
-    return 1 if laudo.problemas else 0
+    # O RC RESPONDE "HA TRABALHO PARA O --fix?", NÃO "HA ALGO IMPERFEITO?"
+    # (2026-09-18). Antes era `1 if laudo.problemas`, e isso criava um laco
+    # não convergente com o aurora-self-heal.zsh:152-158, que roda
+    # `--check --quiet` e enfileira o `--fix` quando o rc != 0: os dois
+    # `wmclass_suspeito` (ONLYOFFICE, Telegram) sao, por desenho, os unicos
+    # que o --fix NUNCA corrige — o próprio laudo diz "o valor certo se
+    # observa, não se deduz". Resultado medido: "1 fix(es) aplicado(s)" a cada
+    # terminal aberto, para sempre, sem nada mudar. E a mesma armadilha do
+    # xbindkeys (leva-06 §4), com detector e applier ambos do Aurora.
+    # Os nao-corrigiveis CONTINUAM impressos: a informação e para o humano,
+    # so não serve mais de gatilho para um reparo que não existe.
+    return 1 if any(p["corrigivel"] for p in laudo.problemas) else 0
 
 
 if __name__ == "__main__":

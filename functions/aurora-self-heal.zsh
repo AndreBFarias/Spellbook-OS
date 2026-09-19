@@ -108,12 +108,36 @@ aurora-self-heal() {
     issues+=("sudoers do aurora-gpu-revive ausente (Ctrl+Alt+0 não roda sem senha)")
     fixes_root+=("$aurora/aurora-reapply-all.sh")
   fi
-  if ! pgrep -x xbindkeys >/dev/null 2>&1; then
-    issues+=("xbindkeys não está rodando (atalho Ctrl+Alt+0 inativo)")
-    fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
-  elif [ ! -f "$HOME/.xbindkeysrc" ] || ! grep -q "aurora-gpu-revive-trigger" "$HOME/.xbindkeysrc" 2>/dev/null; then
-    issues+=("~/.xbindkeysrc sem a entrada Ctrl+Alt+0 do aurora-gpu-revive")
-    fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
+  # GUARDA DE SESSÃO [2026-09-17] — o detector precisa da MESMA condição que o
+  # applier, senão vira laço que nunca converge.
+  #
+  # O QUE ACONTECIA, medido no log desta máquina (7 ocorrências em 25 linhas de
+  # ~/.cache/aurora-self-heal.log): a cada terminal aberto o self-heal via que o
+  # xbindkeys não estava rodando, chamava o aurora-gpu-shortcut-apply.sh, e o
+  # applier saía 0 sem fazer nada — porque ele JÁ tem esta guarda, em
+  # aurora-gpu-shortcut-apply.sh:25:
+  #     if pgrep -x cosmic-comp >/dev/null 2>&1; then
+  #       log "sessão COSMIC/Wayland -> xbindkeys não se aplica ..."
+  #       exit 0
+  #   O self-heal então registrava "1 fix(es) aplicado(s)" e, na passagem
+  #   seguinte, encontrava exatamente o mesmo estado. Para sempre.
+  #
+  # É a armadilha que a leva-06 do Migração-OS descreve com todas as letras —
+  # "o motor briga com o sistema para sempre, de hora em hora, sem ninguém ver".
+  # Aqui o detector e o applier são ambos do Aurora, o que a torna mais fácil de
+  # não enxergar: não há um segundo dono para culpar.
+  #
+  # Sob COSMIC o atalho não existe por decisão (commit f4b0dc8): o xbindkeys faz
+  # XGrabKey no X server e a tecla nem chegaria. O substituto é o 3º aperto do
+  # Alt+F2, via aurora-reiniciar-casca.sh.
+  if ! pgrep -x cosmic-comp >/dev/null 2>&1; then
+    if ! pgrep -x xbindkeys >/dev/null 2>&1; then
+      issues+=("xbindkeys não está rodando (atalho Ctrl+Alt+0 inativo)")
+      fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
+    elif [ ! -f "$HOME/.xbindkeysrc" ] || ! grep -q "aurora-gpu-revive-trigger" "$HOME/.xbindkeysrc" 2>/dev/null; then
+      issues+=("~/.xbindkeysrc sem a entrada Ctrl+Alt+0 do aurora-gpu-revive")
+      fixes_user+=("$aurora/aurora-gpu-shortcut-apply.sh")
+    fi
   fi
 
   # Editor padrão de texto. Nenhum nome de editor aqui: quem responde qual é o
