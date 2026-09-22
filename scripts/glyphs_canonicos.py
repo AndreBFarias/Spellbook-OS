@@ -48,4 +48,25 @@ ALLOWED_GLYPHS = frozenset({
     "⚠",  # U+26A0 sinal de atenção (aviso em documentacao)
     "☐",  # U+2610 caixa vazia (checklist em texto puro)
     "☑",  # U+2611 caixa marcada
+    # --- controles de transporte, acrescentados em 21/09/2026 --------------
+    # Caem na faixa 2300-23FF ("Miscellaneous Technical"), que o sanitizer
+    # apaga junto com os emojis de relogio. Nenhum deles e emoji: sao o
+    # vocabulario com que documentacao de player desenha a barra de controle.
+    #
+    # O CASO QUE OS TROUXE PARA CA. Em 21/09/2026 o pre-commit apagou nove
+    # deles de src/applets/now-playing/LEIA.md do MeowSystem, nas linhas 49,
+    # 50 e 76 -- linhas que ninguem tinha tocado. O mecanismo, medido: o
+    # corretor de acentuacao roda primeiro e re-stageia o arquivo; com isso
+    # aquelas linhas entram no diff staged; o sanitizer passa a ve-las como
+    # linhas ACRESCENTADAS, e a guarda SANITIZER-STAGED-LINES-ONLY deixa de
+    # proteger o que ja estava no arquivo.
+    #
+    # O estrago e o mesmo que o cabecalho deste arquivo ja descreve: uma frase
+    # como "Controles na barra: ⏮ e ⏭, e ⏸ no meio" virou "Controles na
+    # barra:  e , e  no meio". Apagar não limpou o texto, destruiu o sentido.
+    "⏮",  # U+23EE faixa anterior
+    "⏸",  # U+23F8 pausa
+    "⏭",  # U+23ED proxima faixa
+    "⏯",  # U+23EF tocar/pausar (o par dos dois acima)
+    "⏹",  # U+23F9 parar
 })
