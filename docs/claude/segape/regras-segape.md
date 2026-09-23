@@ -62,6 +62,7 @@ Ele é a referência de escrita do repositório. Medido em 2026-09-23:
 - Nada verborrágico. Commit curto, título no molde, corpo curto ou vazio.
 - Nenhum comentário, título ou commit que narre o problema ("corrige bug que duplicava",
   "antes X, agora Y", "isso resolve"). Diga o que muda, não a história do defeito.
+- Sem travessão (`—`), emoji, seta decorativa, negrito no corpo, linha de coautoria ou menção a
   `Claude`, IA ou assistente.
 - Fora do diff, sempre: `CLAUDE.md`, `VALIDATOR_BRIEF.md`, `.claude/`, arquivos de plano ou de
   spec.
