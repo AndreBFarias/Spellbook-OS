@@ -202,6 +202,19 @@ def _block_acao_automatica(brief_status: str, kind: str, has_mem: bool, brief_pa
     return ""
 
 
+def _em_segape(root: str) -> bool:
+    return any("/Projetos_segape" in p for p in (root, os.getcwd()))
+
+
+def _block_segape() -> str:
+    return "\n".join([
+        "[SEGAPE]",
+        "Repositórios de trabalho do MEC. As regras estão em ~/Desenvolvimento/Projetos_segape/CLAUDE.md.",
+        "Aqui não se cria VALIDATOR_BRIEF.md, não se roda sprint-ciclo nem validador-sprint,",
+        "e commit, push e PR só acontecem com pedido explícito do André.",
+    ])
+
+
 # -- Guarda anti-vazamento OSC 9 (preferredNotifChannel x terminal real) ----
 
 
@@ -365,6 +378,21 @@ def main() -> int:
     spec = _load_special_projects()
     kind_canonical = _resolve_kind(name, spec) if kind_env == "generic" else kind_env
     has_mem = _has_memories(kind_canonical, spec)
+
+    if _em_segape(root):
+        blocks = [
+            _block_segape(),
+            _block_aviso_terminal_osc(),
+            _block_capacidades_visuais(),
+        ]
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": "\n\n".join(b for b in blocks if b),
+            }
+        }
+        print(json.dumps(output, ensure_ascii=False))
+        return 0
 
     blocks = [
         _block_santuario_ready(root, name, kind_canonical, brief_path, brief_status),

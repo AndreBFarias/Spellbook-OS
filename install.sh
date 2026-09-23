@@ -76,6 +76,12 @@ if [ "$IS_RELINK" = "true" ]; then
     # statusLine.command para ~/.claude/statusline.sh)
     [ -f "$DOCS/hooks/statusline.sh" ] && ln -sfv "$DOCS/hooks/statusline.sh" "$CLAUDE/statusline.sh"
 
+    # Regras dos repos SEGAPE: a pasta-mãe não é repositório, então o CLAUDE.md
+    # vale para todos os projetos abaixo dela sem entrar em nenhum commit.
+    SEGAPE_DIR="${DEV_DIR:-$HOME/Desenvolvimento}/Projetos_segape"
+    [ -d "$SEGAPE_DIR" ] && [ -f "$DOCS/segape/regras-segape.md" ] \
+        && ln -sfv "$DOCS/segape/regras-segape.md" "$SEGAPE_DIR/CLAUDE.md"
+
     echo "[relink] Concluido. Verifique com: ls -la ~/.claude/"
     exit 0
 fi
