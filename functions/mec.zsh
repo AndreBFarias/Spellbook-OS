@@ -9,6 +9,7 @@ __MEC_RESULTS_SCRIPT="${ZDOTDIR:-$HOME/.config/zsh}/scripts/mec-dbt-results.py"
 __MEC_RESULTS_JSON="${__MEC_DBT_DIR}/target/run_results.json"
 __MEC_PYTHON="${__MEC_ROOT}/.pipelines/bin/python"
 __MEC_MIGRAR_BIN="${ZDOTDIR:-$HOME/.config/zsh}/scripts/mec-migrar-censo.py"
+__MEC_ESCOPO_ESCRITA="path:models/projeto_painel_ministro"
 __MEC_FZF_COLOR="--color=bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4"
 
 # -- Exibe painel de contexto antes do FZF --
@@ -116,7 +117,7 @@ __mec_exec_dbt() {
     __cd "$__MEC_DBT_DIR" || return 1
 
     echo -e "  ${D_COMMENT}Rodando: dbt ${subcmd} ${extra_args}${D_RESET}"
-    $__MEC_DBT_BIN "$subcmd" --profiles-dir ../dev $extra_args
+    $__MEC_DBT_BIN "$subcmd" --profiles-dir ../dev ${=extra_args}
     local dbt_exit=$?
 
     __cd "$original_dir" || return $dbt_exit
@@ -136,12 +137,11 @@ __mec_exec_dbt() {
 # -- Seleção FZF de modelos e executa dbt --
 __mec_exec_dbt_select() {
     local subcmd="$1"
-    local models_dir="${__MEC_DBT_DIR}/models"
+    local models_dir="${__MEC_DBT_DIR}/models/projeto_painel_ministro"
 
     if [[ ! -d "$models_dir" ]]; then
-        __warn "Diretório de modelos não encontrado: ${models_dir}"
-        __mec_exec_dbt "$subcmd"
-        return
+        __err "Diretório de modelos não encontrado: ${models_dir}"
+        return 1
     fi
 
     local fzf_select_color="bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4"
@@ -154,12 +154,12 @@ __mec_exec_dbt_select() {
               --layout=reverse \
               --border \
               --prompt="  Modelo > " \
-              --header="  TAB múltiplos | ESC = todos" \
+              --header="  TAB múltiplos | ESC = todos do painel" \
               --color="$fzf_select_color")
 
     if [[ -z "$selecao" ]]; then
-        echo -e "  ${D_COMMENT}Nenhum modelo selecionado. Rodando todos...${D_RESET}"
-        __mec_exec_dbt "$subcmd"
+        echo -e "  ${D_COMMENT}Nenhum modelo selecionado. Rodando projeto_painel_ministro...${D_RESET}"
+        __mec_exec_dbt "$subcmd" "--select $__MEC_ESCOPO_ESCRITA"
     else
         local modelos_args=""
         while IFS= read -r m; do
@@ -285,10 +285,10 @@ conjurar_mec() {
         "[SYNC]  git fetch	SYNC	Buscar info do remoto sem alterar local"
         "[SYNC]  git status	SYNC	Status atual do repositório"
         "[SYNC]  git log recente	SYNC	Últimos 10 commits com grafo"
-        "[DBT]   dbt run (todos)	DBT	Rodar todos os modelos no dataset dev"
-        "[DBT]   dbt run (selecionar)	DBT	FZF de modelos + dbt run no dev"
-        "[DBT]   dbt build (todos)	DBT	Build completo: run + test no dev"
-        "[DBT]   dbt build (selecionar)	DBT	FZF de modelos + dbt build no dev"
+        "[DBT]   dbt run (painel)	DBT	Rodar os modelos de projeto_painel_ministro no dev"
+        "[DBT]   dbt run (selecionar)	DBT	FZF de modelos do projeto_painel_ministro + dbt run no dev"
+        "[DBT]   dbt build (painel)	DBT	Build de projeto_painel_ministro: run + test no dev"
+        "[DBT]   dbt build (selecionar)	DBT	FZF de modelos do projeto_painel_ministro + dbt build no dev"
         "[DBT]   dbt test	DBT	Rodar testes de qualidade no dev"
         "[DBT]   dbt compile	DBT	Compilar SQL sem executar (validação)"
         "[DBT]   dbt ls	DBT	Listar todos os modelos do projeto"
@@ -363,14 +363,14 @@ printf "\033[38;2;248;248;242m%s\033[0m\n" "$desc"'
         "[SYNC]  git log recente")
             git -C "$__MEC_ROOT" log --oneline --graph --decorate -10
             ;;
-        "[DBT]   dbt run (todos)")
-            __mec_exec_dbt run
+        "[DBT]   dbt run (painel)")
+            __mec_exec_dbt run "--select $__MEC_ESCOPO_ESCRITA"
             ;;
         "[DBT]   dbt run (selecionar)")
             __mec_exec_dbt_select run
             ;;
-        "[DBT]   dbt build (todos)")
-            __mec_exec_dbt build
+        "[DBT]   dbt build (painel)")
+            __mec_exec_dbt build "--select $__MEC_ESCOPO_ESCRITA"
             ;;
         "[DBT]   dbt build (selecionar)")
             __mec_exec_dbt_select build
