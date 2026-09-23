@@ -16,6 +16,24 @@ levitar() {
     fi
 }
 
+# Resolve o nome do projeto para um diretório em REPLY. MEC abre o pipelines;
+# nome ausente em $DEV_DIR é procurado em Projetos_segape.
+__santuario_resolver_raiz() {
+    local nome="$1"
+    local base="${2:-${DEV_DIR:-$HOME/Desenvolvimento}}"
+    local segape="${DEV_DIR:-$HOME/Desenvolvimento}/Projetos_segape"
+
+    if [[ "$nome" == (MEC|mec) ]]; then
+        REPLY="$segape/pipelines"
+    elif [ -d "$base/$nome" ]; then
+        REPLY="$base/$nome"
+    elif [ -d "$segape/$nome" ]; then
+        REPLY="$segape/$nome"
+    else
+        REPLY="$base/$nome"
+    fi
+}
+
 # Propósito: Setup completo de projeto (cd, branch, venv, deps, git context)
 # Uso: santuario <Projeto> [Branch] [--sync] [--vit]
 # Flags: --sync=Sincroniza dependências via pip install -r
@@ -35,6 +53,8 @@ santuario() {
         echo -e "    ${D_GREEN}santuario Luna dev${D_RESET}         Abre e muda para branch dev"
         echo -e "    ${D_GREEN}santuario Luna --sync${D_RESET}      Abre e sincroniza deps"
         echo -e "    ${D_GREEN}santuario repo --vit${D_RESET}       Abre projeto em VitoriaMariaDB/"
+        echo -e "    ${D_GREEN}santuario MEC${D_RESET}              Abre Projetos_segape/pipelines"
+        echo -e "    ${D_GREEN}santuario <repo_segape>${D_RESET}    Abre Projetos_segape/<repo> (conta MEC)"
         echo ""
         return 1
     fi
@@ -60,7 +80,8 @@ santuario() {
     if [ "$perfil_vit" = true ]; then
         base_dir="$base_dir/VitoriaMariaDB"
     fi
-    local dir_alvo="$base_dir/$projeto_raiz"
+    __santuario_resolver_raiz "$projeto_raiz" "$base_dir"
+    local dir_alvo="$REPLY"
     local branch_alvo=""
 
     if [ -n "$alvo_primario" ]; then
@@ -112,10 +133,8 @@ santuario() {
 
     if [[ "$(pwd)" == *"/Projetos_segape/pipelines"* ]]; then
         echo -e "  ${D_ORANGE}Protocolo MEC${D_RESET}"
-        __aplicar_contexto_git_automatico
     elif [[ "$(pwd)" == *"/VitoriaMariaDB/"* ]]; then
         echo -e "  ${D_PURPLE}Protocolo VitoriaMariaDB${D_RESET}"
-        __aplicar_contexto_git_automatico
     else
         if [ -f "Cargo.toml" ]; then
             echo -e "  ${D_COMMENT}Projeto Rust detectado. Compilando...${D_RESET}"
@@ -285,7 +304,7 @@ santuario() {
     fi
 
     # Sistema de validação de sprints (Claude Code v2 - subagente validador-sprint)
-    if [ -d ".git" ]; then
+    if [ -d ".git" ] && [[ "$(pwd)" != *"/Projetos_segape/"* ]]; then
         # Doctor silencioso: avisa apenas se detectar issues
         if typeset -f __sprint_doctor_quick > /dev/null 2>&1; then
             __sprint_doctor_quick

@@ -19,14 +19,27 @@ __santuario_pastas_dev() {
         pastas_vit=("$base/VitoriaMariaDB"/*(/N:t))
         for p in $pastas_vit; do pastas+=("$p (VitoriaMariaDB)"); done
     fi
+    if [[ -d "$base/Projetos_segape" ]]; then
+        pastas+=("MEC:Projetos_segape/pipelines")
+        local -a pastas_segape
+        pastas_segape=("$base/Projetos_segape"/*(/N:t))
+        for p in $pastas_segape; do
+            [[ -d "$base/$p" ]] || pastas+=("${p}:Projetos_segape")
+        done
+    fi
     _describe 'projeto' pastas
 }
 
-# Lista branches locais do repo git cujo path é $DEV_DIR/$words[2].
+# Lista branches locais do repo git resolvido a partir de $words[2].
 __santuario_branches_git() {
     local projeto="${words[2]:-}"
-    local base="${DEV_DIR:-$HOME/Desenvolvimento}"
-    local repo="$base/$projeto"
+    local repo
+    if (( $+functions[__santuario_resolver_raiz] )); then
+        __santuario_resolver_raiz "$projeto"
+        repo="$REPLY"
+    else
+        repo="${DEV_DIR:-$HOME/Desenvolvimento}/$projeto"
+    fi
     [[ -d "$repo/.git" ]] || return 0
     local -a branches
     branches=(${(f)"$(git -C "$repo" for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null)"})
