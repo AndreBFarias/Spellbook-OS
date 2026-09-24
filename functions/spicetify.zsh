@@ -173,12 +173,15 @@ spicetify_reparar() {
 spicetify_instalar() {
     # [2026-09-23] DESATIVADA — o script que ela roda (scripts/spicetify-setup.sh)
     # faz oito coisas, e seis são território do MeowSystem desde 22/09 (sprint
-    # P29 de lá): o binário por `curl | sh`, os temas por `git clone`, o
-    # Marketplace por `curl | sh`, `current_theme Sleek` e `color_scheme
-    # Dracula` no config-xpui.ini — as MESMAS duas chaves que o manifesto do
-    # Spotify do MeowSystem escreve a partir do pack — e o `restore` + `backup
-    # apply` que congela o tema dele como se fosse o Spotify de fábrica. Dois
-    # donos no mesmo arquivo, e o último a rodar vencia.
+    # P29 de lá): o binário por `curl | sh`, o `prefs_path`, os temas por
+    # `git clone`, o Marketplace por `curl | sh`, `current_theme Sleek` e
+    # `color_scheme Dracula` no config-xpui.ini — as MESMAS duas chaves que o
+    # manifesto do Spotify do MeowSystem escreve a partir do pack — e o
+    # `restore` + `backup apply` que congela o tema dele como se fosse o
+    # Spotify de fábrica. Dois donos no mesmo arquivo, e o último a rodar
+    # vencia. (O `prefs_path` continua também no spicetify_reparar: lá ele só é
+    # escrito quando diverge do arquivo que existe no disco, e o valor é o mesmo
+    # que o MeowSystem deriva — não há disputa de valor.)
     #
     # O que é desta máquina — as dez extensões e os quatro custom apps — segue
     # vivo no spicetify_reparar, logo acima. Só manual (medido em 23/09: nenhum
