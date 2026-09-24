@@ -122,6 +122,37 @@
 # Fonte canônica: ~/.config/zsh/scripts/. Destino: /usr/local/sbin/. Aurora v3.54.
 set -u
 
+# ---------------------------------------------------------------------------
+# DESATIVADO EM 24/09/2026 — O BUILD MIGROU PARA O MEOWSYSTEM (sprint P39)
+# ---------------------------------------------------------------------------
+#   A regra do dono, de 23/09: o que o MeowSystem usa do Spellbook migra para
+#   lá e é desativado aqui. Os cinco `.patch` e a `series` moram em
+#   `MeowSystem/patches/` desde 22/09, e agora o build também:
+#     meow compositor            baixa o fonte da versão instalada, aplica a
+#                                série, compila e instala (sudo só no fim)
+#     meow compositor --seco     diz o que faria, sem baixar nem escrever
+#     meow compositor conferir   o que o --status mostrava
+#     meow compositor reverter   como voltar ao binário do pacote
+#   O corpo antigo fica abaixo do `exit`, como no aurora-userscripts-apply.sh:
+#   é o registro de como era, e ninguém o executa.
+#
+#   O QUE NÃO FOI PARA LÁ, E POR QUÊ: o --ensure de hora em hora e o auto-build
+#   numa unit transitória. O MeowSystem não compila nem usa sudo por timer —
+#   este binário é também a tela de login —, e quem avisa depois de um apt é a
+#   linha `patches` do `meow doctor`. A reaplicação do night light também não
+#   foi: a luz quente de lá é o modo de leitura, que é um patch da série.
+#
+#   O --ensure, o --build-auto e o --compile-only saem EM SILÊNCIO e com 0: são
+#   chamados por máquina (o self-heal, a unit transitória), e um aviso por ciclo
+#   no journal seria ruído sobre uma decisão já tomada. Os verbos de gente
+#   (--build, --status, --restore, --podar) dizem para onde ir e saem 0.
+case "${1:---ensure}" in
+  --ensure|ensure|--build-auto|--compile-only) exit 0 ;;
+esac
+echo "aurora-cosmic-comp-ws.sh: desativado em 24/09/2026 — o build dos patches do cosmic-comp mora no MeowSystem." >&2
+echo "  use: meow compositor   (--seco mostra o que faria; conferir; reverter)" >&2
+exit 0
+
 # QUEM CHAMA ESTE SCRIPT PELO systemd NÃO TEM `HOME` NO AMBIENTE
 #   O self-heal roda numa unit de SISTEMA (sem `User=`), e o systemd só define
 #   HOME quando há usuário. Com `set -u`, a primeira expansão de `$HOME` abortava

@@ -2,6 +2,42 @@
 
 ## [Não lançado]
 
+### Desativado em 2026-09-24 — o que o MeowSystem pedia emprestado
+
+A mesma regra de 23/09, pelo outro lado: a P37 desativou aqui o que ESCREVIA o
+que o MeowSystem escreve; esta desativa o que o MeowSystem LIA daqui para
+funcionar. Na máquina de qualquer outra pessoa não há `~/.config/zsh`, e esses
+recursos simplesmente não existiam. Do lado de lá, o conferidor
+(`tests/portabilidade.sh`, regra 4) passou a recusar `.config/zsh` e `aurora-`
+em código que roda, sem escape e sem isenção.
+
+| o quê | o que o MeowSystem fazia com isto | destino | aviso aponta |
+|---|---|---|---|
+| `scripts/aurora-cosmic-comp-ws.sh` | mandava rodar `--build` (doctor, `forma.sh`) e dependia dele para os patches do compositor existirem | **migrou**: `meow compositor` baixa o fonte da versão instalada, aplica a série de `MeowSystem/patches/`, compila e instala; a versão validada mora em `patches/versao` | `meow compositor` |
+| `patches/patches.d/` | nada (a série já morava lá desde 22/09) | **migrou** antes; aqui ganhou a nota de desativado no `LEIA-ME.txt` | — |
+| a linha do fastfetch em `env.zsh` | o `fastfetch_logo.sh` a reescrevia (`fastfetch` ↔ `meow-fetch`) e o desinstalador a destrocava | **fica aqui**: a linha agora escolhe sozinha, `meow-fetch` se existir, `fastfetch` se não — o que tira o `command not found` depois de uma desinstalação | — |
+| `env.zsh` (`starship init`, `ZSH_THEME`, `FZF_DEFAULT_OPTS`) | o `prompt.sh` lia as três e mandava aplicar aqui o `aurora.patch` | **fica aqui**; o patch saiu do MeowSystem, que agora só diz a linha do `starship init` | — |
+| `aurora-cosmic-workspaces.py` | o `areas.sh` o lia como vizinho do `pinned_workspaces` | **saiu de lá**: o script já não existia aqui (medido pela P37); nomear áreas é do MeowSystem desde 07/09 | — |
+| `functions/_helpers.zsh` | o `coleta-meowsystem.sh` lia a paleta | **saiu de lá** | — |
+
+**Quem chama o `aurora-cosmic-comp-ws.sh`, medido antes de mexer:** nada neste
+repositório (`git grep`), e nesta máquina nenhuma unit nem cópia em
+`/usr/local/sbin`. O próprio script documenta que, onde o self-heal do Ritual
+está instalado, ele chama `--ensure` de hora em hora como root. Por isso `--ensure`, `--build-auto` e `--compile-only`
+saem em silêncio e com 0; `--build`, `--status`, `--restore` e `--podar` dizem
+para onde ir e saem 0. O corpo antigo ficou abaixo do `exit`.
+
+**O que NÃO foi para o MeowSystem, de propósito:** o `--ensure` e o auto-build
+por timer (lá nada compila nem usa sudo sozinho — o binário é também a tela de
+login; quem avisa depois de um `apt` é a linha `patches` do `meow doctor`) e a
+reaplicação do night light (a luz quente de lá é o modo de leitura, um patch da
+série).
+
+**Ficou no disco, sem ninguém que o leia:** `/var/lib/aurora/` (o `.estado`, os
+artefatos `.aurora-ws` e o `.pkg-orig` da a557859) e
+`/usr/local/share/aurora/patches.d/`. Nada foi apagado. O MeowSystem grava o
+dele em `/var/lib/meowsystem/cosmic-comp/`.
+
 ### Desativado em 2026-09-23 — o que brigava com o MeowSystem
 
 A regra do dono, de 23/09: *"tudo do spellbook que entrar em conflito com o

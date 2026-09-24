@@ -97,7 +97,14 @@ if [[ -o interactive && -z "$TMUX" ]]; then
     fi
     if command -v fastfetch >/dev/null 2>&1; then
         printf '\033c'
-        meow-fetch --pipe false | sed -E $'
+        # O `meow-fetch` é do MeowSystem (o gato alinhado ao texto). Até
+        # 24/09/2026 era o MeowSystem que trocava esta palavra aqui dentro; ele
+        # deixou de escrever neste arquivo (regra de 23/09, sprint P39), e quem
+        # escolhe agora é esta linha, pelo que está instalado — sem o
+        # `meow-fetch` no PATH, o fastfetch puro, e nunca `command not found`.
+        _ff=fastfetch
+        command -v meow-fetch >/dev/null 2>&1 && _ff=meow-fetch
+        "$_ff" --pipe false | sed -E $'
             s/\\[Discrete\\]/\e[38;2;255;184;108m(Dedicada)\e[0m/g;
             s/\\[Integrated\\]/\e[38;2;255;184;108m(Integrada)\e[0m/g;
             s/\\[AC Connected\\]/\e[38;2;255;184;108m(Conectado)\e[0m/g;
@@ -106,6 +113,7 @@ if [[ -o interactive && -z "$TMUX" ]]; then
             s/\\[Built-in\\]/\e[38;2;255;184;108m(Embutido)\e[0m/g;
             s/\\[([^][\\x1b]+)\\]/\e[38;2;255;184;108m(\\1)\e[0m/g
         '
+        unset _ff
         echo
     fi
     # O aviso de 'maria offline' foi removido em 2026-09-11: a unit

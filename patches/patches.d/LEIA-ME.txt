@@ -1,6 +1,22 @@
 patches.d/ — a SÉRIE de patches do cosmic-comp. Criado em 30/08/2026.
 
 ================================================================================
+DESATIVADO EM 24/09/2026 — A SÉRIE E O BUILD MORAM NO MEOWSYSTEM (sprint P39)
+================================================================================
+    Nada mais lê este diretório. A cópia canônica da série é
+    `MeowSystem/patches/` (os cinco `.patch`, a `series` e, desde 24/09, a
+    `versao` — o pacote contra o qual a série foi validada), e quem compila é
+    o `meow compositor`. O `aurora-cosmic-comp-ws.sh` virou um aviso que aponta
+    para lá. Os arquivos ficam aqui como registro, e a descrição abaixo é a de
+    como era.
+
+    ATENÇÃO À CÓPIA DAQUI: três destes `.patch` (blur, menu, modo-leitura)
+    perderam o espaço das linhas de contexto em branco numa passagem do
+    pre-commit. O `patch` do GNU aceita assim mesmo, e a do MeowSystem está
+    igual a esta — medido em 24/09 com `-F0` sobre o fonte limpo da a557859:
+    os cinco entram, e o `src/` sai byte a byte igual ao do build de 17/09.
+
+================================================================================
 O QUE ESTE DIRETÓRIO É
 ================================================================================
     Até 29/08/2026 o `aurora-cosmic-comp-ws.sh` aplicava UM `.patch` só, num
