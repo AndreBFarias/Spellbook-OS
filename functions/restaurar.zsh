@@ -576,34 +576,31 @@ sistema_restaurar() {
 
     if __restaurar_categoria_ativa "tema"; then
         echo -e "  ${D_PURPLE}${D_BOLD}[8/10] Tema e aparência${D_RESET}"
-        local gtk_tema=$(jq -r '.tema.gtk_tema // ""' "$manifesto" 2>/dev/null)
-        local icones=$(jq -r '.tema.icones // ""' "$manifesto" 2>/dev/null)
-        local cursor=$(jq -r '.tema.cursor // ""' "$manifesto" 2>/dev/null)
-        local cursor_tamanho=$(jq -r '.tema.cursor_tamanho // 24' "$manifesto" 2>/dev/null)
-        local wallpaper=$(jq -r '.tema.wallpaper // ""' "$manifesto" 2>/dev/null)
-
-        echo -e "  ${D_COMMENT}GTK: ${gtk_tema}, Ícones: ${icones}, Cursor: ${cursor}${D_RESET}"
-
-        if [[ "$dry_run" == false ]] && command -v gsettings &>/dev/null; then
-            [[ -n "$gtk_tema" ]] && gsettings set org.gnome.desktop.interface gtk-theme "$gtk_tema" 2>/dev/null
-            [[ -n "$icones" ]] && gsettings set org.gnome.desktop.interface icon-theme "$icones" 2>/dev/null
-            [[ -n "$cursor" ]] && gsettings set org.gnome.desktop.interface cursor-theme "$cursor" 2>/dev/null
-            [[ -n "$cursor_tamanho" ]] && gsettings set org.gnome.desktop.interface cursor-size "$cursor_tamanho" 2>/dev/null
-            [[ -n "$wallpaper" ]] && gsettings set org.gnome.desktop.background picture-uri "$wallpaper" 2>/dev/null
-            __ok "Tema aplicado via gsettings"
-
-            local dconf_backup="$(__restaurar_dir_manifesto)/dconf-backup.ini"
-            if [[ -f "$dconf_backup" ]]; then
-                dconf load / < "$dconf_backup" 2>/dev/null
-                __ok "Configurações dconf restauradas"
-            fi
-        fi
-
-        local cosmic_backup="$(__restaurar_dir_manifesto)/cosmic-backup.tar.gz"
-        if [[ -f "$cosmic_backup" && "$dry_run" == false ]]; then
-            tar -xzf "$cosmic_backup" -C "${HOME}/.config/" 2>/dev/null
-            __ok "Configurações Cosmic restauradas"
-        fi
+        # [2026-09-23] DESATIVADA — tema e aparência são do MeowSystem, pela
+        # regra do dono de 23/09 ("tudo do spellbook que entrar em conflito com
+        # o meowsystem, migramos pra cá e desativamos no spellbook").
+        #
+        # O QUE ELA ESCREVIA, e cada item tem outro dono: gtk-theme, icon-theme,
+        # cursor-theme, cursor-size e picture-uri no gsettings (a fronteira do
+        # MeowSystem, docs/FRONTEIRA.md de lá, dá org.gnome.desktop.interface a
+        # ele desde 25/08: o cursor-theme pelo cursor.sh, o tema de ícones e o
+        # papel de parede pelo COSMIC, em CosmicTk e CosmicBackground); um
+        # `dconf load /` do dump inteiro, que repõe as mesmas chaves por outro
+        # caminho; e o tar do ~/.config/cosmic inteiro por cima do atual,
+        # CosmicTheme.*, CosmicTk e CosmicBackground inclusive. Uma foto velha do
+        # tema restaurada por cima do MeowSystem é exatamente o conflito que a
+        # regra veio acabar.
+        #
+        # O QUE SE PERDE, DITO PARA NÃO VIRAR SURPRESA: o dump do dconf e o tar
+        # do cosmic também levavam o que não é tema (atalhos, painel, áreas). A
+        # captura continua guardando os dois (sistema_capturar não mudou);
+        # restaurar só essa parte, sem a aparência, fica como pergunta ao dono.
+        #
+        # Medido em 23/09: sistema_restaurar é só manual (alias restaurar), e
+        # ~/.config/spellbook/manifesto nem existe nesta máquina. O código
+        # antigo desta categoria está no commit d2d3868.
+        __warn "tema e aparência são do MeowSystem: nada desta categoria é restaurado aqui"
+        echo -e "  ${D_COMMENT}traga o ~/.config/meow/meow.conf de volta e rode: meow aplicar${D_RESET}"
         echo ""
     fi
 

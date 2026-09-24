@@ -1,11 +1,10 @@
 #compdef rebuild_dracula_theme
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: sistema.zsh
-# Propósito: Reconstruir Dracula_OS-Theme do zero (build + install --user)
-# Uso: rebuild_dracula_theme [--activate]
+# Propósito: Aviso de que o tema Dracula mudou para o MeowSystem (não escreve nada)
+# Uso: rebuild_dracula_theme
 
 _rebuild_dracula_theme() {
-    _arguments \
-        '--activate[--activate]'
+    _message 'sem argumentos definidos'
 }
 _rebuild_dracula_theme "$@"

@@ -74,7 +74,7 @@ spicetify_status() {
     done
 }
 
-# Propósito: Reparar Spicetify (re-aplicar tema, extensions, custom apps, sidebar)
+# Propósito: Reparar extensions, custom apps e sidebar do Spicetify (o tema é do MeowSystem)
 # Uso: spicetify_reparar
 spicetify_reparar() {
     local bin
@@ -150,16 +150,43 @@ spicetify_reparar() {
         __ok "Cache web do Flatpak limpo"
     fi
 
-    "$bin" restore 2>/dev/null || true
-    "$bin" clear 2>/dev/null
-    "$bin" backup apply 2>/dev/null
-
-    __ok "Spicetify reparado e reaplicado"
+    # [2026-09-23] SAIU O `restore` + `clear` + `backup apply`, E FICOU O `apply`.
+    #   O backup do spicetify FOTOGRAFA o que está no disco. Rodado com o tema
+    #   do MeowSystem aplicado, ele congela esse tema como se fosse o Spotify de
+    #   fábrica, e o `spicetify restore` nunca mais devolve o original — medido
+    #   e escrito pelo MeowSystem no scripts/spicetify_setup.sh de lá (recusa
+    #   6), que é quem cuida do tema e do backup agora, com a versão conferida
+    #   antes. Pela regra do dono de 23/09, o que conflita sai daqui.
+    #   O `apply` sozinho não tira foto: aplica o config-xpui.ini como está —
+    #   as extensões e os apps acima, que são desta máquina, e o tema que o
+    #   MeowSystem escolheu. Se ele recusar (backup de outra versão do Spotify),
+    #   quem sabe refazer sem estragar é o MeowSystem.
+    if "$bin" apply 2>/dev/null; then
+        __ok "Spicetify reparado e reaplicado (o tema é o do MeowSystem)"
+    else
+        __warn "o spicetify apply recusou — backup e tema são do MeowSystem: meow apps aplicar spotify"
+    fi
 }
 
-# Propósito: Instalar Spicetify via script de setup
+# Propósito: Aviso de que o Spicetify e o tema do Spotify são do MeowSystem (não instala nada)
 # Uso: spicetify_instalar
 spicetify_instalar() {
+    # [2026-09-23] DESATIVADA — o script que ela roda (scripts/spicetify-setup.sh)
+    # faz oito coisas, e seis são território do MeowSystem desde 22/09 (sprint
+    # P29 de lá): o binário por `curl | sh`, os temas por `git clone`, o
+    # Marketplace por `curl | sh`, `current_theme Sleek` e `color_scheme
+    # Dracula` no config-xpui.ini — as MESMAS duas chaves que o manifesto do
+    # Spotify do MeowSystem escreve a partir do pack — e o `restore` + `backup
+    # apply` que congela o tema dele como se fosse o Spotify de fábrica. Dois
+    # donos no mesmo arquivo, e o último a rodar vencia.
+    #
+    # O que é desta máquina — as dez extensões e os quatro custom apps — segue
+    # vivo no spicetify_reparar, logo acima. Só manual (medido em 23/09: nenhum
+    # alias, hook ou timer a chama). Corpo antigo abaixo do return.
+    __warn "spicetify_instalar saiu do Spellbook: o Spicetify e o tema do Spotify são do MeowSystem"
+    echo -e "  ${D_COMMENT}meow apps aplicar spotify (sem o binário, ele aponta o instalador de lá) · extensões desta máquina: spicetify_reparar${D_RESET}"
+    return 0
+
     local script_dir="${ZDOTDIR:-$HOME/.config/zsh}/scripts/spicetify-setup.sh"
 
     if [[ ! -f "$script_dir" ]]; then

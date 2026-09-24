@@ -1,6 +1,23 @@
 #!/bin/bash
 # Instalador e configurador do Spicetify para Spellbook-OS
 # Detecta tipo de instalação do Spotify, instala Spicetify e aplica config padrao
+#
+# [2026-09-23] DESATIVADO: o Spicetify e o tema do Spotify são do MeowSystem.
+# Regra do dono, 23/09: o que conflita com o MeowSystem migra para lá e é
+# desativado aqui. O que valia ser produto já foi para lá em 22/09 (binário e
+# prefs_path, no scripts/spicetify_setup.sh de lá); o resto deste script
+# escrevia current_theme e color_scheme no mesmo config-xpui.ini que o manifesto
+# do Spotify de lá escreve, e o `backup apply` congelava o tema dele como se
+# fosse o Spotify de fábrica. As extensões e os custom apps desta máquina
+# continuam no spicetify_reparar (functions/spicetify.zsh).
+#
+# Quem chamava: o spicetify_instalar (desativado junto) e, como alternativa
+# opcional, o instalar_app_themes.sh do Dracula_OS-Theme, que procura este
+# arquivo por ~/Desenvolvimento/Spellbook-OS — symlink para este repositório.
+# Nos dois casos, sair 0 é o certo: não é falha, é endereço novo. O corpo antigo
+# segue abaixo, como no aurora-userscripts-apply.sh.
+echo "  spicetify-setup.sh saiu do Spellbook: o Spicetify e o tema do Spotify são do MeowSystem (meow apps aplicar spotify)"
+exit 0
 
 set -euo pipefail
 

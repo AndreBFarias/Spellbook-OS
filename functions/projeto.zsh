@@ -143,10 +143,22 @@ santuario() {
             # Delegação para install.sh do projeto (respeita configuração de venv do projeto)
             if [ -f "install.sh" ]; then
                 # Exceção: Dracula_OS-Theme não usa venv e seu install.sh exige modo.
-                # Instala/reaplica TUDO de forma idempotente (pula o que já está aplicado).
+                #
+                # [2026-09-23] O `install.sh --user --all` DE LÁ NÃO RODA MAIS AO
+                # ENTRAR. Era a escrita mais larga do Spellbook no território do
+                # MeowSystem: ativava icon-theme Dracula-Icones, gtk-theme e
+                # cursor-theme no gsettings por cima do MeowSystem-Icons, trocava
+                # o tema de som, os temas do Spotify, do Obsidian e do
+                # qBittorrent, o index.theme do hicolor, 30 .desktop do lançador,
+                # e instalava o apt hook 99-dracula-os-theme, que repete parte
+                # disso depois de todo apt. Tudo isso tem dono do lado de lá
+                # agora (regra do dono, 23/09: o que conflita migra para o
+                # MeowSystem e é desativado aqui). O ramo continua existindo
+                # para o repositório não cair no `else`, que chamaria o
+                # install.sh sem modo e só colheria o erro de uso.
                 if [[ "$(basename "$(pwd)")" == "Dracula_OS-Theme" ]]; then
-                    echo -e "  ${D_GREEN}[SETUP]${D_RESET} Dracula_OS-Theme: install.sh --user --all (idempotente)..."
-                    bash install.sh --user --all || __warn "Falha ao executar install.sh --user --all"
+                    __warn "Dracula_OS-Theme: o install.sh de lá não roda mais ao entrar — o tema é do MeowSystem"
+                    echo -e "  ${D_COMMENT}para vestir o Dracula: meow pack usar dracula${D_RESET}"
                 else
                     local venv_base="venv"
                     if [ ! -d "$venv_base" ] || [ "$sync_dependencias" = true ]; then

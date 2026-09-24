@@ -1,7 +1,7 @@
 #compdef spicetify_instalar
 # Gerado automaticamente por scripts/gerar-completions.py
 # Fonte: spicetify.zsh
-# Propósito: Instalar Spicetify via script de setup
+# Propósito: Aviso de que o Spicetify e o tema do Spotify são do MeowSystem (não instala nada)
 # Uso: spicetify_instalar
 
 _spicetify_instalar() {

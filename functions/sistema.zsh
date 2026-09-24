@@ -64,7 +64,23 @@ _reconstruir_caches_icones() {
 # Uso: _fix_flatpak_icons (chamado após flatpak update/repair em limpar_cache e atualizar_tudo)
 # Contexto: alguns .desktop de Flatpaks vêm com Icon= apontando para ~/.icons/Dracula-Icones/
 #           scalable/ que não existe. Esta função sobrescreve para nomes canonicos.
+# [2026-09-23] DESATIVADA: o Icon= dos lançadores é do MeowSystem.
 _fix_flatpak_icons() {
+    # DOIS DONOS NA MESMA LINHA. O icones_absolutos.sh do MeowSystem reescreve o
+    # Icon= de caminho absoluto nestes mesmos .desktop de
+    # ~/.local/share/flatpak/exports/share/applications (meow aplicar), e o
+    # meow doctor das 5h confere a mesma linha todo dia. A diferença é o
+    # critério: lá o nome sai do estado do disco (o caminho existe? o nome
+    # resolve no tema?); aqui saía de um mapa de quatro apps escrito à mão, que
+    # forçava o nome mesmo quando o Icon= já era um nome e passava por cima da
+    # escolha dos mapas de ícone do MeowSystem.
+    # Medido em 23/09: nenhum dos quatro .desktop existe hoje nesta máquina.
+    #
+    # Quem chama são limpar_cache e atualizar_tudo (aliases.zsh), à mão; por
+    # isso uma linha só, apagada, e não um alerta. Corpo antigo abaixo do return.
+    echo -e "  ${D_COMMENT}Icon= dos flatpaks: quem acerta é o MeowSystem (meow aplicar; o meow doctor confere)${D_RESET}"
+    return 0
+
     local exports_dir="$HOME/.local/share/flatpak/exports/share/applications"
     [ -d "$exports_dir" ] || return 0
 
@@ -98,9 +114,41 @@ _fix_flatpak_icons() {
     echo ""
 }
 
-# Propósito: Reconstruir Dracula_OS-Theme do zero (build + install --user)
-# Uso: rebuild_dracula_theme [--activate]
+# Propósito: Aviso de que o tema Dracula mudou para o MeowSystem (não escreve nada)
+# Uso: rebuild_dracula_theme
 rebuild_dracula_theme() {
+    # [2026-09-23] DESATIVADO — o tema mudou de casa, pela regra do dono de
+    # 23/09: "tudo do spellbook que entrar em conflito com o meowsystem,
+    # migramos pra cá e desativamos no spellbook".
+    #
+    # O CONFLITO, MEDIDO: esta função rodava o build.sh e o `install.sh --user`
+    # do ~/Desenvolvimento/Dracula_OS-Theme, que reescrevem do zero quatro temas
+    # em ~/.local/share/icons (Dracula-Icones, dracula-icons-main,
+    # dracula-icons-circle, Dracula-Cursor), o GTK Dracula-standard-buttons, o
+    # index.theme do hicolor e 30 .desktop inteiros em ~/.local/share/applications
+    # — e, com --activate, trocavam icon-theme, gtk-theme e cursor-theme no
+    # gsettings por cima do MeowSystem-Icons. São os mesmos arquivos e chaves que
+    # o MeowSystem escreve (hicolor.sh, icones_apps_dracula.sh, cursor.sh,
+    # nomes_apps.sh/ocultar_apps.sh): o último a rodar vencia, e o sintoma
+    # aparecia dias depois, longe da causa.
+    #
+    # PARA ONDE FOI: os desenhos moram em ~/Desenvolvimento/MeowSystem/packs/dracula
+    # (295 na biblioteca, 191 apps ligados no apps.map, sprint P36), e quem os
+    # monta no tema é o icones_apps_dracula.sh do MeowSystem, lendo do pack —
+    # nunca do Dracula_OS-Theme.
+    #
+    # NADA FOI APAGADO DO DISCO. O ~/.local/share/icons/Dracula-Icones continua
+    # servindo de herança enquanto o meow.conf pedir (ICONES_BASE), só não é
+    # mais reconstruído.
+    #
+    # O AVISO SAI SEMPRE, E ISSO FOI MEDIDO: nenhum alias, hook de login
+    # (.zshrc), timer ou apt hook chama esta função — só gente digitando.
+    # O corpo antigo fica abaixo do return, como no aurora-userscripts-apply.sh:
+    # religar é apagar estas linhas.
+    __warn "rebuild_dracula_theme saiu do Spellbook: o tema Dracula agora é do MeowSystem"
+    echo -e "  ${D_COMMENT}os ícones vêm de packs/dracula — meow pack usar dracula (se já está no ar: meow aplicar)${D_RESET}"
+    return 0
+
     local repo="$HOME/Desenvolvimento/Dracula_OS-Theme"
     if [ ! -d "$repo" ]; then
         echo -e "  ${D_YELLOW}[!]${D_RESET} Repo não encontrado em $repo"

@@ -2,6 +2,54 @@
 
 ## [Não lançado]
 
+### Desativado em 2026-09-23 — o que brigava com o MeowSystem
+
+A regra do dono, de 23/09: *"tudo do spellbook que entrar em conflito com o
+meowsystem, migramos pra cá e desativamos no spellbook"*. Nenhuma função foi
+apagada: cada uma virou um aviso curto que aponta o `meow` equivalente e sai sem
+escrever. O corpo antigo ficou abaixo do `return` (como no
+`aurora-userscripts-apply.sh`), ou no commit `d2d3868` quando era só um ramo.
+
+| o quê | o que escrevia | quem escreve agora | aviso aponta |
+|---|---|---|---|
+| `rebuild_dracula_theme` (`functions/sistema.zsh`) | build + `install.sh --user` do Dracula_OS-Theme: 4 temas em `~/.local/share/icons`, GTK, hicolor, 30 `.desktop`; com `--activate`, icon/gtk/cursor-theme no gsettings | MeowSystem, lendo de `packs/dracula` (`icones_apps_dracula.sh`, `hicolor.sh`, `cursor.sh`) | `meow pack usar dracula` |
+| `_fix_flatpak_icons` (`functions/sistema.zsh`) | `Icon=` de 4 flatpaks, por mapa escrito à mão | MeowSystem (`icones_absolutos.sh`, pelo estado do disco) | `meow aplicar` |
+| categoria `tema` do `sistema_restaurar` (`functions/restaurar.zsh`) | gtk/icon/cursor-theme, cursor-size e picture-uri; `dconf load /`; tar do `~/.config/cosmic` inteiro | MeowSystem (`meow.conf` + `meow aplicar`) | `meow aplicar` |
+| ramo Dracula_OS-Theme do `santuario` (`functions/projeto.zsh`) | `install.sh --user --all` de lá: gsettings, som, Spotify, Obsidian, qBittorrent, hicolor, lançador, apt hook | MeowSystem | `meow pack usar dracula` |
+| `spicetify_instalar` e `scripts/spicetify-setup.sh` | binário, temas, Marketplace, `current_theme`/`color_scheme`, `backup apply` | MeowSystem (manifesto do Spotify, `spicetify_setup.sh` de lá) | `meow apps aplicar spotify` |
+| `spicetify_reparar` (só o final) | `restore` + `clear` + `backup apply`, que congelava o tema do MeowSystem como "de fábrica" | virou `spicetify apply`; extensões e custom apps continuam aqui | `meow apps aplicar spotify`, se o apply recusar |
+
+**Quem chama, medido antes de mexer:** nenhuma delas roda sozinha — nenhum hook
+do `.zshrc`, timer, unit ou apt hook deste repositório as chama. O
+`_fix_flatpak_icons` vem de dentro do `limpar_cache` e do `atualizar_tudo`, à
+mão; por isso ali o aviso é uma linha apagada, e não um alerta.
+
+**Ficaram, porque são desta máquina:** `fontes_instalar` (fontes de
+compatibilidade com Windows/Mac e o `fonts.conf` de aliases, que o MeowSystem
+não escreve), `relatorio` (Liberation Narrow e o `60-relatorio-mec.conf`, em
+arquivos próprios), `_reconstruir_caches_icones` (reindexa a partir do disco,
+não decide conteúdo), a config do Ghostty, os atalhos, o `aurora-menu-doctor.py`.
+
+**Ficou no disco, sem ninguém que o reconstrua:** `~/.local/share/icons/Dracula-Icones`
+(e os irmãos `dracula-icons-main`, `dracula-icons-circle`, `Dracula-Cursor`)
+continua servindo de herança enquanto o `meow.conf` pedir
+(`ICONES_BASE="Dracula-Icones"`, `CURSOR="Dracula-Cursor"`). Não foi apagado.
+
+**Órfãos fora deste repositório, que a pessoa remove se quiser** (nada foi
+removido aqui):
+
+```sh
+# 3.400 SVG de 06/10/2025, root; o Spellbook só reindexava a cache
+# (_reconstruir_caches_icones). Antes, confira se a tela de login não o usa:
+sudo cat /var/lib/cosmic-greeter/.config/cosmic/com.system76.CosmicTk/v1/icon_theme
+sudo rm -rf /usr/share/icons/Dracula-Icones /usr/share/icons/Dracula-Cursor
+
+# o apt hook do Dracula_OS-Theme (instalado pelo `install.sh --all` que o
+# santuario rodava): 114 passagens no log, a última em 21/09; repõe ícones e
+# tenta trocar icon/gtk/cursor-theme depois de todo apt
+sudo ~/Desenvolvimento/Dracula_OS-Theme/scripts/instalar_apt_hook.sh --revert
+```
+
 ### Corrigido em 2026-09-18 — os laços que anunciavam conserto sem consertar
 
 - **`functions/aurora-self-heal.zsh`: o detector do xbindkeys ganhou a guarda de
