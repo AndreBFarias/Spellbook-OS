@@ -108,16 +108,27 @@ if [[ -o interactive && -z "$TMUX" ]]; then
         # `meow-fetch` no PATH, o fastfetch puro, e nunca `command not found`.
         _ff=fastfetch
         command -v meow-fetch >/dev/null 2>&1 && _ff=meow-fetch
-        "$_ff" --pipe false | sed -E $'
-            s/\\[Discrete\\]/\e[38;2;255;184;108m(Dedicada)\e[0m/g;
-            s/\\[Integrated\\]/\e[38;2;255;184;108m(Integrada)\e[0m/g;
-            s/\\[AC Connected\\]/\e[38;2;255;184;108m(Conectado)\e[0m/g;
-            s/\\[AC Disconnected\\]/\e[38;2;255;184;108m(Desconectado)\e[0m/g;
-            s/\\[External\\]/\e[38;2;255;184;108m(Externo)\e[0m/g;
-            s/\\[Built-in\\]/\e[38;2;255;184;108m(Embutido)\e[0m/g;
-            s/\\[([^][\\x1b]+)\\]/\e[38;2;255;184;108m(\\1)\e[0m/g
-        '
-        unset _ff
+        # O LARANJA DOS RÓTULOS É DO MEOWSYSTEM DESDE 24/09/2026 (MeowSystem
+        # P47). Era `38;2;255;184;108` cravado nas sete linhas abaixo — o laranja
+        # do Dracula, com qualquer pack no ar. Agora é o `peach` da paleta do
+        # pack, que o `meow aplicar` exporta como MEOW_SGR_LARANJA no mesmo
+        # ~/.config/meowsystem/fzf.sh das cores do fzf (seção 6), lido aqui
+        # também porque esta seção roda antes dela. Com o Dracula no ar a saída
+        # é byte a byte a de antes. Sem o MeowSystem, os rótulos saem traduzidos
+        # e sem cor.
+        [ -r "$HOME/.config/meowsystem/fzf.sh" ] && . "$HOME/.config/meowsystem/fzf.sh"
+        _lj="" _lz=""
+        [ -n "${MEOW_SGR_LARANJA:-}" ] && _lj=$'\e['"$MEOW_SGR_LARANJA"m && _lz=$'\e[0m'
+        "$_ff" --pipe false | sed -E "
+            s/\\[Discrete\\]/${_lj}(Dedicada)${_lz}/g;
+            s/\\[Integrated\\]/${_lj}(Integrada)${_lz}/g;
+            s/\\[AC Connected\\]/${_lj}(Conectado)${_lz}/g;
+            s/\\[AC Disconnected\\]/${_lj}(Desconectado)${_lz}/g;
+            s/\\[External\\]/${_lj}(Externo)${_lz}/g;
+            s/\\[Built-in\\]/${_lj}(Embutido)${_lz}/g;
+            s/\\[([^][\\x1b]+)\\]/${_lj}(\\1)${_lz}/g
+        "
+        unset _ff _lj _lz
         echo
     fi
     # O aviso de 'maria offline' foi removido em 2026-09-11: a unit
