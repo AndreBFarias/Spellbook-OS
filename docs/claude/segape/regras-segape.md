@@ -25,6 +25,15 @@ Antes de qualquer tarefa, conheça as duas pastas de referência:
 @~/Desenvolvimento/Projetos_segape/onboarding-painel-estrategico/05-armadilhas.md
 @~/Desenvolvimento/Projetos_segape/onboarding-painel-estrategico/10-commit-e-pull-request.md
 
+## Onde está o trabalho em andamento
+
+- Sustentação do Painel: `Tasks Padrões/TODO.md` (plano) e `Tasks Padrões/README.md` (índice e evidências).
+  Ler o TODO antes de qualquer tarefa de sustentação e marcar o que fechar.
+- Memória do projeto: `~/.claude/projects/-home-andrefarias-Desenvolvimento-Projetos-segape/memory/MEMORY.md`.
+  Vale ler mesmo quando a sessão abre dentro de `pipelines/` ou de outra subpasta, que têm memória própria e vazia.
+- Relatório ou mensagem para o Teams: HTML em `Tasks Padrões/relatorios_teams/`, no formato da memória
+  `relatorios-teams-formato`.
+
 ## Acesso ao BigQuery
 
 | Projeto | Leitura | Escrita |
@@ -39,6 +48,10 @@ Antes de qualquer tarefa, conheça as duas pastas de referência:
   aponta para prod.
 - O hook `guardian.py` barra comando de `bq`/`dbt`/`gcloud` que fure essa tabela. Se ele
   barrar, o comando está errado. Não procure contorno.
+- A conta de usuário do gcloud expira e pede login no navegador. Para ler o dev, use a service account
+  do projeto só no comando: `CLOUDSDK_CORE_ACCOUNT=projeto-painel-ministro-andref@br-mec-segape-dev.iam.gserviceaccount.com`.
+- O dev é compartilhado: uma rodada da develop apaga o efeito de PR aberta. Até o merge, conferir as
+  tabelas da PR antes de homologar e rodar os modelos da branch de novo se mudaram.
 
 ## Escrever como o Vinicius Jacinto
 
