@@ -44,11 +44,15 @@ fi
 [[ -f "${ZDOTDIR:-$HOME/.config/zsh}/completions/completers.zsh" ]] && \
     source "${ZDOTDIR:-$HOME/.config/zsh}/completions/completers.zsh"
 
-# fzf-tab: tema Dracula, preview à direita, descrições na mesma linha
+# fzf-tab: preview à direita, descrições na mesma linha.
+# AS CORES SAÍRAM DAQUI EM 24/09/2026 (MeowSystem P44): o --color do Dracula
+# que estava cravado nestas flags virou o `use-fzf-default-opts`, e o fzf-tab
+# passa a usar as cores do FZF_DEFAULT_OPTS — que vêm da paleta do pack no ar,
+# pelo arquivo do MeowSystem carregado na seção 6. Tema é do MeowSystem.
 if (( $+functions[fzf-tab-complete] )); then
     zstyle ':fzf-tab:*' fzf-flags \
-        --color=bg+:#44475a,fg+:#f8f8f2,hl:#bd93f9,hl+:#ff79c6,pointer:#50fa7b,marker:#50fa7b,prompt:#bd93f9,header:#6272a4,border:#6272a4 \
         --height=60% --layout=reverse --border
+    zstyle ':fzf-tab:*' use-fzf-default-opts yes
     zstyle ':fzf-tab:*' show-group full
     zstyle ':fzf-tab:*' single-group color header
     zstyle ':completion:*:descriptions' format '[%d]'
@@ -148,16 +152,20 @@ ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 
 # A paleta do fzf, para TODO fzf — e não só para os que já a tinham.
 #
-# Este hex é o mesmo de `functions/mec.zsh` (__MEC_FZF_COLOR), copiado sem uma
-# vírgula de diferença. Ele já existe em cinco lugares deste repositório e em
-# nenhum deles alcança o fzf do dia a dia: o Ctrl+R, o Ctrl+T, o Alt+C e todo
-# `fzf` chamado na unha rodavam sem cor nenhuma.
+# AS CORES SÃO DO MEOWSYSTEM DESDE 24/09/2026 (P44). A linha abaixo, que
+# cravava o Catppuccin Mocha, está DESATIVADA: com o Dracula no ar, o Ctrl+R
+# saía Catppuccin e o TAB (fzf-tab, seção 1) saía Dracula, no mesmo terminal.
+# Agora o `meow aplicar` escreve ~/.config/meowsystem/fzf.sh a partir da
+# paleta do pack no ar, e esta seção só o carrega: trocar de pack troca as
+# cores do próximo shell, sem ninguém editar nada aqui. Sem o MeowSystem o
+# arquivo não existe, o `-r` falha calado e o fzf fica com as cores dele.
+#   A linha que ficava aqui:
+# export FZF_DEFAULT_OPTS="--color=bg+:#45475A,fg+:#CDD6F4,hl:#CBA6F7,hl+:#F5C2E7,pointer:#A6E3A1,marker:#A6E3A1,prompt:#CBA6F7,header:#6C7086,border:#6C7086"
 #
-# ISTO NÃO SUBSTITUI OS CINCO. O fzf lê o FZF_DEFAULT_OPTS primeiro e a linha de
-# comando depois, e a última opção repetida vence — então tudo que já passa o
-# próprio `--color=` continua exatamente como estava. O que muda é só o que não
-# passava nada.
-export FZF_DEFAULT_OPTS="--color=bg+:#45475A,fg+:#CDD6F4,hl:#CBA6F7,hl+:#F5C2E7,pointer:#A6E3A1,marker:#A6E3A1,prompt:#CBA6F7,header:#6C7086,border:#6C7086"
+# O `functions/mec.zsh` (__MEC_FZF_COLOR) e os outros que passam o próprio
+# `--color=` continuam como estavam: o fzf lê o FZF_DEFAULT_OPTS primeiro e a
+# linha de comando depois, e a última opção repetida vence.
+[ -r "$HOME/.config/meowsystem/fzf.sh" ] && . "$HOME/.config/meowsystem/fzf.sh"
 export FZF_OMZ_DEFAULT_COMPLETION=1
 
 if [ -f "$HOME/.env" ]; then
