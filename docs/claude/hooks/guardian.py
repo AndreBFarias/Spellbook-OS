@@ -94,7 +94,7 @@ SEGAPE_DBT_ESCRITA = re.compile(r"\bdbt\s+(run|build|seed|snapshot)\b([^;&|]*)")
 
 
 def _segape_selecao_valida(args: str) -> str | None:
-    m = re.search(r"(?:--select|-s|-m|--models)[=\s]+((?:[^\s-][^\s]*\s*)+)", args)
+    m = re.search(r"(?:--select|-s|-m|--models)[=\s]+((?:[^\s\-<>&|;0-9][^\s<>&|;]*\s*)+)", args)
     if not m:
         return "dbt de escrita sem --select roda o projeto inteiro"
     for sel in m.group(1).split():
