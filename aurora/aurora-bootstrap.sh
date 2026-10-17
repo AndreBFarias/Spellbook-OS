@@ -188,6 +188,9 @@ copia_se_diff "$AURORA_REPO/aurora-gpu-compositor" /usr/local/sbin/aurora-gpu-co
 copia_se_diff "$AURORA_REPO/aurora-gpu-compositor.service" /etc/systemd/system/aurora-gpu-compositor.service root:root 0644
 copia_se_diff "$AURORA_REPO/aurora-gpu-compositor.path" /etc/systemd/system/aurora-gpu-compositor.path root:root 0644
 systemctl enable aurora-gpu-compositor.service aurora-gpu-compositor.path >/dev/null 2>&1 || true
+# Nenhum kernel fica sem NVIDIA: no fim de todo apt (17/10/2026, kernel 7.2.6 desfeito pelo DKMS).
+copia_se_diff "$AURORA_REPO/aurora-kernel-nvidia" /usr/local/sbin/aurora-kernel-nvidia root:root 0755
+copia_se_diff "$AURORA_REPO/99-aurora-kernel-nvidia" /etc/apt/apt.conf.d/99-aurora-kernel-nvidia root:root 0644
 # sudoers: validar com visudo ANTES de ativar (um sudoers inválido quebra o sudo)
 if ! sudo -n cmp -s "$AURORA_REPO/sudoers-aurora-gpu-revive" /etc/sudoers.d/aurora-gpu-revive 2>/dev/null; then
   if sudo -n visudo -cf "$AURORA_REPO/sudoers-aurora-gpu-revive" >/dev/null 2>&1; then

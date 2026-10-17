@@ -1,0 +1,2 @@
+// Aurora: no fim de todo apt, nenhum kernel fica sem o módulo da NVIDIA (aurora-kernel-nvidia).
+DPkg::Post-Invoke { "if [ -x /usr/local/sbin/aurora-kernel-nvidia ]; then /usr/local/sbin/aurora-kernel-nvidia | logger -t aurora-kernel-nvidia || true; fi"; };

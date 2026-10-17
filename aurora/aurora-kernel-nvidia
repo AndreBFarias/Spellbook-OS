@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# aurora-kernel-nvidia — nenhum kernel desta máquina fica sem o módulo da NVIDIA (CUDA).
+# Roda no fim de todo apt (DPkg::Post-Invoke). Idempotente: se tudo está certo, não escreve.
+# Por quê: num full-upgrade o kernel novo é configurado antes do nvidia-dkms novo; o DKMS
+# tenta o driver velho no kernel novo, falha e o dpkg desfaz o kernel (17/10/2026). No fim do
+# apt o driver novo já está lá: aqui se compila o que faltou, sem versão escrita.
+set -u
+SECO="${AURORA_KN_SECO:-0}"
+log() { printf '[aurora-kernel-nvidia] %s\n' "$*"; }
+tem_nvidia() { modinfo -k "$1" nvidia >/dev/null 2>&1; }
+
+command -v dkms >/dev/null 2>&1 || { log "sem dkms, nada a fazer"; exit 0; }
+mudou=0
+kernels=$(ls -1 /lib/modules 2>/dev/null | while read -r k; do [ -e "/boot/vmlinuz-$k" ] && echo "$k"; done | sort -V)
+
+# 1. Todo kernel instalado com os módulos DKMS compilados (o autoinstall é idempotente).
+for k in $kernels; do
+  [ -d "/lib/modules/$k/build" ] || continue          # sem headers não há o que compilar
+  if ! tem_nvidia "$k"; then
+    if [ "$SECO" = "1" ]; then log "compilaria os módulos DKMS para $k"
+    else dkms autoinstall -k "$k" >/dev/null 2>&1 && log "módulos DKMS compilados para $k" || log "DKMS falhou em $k"; fi
+    mudou=1
+  fi
+done
+
+# 2. O boot padrão aponta para um kernel com NVIDIA; se não, para o mais novo que tem.
+padrao="$(readlink -f /boot/vmlinuz 2>/dev/null | sed 's#.*/vmlinuz-##')"
+if [ -n "$padrao" ] && ! tem_nvidia "$padrao"; then
+  bom=""; for k in $kernels; do tem_nvidia "$k" && bom="$k"; done
+  if [ -n "$bom" ] && command -v kernelstub >/dev/null 2>&1; then
+    if [ "$SECO" = "1" ]; then log "apontaria o boot de $padrao para $bom"
+    else kernelstub -k "/boot/vmlinuz-$bom" -i "/boot/initrd.img-$bom" >/dev/null 2>&1 \
+      && log "boot apontado de $padrao (sem NVIDIA) para $bom" || log "kernelstub falhou"; fi
+    mudou=1
+  else
+    log "ATENÇÃO: o kernel padrão $padrao está sem NVIDIA e não há outro com o módulo"
+  fi
+fi
+[ "$mudou" = "0" ] && log "ok: todo kernel com NVIDIA; boot em ${padrao:-?}"
+exit 0
