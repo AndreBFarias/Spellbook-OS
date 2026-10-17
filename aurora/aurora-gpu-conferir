@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# conferir.sh — em que GPU o compositor está AGORA, e quanto isso custa. SÓ LÊ.
+# (sudo só para ler o journal do sistema; sem sudo, conta pelo journal do usuário.)
+#
+# COMO DECIDE A GPU (aprendido em 09/10/2026)
+#   Contar fds em /dev/dri/renderD* NÃO distingue: com o compositor na AMD ele
+#   mantém 2 fds em renderD129 (NVIDIA) e 0 em renderD128, porque desenha na AMD
+#   pelo nó card0. A medição de 18/09 leu "renderD129, 2 fds" como "está na
+#   NVIDIA" — e é o mesmo número do baseline AMD de 17/09.
+#   O que distingue de verdade, medido nos dois estados:
+#     - a variável no /proc/<pid>/environ do compositor, sem "Failed to parse";
+#     - quanto o cosmic-comp segura de VRAM: ~34-40 MiB = só a cópia para o HDMI
+#       (AMD primária); centenas de MiB a ~1,1 GiB = primária na RTX;
+#     - clientes (cosmic-panel, cosmic-app-library, apps) aparecendo no
+#       nvidia-smi: só acontece com a RTX primária (o dmabuf feedback manda os
+#       clientes alocarem na GPU principal do compositor).
+set -uo pipefail
+
+pid=$(pgrep -u "$(id -u)" -x cosmic-comp | tail -1)   # só o da sua sessão (o do greeter é de outro usuário)
+if [ -z "$pid" ]; then echo "cosmic-comp não está rodando."; exit 1; fi
+
+J() { if sudo -n true 2>/dev/null; then sudo journalctl -b 0 --no-pager -q "$@"; else journalctl --user -b 0 --no-pager -q "$@"; fi; }
+cnt() { grep -c -- "$1" || true; }
+
+printf '===== conferir GPU do compositor — %s =====\n\n' "$(date '+%F %T')"
+
+echo "-- /etc/environment --"
+grep -nE '^[[:space:]]*#?[[:space:]]*COSMIC_RENDER_DEVICE=' /etc/environment | sed 's/^/   /'
+echo
+echo "-- compositor pid $pid (vivo há $(ps -o etimes= -p "$pid" | tr -d ' ') s) --"
+var=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^COSMIC_RENDER_DEVICE=//p')
+echo "   COSMIC_RENDER_DEVICE no ambiente: ${var:-(ausente)}"
+parse=$(J _PID="$pid" | cnt 'Failed to parse device entry')
+echo "   'Failed to parse device entry' : $parse"
+
+vram_comp=$(nvidia-smi 2>/dev/null | awk -v p="$pid" '$0 ~ " "p" " && /cosmic-comp/ {for(i=1;i<=NF;i++) if($i ~ /MiB$/) print $i}' | head -1)
+# Só processos com tipo G ou C+G contam. O Ollama aparece como tipo C e, antes,
+# entrava na conta, o que podia dar "RTX" com o compositor ainda na AMD.
+clientes=$(nvidia-smi 2>/dev/null | awk '$1=="|" && $3=="N/A" && $6 ~ /G/ && $7 !~ /cosmic-comp|Xwayland/' | grep -c . || true)
+echo "   VRAM do cosmic-comp na RTX     : ${vram_comp:-?}"
+echo "   outros clientes gráficos na RTX: $clientes"
+echo
+
+mib=${vram_comp%MiB}
+if [ -n "$var" ] && [ "$parse" = "0" ] && { [ "${clientes:-0}" -gt 0 ] || [ "${mib:-0}" -gt 100 ] 2>/dev/null; }; then
+    echo "   VEREDITO: compositor na RTX (NVIDIA)"
+elif [ -z "$var" ] && [ "${mib:-0}" -lt 100 ] 2>/dev/null; then
+    echo "   VEREDITO: compositor na AMD (a RTX só recebe a cópia do HDMI)"
+else
+    echo "   VEREDITO: inconclusivo — confira os números acima à mão"
+fi
+echo
+
+echo "-- erros do boot atual --"
+J _COMM=cosmic-comp > /tmp/.conferir-gpu.$$ 2>/dev/null || true
+printf '   import for wrong devices (total) : %s\n' "$(cnt 'import for wrong devices' < /tmp/.conferir-gpu.$$)"
+printf '     ... no nó AMD   (dev 57984)     : %s\n' "$(cnt 'dev: 57984' < /tmp/.conferir-gpu.$$)"
+printf '     ... no nó NVIDIA (dev 57985)    : %s\n' "$(cnt 'dev: 57985' < /tmp/.conferir-gpu.$$)"
+printf '   Duplicated FramebufferEffect     : %s\n' "$(cnt 'Duplicated FramebufferEffect' < /tmp/.conferir-gpu.$$)"
+rm -f /tmp/.conferir-gpu.$$
+if sudo -n true 2>/dev/null; then
+    printf '   quedas do cosmic-comp (coredump) : %s\n' "$(sudo journalctl -b 0 -q --no-pager | grep -cE 'Process [0-9]+ \(cosmic-comp\).*dumped core' || true)"
+    printf '   page faults do amdgpu            : %s\n' "$(sudo journalctl -k -b 0 -q --no-pager | grep -c 'amdgpu.*page fault' || true)"
+    printf '   page flip falho (nvidia)         : %s\n' "$(sudo journalctl -k -b 0 -q --no-pager | grep -c 'Page flip commit failed' || true)"
+fi
+echo
+
+echo "-- VRAM da RTX 3050 (a mesma do Ollama) --"
+nvidia-smi --query-gpu=memory.total,memory.used,memory.free --format=csv,noheader 2>/dev/null | sed 's/^/   total, usada, livre: /'
+echo "   referência: 3679 MiB livres com o compositor na AMD (17/09); 2513 MiB na RTX após 3h10 (18/09)"
+echo "   processos gráficos na RTX:"
+nvidia-smi 2>/dev/null | grep -E '^\|\s+[0-9]+\s+N/A' | sed 's/^/     /'

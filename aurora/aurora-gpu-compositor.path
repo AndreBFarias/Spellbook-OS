@@ -1,0 +1,10 @@
+[Unit]
+Description=Aurora: vigia /etc/environment e o modo do system76-power para a GPU do compositor
+
+[Path]
+PathChanged=/etc/environment
+PathChanged=/etc/modprobe.d/system76-power.conf
+Unit=aurora-gpu-compositor.service
+
+[Install]
+WantedBy=multi-user.target

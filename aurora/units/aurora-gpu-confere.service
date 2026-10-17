@@ -1,0 +1,12 @@
+[Unit]
+Description=Aurora: confere, depois do login, se o compositor está na RTX
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/zsh/aurora/aurora-gpu-confere
+SyslogIdentifier=aurora-gpu-confere
+
+[Install]
+WantedBy=graphical-session.target

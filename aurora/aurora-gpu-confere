@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# aurora-gpu-confere — depois do login, confere se o compositor está mesmo na RTX.
+# Não conserta (o conserto é do gpu-guarda, como root); avisa numa linha se não estiver.
+sleep "${AURORA_GPU_CONFERE_ESPERA:-20}"
+pid="$(pgrep -u "$(id -u)" -x cosmic-comp | head -1)"
+[ -n "$pid" ] || exit 0
+na_env=0; tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -qx 'COSMIC_RENDER_DEVICE=0x10de:0x25a2' && na_env=1
+na_rtx=0; nvidia-smi --query-compute-apps=pid --format=csv,noheader >/dev/null 2>&1
+nvidia-smi 2>/dev/null | grep -E " G | C\+G " | grep -q cosmic-comp && na_rtx=1
+if [ "$na_env" = "1" ] && [ "$na_rtx" = "1" ]; then
+  echo "aurora-gpu-confere: compositor na RTX"
+else
+  echo "aurora-gpu-confere: compositor FORA da RTX (env=$na_env, nvidia-smi=$na_rtx)"
+  notify-send -u critical -i video-display "Compositor fora da NVIDIA" "Reinicie a sessão; se repetir: journalctl -t aurora-gpu" 2>/dev/null || true
+fi

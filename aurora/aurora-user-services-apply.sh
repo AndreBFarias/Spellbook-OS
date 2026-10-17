@@ -17,6 +17,7 @@ DST_DIR="$HOME/.config/systemd/user"
 USER_SERVICES=(
   "gradia-autosave.service"
   "imagens-router.service"
+  "aurora-gpu-confere.service"
 )
 
 # Timers (systemd --user): copia o .timer + o .service par; habilita SO o .timer.

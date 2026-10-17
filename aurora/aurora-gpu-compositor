@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# aurora-gpu-compositor — mantém o compositor COSMIC na RTX (NVIDIA) desta máquina.
+# Idempotente: se está certo, não escreve nada; se não está, faz backup e conserta.
+# Quem usa trabalha com CUDA e decidiu «tudo NVIDIA» (17/09/2026, reaplicado em 15/10/2026).
+# Roda como root, no boot e quando /etc/environment ou o modo do system76-power mudam.
+set -u
+ARQ="${AURORA_GPU_ARQ:-/etc/environment}"
+LINHA='COSMIC_RENDER_DEVICE="0x10de:0x25a2"'
+SECO="${AURORA_GPU_SECO:-0}"
+mudou=0
+
+log() { printf '[aurora-gpu] %s\n' "$*"; }
+
+# 1. Exatamente uma linha ativa, a certa. Linhas comentadas e o histórico ficam.
+ativas="$(grep -cE '^[[:space:]]*COSMIC_RENDER_DEVICE=' "$ARQ" 2>/dev/null || true)"
+certa="$(grep -cxF "$LINHA" "$ARQ" 2>/dev/null || true)"
+if [ "$ativas" != "1" ] || [ "$certa" != "1" ]; then
+  if [ "$SECO" = "1" ]; then
+    log "consertaria $ARQ (ativas=$ativas, certa=$certa)"
+  else
+    bak="$ARQ.bak-aurora-gpu-$(date +%Y%m%d-%H%M%S)-$$"
+    cp -p "$ARQ" "$bak"
+    tmp="$(mktemp "$ARQ.XXXX")"
+    grep -vE '^[[:space:]]*COSMIC_RENDER_DEVICE=' "$ARQ" > "$tmp"
+    printf '%s\n' "$LINHA" >> "$tmp"
+    chmod --reference="$ARQ" "$tmp"; chown --reference="$ARQ" "$tmp"
+    mv -f "$tmp" "$ARQ"
+    log "consertado $ARQ (era ativas=$ativas, certa=$certa); backup em $bak; vale no próximo login"
+  fi
+  mudou=1
+fi
+
+# 2. O modo do system76-power não pode tirar a NVIDIA da tela.
+if [ -z "${AURORA_GPU_ARQ:-}" ] && command -v system76-power >/dev/null 2>&1; then
+  modo="$(system76-power graphics 2>/dev/null || true)"
+  case "$modo" in
+    integrated|compute)
+      if [ "$SECO" = "1" ]; then log "trocaria o modo gráfico $modo -> hybrid"
+      else system76-power graphics hybrid && log "modo gráfico $modo -> hybrid (vale no próximo boot)"; fi
+      mudou=1 ;;
+  esac
+fi
+
+[ "$mudou" = "0" ] && log "ok: compositor na RTX garantido"
+exit 0

@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# reverter.sh — o caminho de volta do aplicar-compositor-na-rtx.sh.
+#
+# Comenta toda linha COSMIC_RENDER_DEVICE ativa em /etc/environment (o
+# compositor volta a escolher sozinho, e nesta máquina ele escolhe a AMD,
+# porque o eDP-1 está nela). Não restaura backup às cegas: outras linhas do
+# arquivo (SUDO_ASKPASS, por exemplo) podem ter mudado depois do backup.
+#
+# USO
+#   ./reverter.sh                      # dry-run (padrão)
+#   ./reverter.sh --aplicar            # escreve, com backup datado
+#   ./reverter.sh --restaurar <backup> # copia um backup inteiro de volta (dry-run sem --aplicar)
+#   Depois: reiniciar.
+#
+# SEM SESSÃO GRÁFICA (se a tela não subir com a RTX): Ctrl+Alt+F3, entre no
+# TTY e rode este script com --aplicar, ou à mão:
+#   sudo sed -i 's/^COSMIC_RENDER_DEVICE=/#COSMIC_RENDER_DEVICE=/' /etc/environment
+#   sudo reboot
+set -euo pipefail
+
+ARQ="${ARQ_TESTE:-/etc/environment}"   # ARQ_TESTE só para testar o dry-run numa cópia
+MODO=dry-run
+BACKUP=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run) MODO=dry-run ;;
+        --aplicar) MODO=aplicar ;;
+        --restaurar)
+            # sem o caminho, o `shift` duplo falhava calado sob set -e (rc=1, nenhuma mensagem)
+            [ -n "${2:-}" ] || { echo "ERRO: --restaurar precisa do caminho do backup." >&2; exit 2; }
+            BACKUP="$2"; shift ;;
+        -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+        *) echo "uso: $0 [--aplicar] [--restaurar <backup>]" >&2; exit 2 ;;
+    esac
+    shift
+done
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+if [ -n "$BACKUP" ]; then
+    [ -f "$BACKUP" ] || { echo "ERRO: backup não existe: $BACKUP" >&2; exit 1; }
+    cp "$BACKUP" "$tmp"
+else
+    if ! grep -qE '^[[:space:]]*COSMIC_RENDER_DEVICE=' "$ARQ"; then
+        echo "nenhuma COSMIC_RENDER_DEVICE ativa em $ARQ. Nada a fazer."
+        exit 0
+    fi
+    # Comentar desfaz o EFEITO (o compositor volta para a AMD), mas deixa no
+    # arquivo os comentários que o aplicar escreveu. Para voltar byte a byte,
+    # o backup que o aplicar fez é o caminho exato:
+    # shellcheck disable=SC2012  # os nomes são nossos (data sem espaço); ls -t ordena pelo mais novo
+    ultimo=$(ls -1t "$ARQ".bak-antes-rtx-* 2>/dev/null | head -1 || true)
+    if [ -n "$ultimo" ]; then
+        echo "volta byte a byte (se nada mais mudou no arquivo depois): $0 --restaurar $ultimo --aplicar"
+        echo
+    fi
+    hoje=$(date '+%F %H:%M')
+    awk -v hoje="$hoje" '
+        /^[[:space:]]*COSMIC_RENDER_DEVICE=/ {
+            print "# REVERTIDA EM " hoje " por reverter.sh (compositor volta para a AMD)"
+            print "#" $0; next
+        }
+        { print }' "$ARQ" > "$tmp"
+fi
+
+ruim=$(grep -vnE '^[[:space:]]*(#.*)?$|^[A-Za-z_][A-Za-z0-9_]*=' "$tmp" || true)
+if [ -n "$ruim" ]; then
+    echo "ERRO: o arquivo resultante tem linhas que o pam_env não entende:" >&2
+    echo "$ruim" >&2
+    exit 1
+fi
+
+echo "--- diff $ARQ (atual -> novo) ---"
+diff -u "$ARQ" "$tmp" || true
+echo
+
+if [ "$MODO" = dry-run ]; then
+    echo "DRY-RUN: nada foi escrito. Para aplicar: $0 --aplicar${BACKUP:+ --restaurar $BACKUP}"
+    exit 0
+fi
+
+bak="$ARQ.bak-antes-reverter-$(date +%Y%m%d-%H%M%S)"
+# duas gravações no mesmo segundo sobrescreviam o backup anterior (visto no teste)
+[ -e "$bak" ] && bak="$bak-$$"
+sudo cp -p "$ARQ" "$bak"
+sudo install -m 644 -o root -g root "$tmp" "$ARQ"
+echo "revertido. backup do estado anterior: $bak"
+echo ">>> PRECISA REINICIAR para valer."

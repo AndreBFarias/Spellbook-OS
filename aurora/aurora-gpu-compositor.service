@@ -1,0 +1,13 @@
+[Unit]
+Description=Aurora: mantém o compositor COSMIC na RTX (NVIDIA)
+DefaultDependencies=no
+After=local-fs.target
+Before=display-manager.service greetd.service cosmic-greeter.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/aurora-gpu-compositor
+SyslogIdentifier=aurora-gpu
+
+[Install]
+WantedBy=multi-user.target
