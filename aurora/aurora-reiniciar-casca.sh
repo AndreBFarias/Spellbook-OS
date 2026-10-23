@@ -115,10 +115,17 @@ declare -A ANTES=()
 for p in "${EXTRAS[@]}"; do ANTES[$p]="$(pgrep -x "$p" | head -1)"; done
 for p in "${EXTRAS[@]}"; do [ -n "${ANTES[$p]}" ] && pkill -x "$p" 2>/dev/null; done
 
-# O painel vai pelo script portado da meowsystem (hash de3416ca…, idêntico nas
-# duas máquinas): ele tem a espera pelo PID novo, a captura de ambiente de um
-# irmão e o fallback de subir na mão. Nada disso vale a pena duplicar aqui.
-if [ -x /usr/local/bin/aurora-reiniciar-painel.sh ]; then
+# O painel vai pela porta única do MeowSystem, `meow painel reciclar`: ela arma o
+# meow-painel.service antes de reciclar e se recusa quando o cosmic-session
+# dormiria por causa do backoff (P94). Só SEM o meow cai no script portado
+# (aurora-reiniciar-painel.sh), que faz `pkill -x cosmic-panel` direto. O meow
+# pode não estar no PATH de quem dispara a tecla (o Spawn do COSMIC), então o
+# ~/.local/bin entra na procura.
+MEOW="$(command -v meow 2>/dev/null || true)"
+[ -z "$MEOW" ] && [ -x "$HOME/.local/bin/meow" ] && MEOW="$HOME/.local/bin/meow"
+if [ -n "$MEOW" ]; then
+  MEOW_QUEM_RECICLA="Alt+F2 (aurora-reiniciar-casca)" "$MEOW" painel reciclar 2>&1 | sed 's/^/[casca] /'
+elif [ -x /usr/local/bin/aurora-reiniciar-painel.sh ]; then
   /usr/local/bin/aurora-reiniciar-painel.sh 2>&1 | sed 's/^/[casca] /'
 else
   log "AVISO: aurora-reiniciar-painel.sh ausente — so os extras reiniciaram"
