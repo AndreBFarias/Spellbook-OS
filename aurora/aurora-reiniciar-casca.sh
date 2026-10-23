@@ -123,8 +123,12 @@ for p in "${EXTRAS[@]}"; do [ -n "${ANTES[$p]}" ] && pkill -x "$p" 2>/dev/null; 
 # ~/.local/bin entra na procura.
 MEOW="$(command -v meow 2>/dev/null || true)"
 [ -z "$MEOW" ] && [ -x "$HOME/.local/bin/meow" ] && MEOW="$HOME/.local/bin/meow"
+painel_recusou=0
 if [ -n "$MEOW" ]; then
   MEOW_QUEM_RECICLA="Alt+F2 (aurora-reiniciar-casca)" "$MEOW" painel reciclar 2>&1 | sed 's/^/[casca] /'
+  # A recusa da porta única sai diferente de 0; sem isto a notificação dizia
+  # «Interface reiniciada» com o painel intocado.
+  [ "${PIPESTATUS[0]}" -eq 0 ] || painel_recusou=1
 elif [ -x /usr/local/bin/aurora-reiniciar-painel.sh ]; then
   /usr/local/bin/aurora-reiniciar-painel.sh 2>&1 | sed 's/^/[casca] /'
 else
@@ -142,6 +146,7 @@ for p in "${EXTRAS[@]}"; do
   done
   [ -z "$novo" ] && faltaram+=("$p")
 done
+[ "$painel_recusou" = 1 ] && faltaram+=("cosmic-panel (o meow painel reciclar recusou; veja o meow.log)")
 
 if [ ${#faltaram[@]} -gt 0 ]; then
   log "AVISO: não voltaram em 5s: ${faltaram[*]}"
