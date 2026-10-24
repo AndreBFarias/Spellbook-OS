@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Troca fontes Microsoft ausentes no Linux por equivalentes universais, direto no docx.
+Uso: relatorio_fontfix <arquivo.docx>   (gera backup .bak_fontes ao lado)"""
+import sys, zipfile, shutil, re, os
+MAPA = {
+    "Arial Nova Cond Light": "Arial Narrow",
+    "Arial Nova Cond": "Arial Narrow",
+    "Arial Nova": "Arial",
+    "Open Sans Condensed Light": "Arial Narrow",
+    "Open Sans Condensed": "Arial Narrow",
+    "Fira Mono": "Courier New",
+    "Segoe UI": "Arial",
+}
+if len(sys.argv) != 2 or not sys.argv[1].lower().endswith(".docx"):
+    sys.exit("uso: relatorio_fontfix <arquivo.docx>")
+docx = sys.argv[1]
+lock = os.path.join(os.path.dirname(os.path.abspath(docx)), ".~lock." + os.path.basename(docx) + "#")
+if os.path.exists(lock):
+    sys.exit(f"ERRO: {os.path.basename(docx)} esta aberto no editor (lock presente). Feche antes.")
+bak = docx + ".bak_fontes"
+shutil.copy2(docx, bak)
+tmp = docx + ".tmp_fontfix"
+trocas = 0
+with zipfile.ZipFile(docx) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+    for item in zin.infolist():
+        data = zin.read(item.filename)
+        if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+            txt = data.decode("utf-8")
+            for de, para in MAPA.items():  # ordem: nomes mais longos primeiro (dict preserva ordem)
+                padrao = r'((?:w:(?:ascii|hAnsi|cs|eastAsia)|w:name)=)"' + re.escape(de) + '"'
+                txt, n = re.subn(padrao, r'\1"' + para + '"', txt)
+                trocas += n
+            data = txt.encode("utf-8")
+        zout.writestr(item, data)
+os.replace(tmp, docx)
+print(f"OK: {trocas} referencias de fonte trocadas. Backup: {os.path.basename(bak)}")

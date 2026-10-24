@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Lava PDF in-place (mesmo nome) para o perfil que renderiza integro em qualquer
+# visualizador web (TrueType/WinAnsi via pdftocairo).
+# ATENCAO: a lavagem re-renderiza o conteudo — hyperlinks/formularios/sumario
+# clicavel/metadados NAO sobrevivem. Por isso: backup automatico ao lado
+# (<nome>.pdf.orig, criado só na 1a vez; desative com PDF_LAVAR_SEM_BACKUP=1).
+# PDFs ASSINADOS digitalmente sao RECUSADOS (lavar destroi a assinatura).
+# Uso: pdf_lavar <arquivo.pdf> [-o saida.pdf]
+set -euo pipefail
+[ $# -ge 1 ] || { echo "uso: pdf_lavar <arquivo.pdf> [-o saida.pdf]"; exit 1; }
+PDF="$1"; SAIDA="$PDF"
+[ "${2:-}" = "-o" ] && SAIDA="${3:?uso: pdf_lavar <arquivo.pdf> -o <saida.pdf>}"
+case "$PDF" in
+  *.pdf) ;;
+  *.docx) echo "ERRO: exporte o PDF pelo OnlyOffice primeiro (Arquivo > Baixar como > PDF)"; exit 1 ;;
+  *) echo "ERRO: esperado .pdf"; exit 1 ;;
+esac
+if pdfsig "$PDF" 2>/dev/null | grep -q "Signature #"; then
+  if [ "${FORCA:-0}" != "1" ]; then
+    echo "RECUSADO: '$PDF' está ASSINADO digitalmente — lavar destruiria a assinatura."
+    echo "(se tiver certeza absoluta: FORCA=1 pdf_lavar ...)"
+    exit 2
+  fi
+fi
+if [ "${PDF_LAVAR_SEM_BACKUP:-0}" != "1" ] && [ "$SAIDA" = "$PDF" ] && [ ! -f "$PDF.orig" ]; then
+  cp -a "$PDF" "$PDF.orig"
+fi
+MODO=$(stat -c %a "$PDF" 2>/dev/null || echo 644)
+TMP=$(mktemp --suffix=.pdf)
+trap 'rm -f "$TMP"' EXIT
+pdftocairo -pdf "$PDF" "$TMP"
+pdfinfo "$TMP" >/dev/null 2>&1 || { echo "ERRO: saida invalida, original preservado"; exit 1; }
+mv "$TMP" "$SAIDA"
+chmod "$MODO" "$SAIDA"
+trap - EXIT
+echo "PDF lavado: $SAIDA"

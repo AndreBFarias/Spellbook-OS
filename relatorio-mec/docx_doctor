@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""docx_doctor — diagnostica e trata docx que quebra entre Windows/Linux/web.
+
+Trata as 3 doenças conhecidas (aprendidas no Relatório MEC, 2026-07-02):
+  1. FONTES: famílias usadas no docx mas ausentes no Linux.
+     - Sem versão livre (Arial Nova, Open Sans Condensed, Fira Mono, Segoe UI):
+       REESCREVE no docx para equivalente universal (existe no Windows E no Linux).
+     - Windows-stock com métrica-compatível livre (Calibri, Cambria, Arial Narrow):
+       NÃO mexe no docx (no Windows renderiza certo); avisa para instalar/aliasar.
+  2. LOGOS COM TRANSPARÊNCIA: PNGs pequenos (tipo brasão/logotipo) com canal alfa
+     viram quadrado cinza no pdf.js dos sites (assinador gov.br etc.). Achatados
+     sobre branco com --logos (padrão: só reporta).
+  3. PLACEHOLDERS: textos "<algo>" esquecidos de template. Sempre só reporta.
+
+Uso: docx_doctor <arquivo.docx> [--aplicar] [--logos]
+     (sem --aplicar: só diagnóstico, não altera nada)
+Backup automático: <arquivo>.bak_doctor antes de qualquer alteração.
+"""
+import sys, os, re, zipfile, shutil, subprocess, tempfile
+
+REESCREVER = {  # ordem: nomes mais longos primeiro
+    "Arial Nova Cond Light": "Arial Narrow",
+    "Arial Nova Cond": "Arial Narrow",
+    "Arial Nova": "Arial",
+    "Open Sans Condensed Light": "Arial Narrow",
+    "Open Sans Condensed": "Arial Narrow",
+    "Fira Mono": "Courier New",
+    "Segoe UI Light": "Arial",
+    "Segoe UI Semibold": "Arial",
+    "Segoe UI": "Arial",
+}
+# Windows-stock: docx fica intacto; no Linux resolve-se com fonte métrica-compatível
+METRICA_LINUX = {
+    "Calibri": "Carlito", "Calibri Light": "Carlito",
+    "Cambria": "Caladea",
+    "Arial Narrow": "Liberation Sans Narrow",
+    "Times New Roman": "Liberation Serif", "Arial": "Liberation Sans",
+    "Courier New": "Liberation Mono",
+}
+
+def fc_match(familia):
+    try:
+        out = subprocess.run(["fc-match", familia, "--format", "%{family}"],
+                             capture_output=True, text=True, timeout=10).stdout
+        return out.split(",")[0].strip()
+    except Exception:
+        return ""
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    aplicar = "--aplicar" in sys.argv
+    logos = "--logos" in sys.argv
+    if len(args) != 1 or not args[0].lower().endswith(".docx"):
+        sys.exit(__doc__)
+    docx = args[0]
+    lock = os.path.join(os.path.dirname(os.path.abspath(docx)) or ".",
+                        ".~lock." + os.path.basename(docx) + "#")
+    if aplicar and os.path.exists(lock):
+        sys.exit(f"ERRO: arquivo aberto no editor (lock presente). Feche antes.")
+
+    z = zipfile.ZipFile(docx)
+    xmls = {n: z.read(n).decode("utf8") for n in z.namelist()
+            if n.startswith("word/") and n.endswith(".xml")}
+    corpo = "".join(xmls.values())
+
+    # ── 1. fontes usadas de verdade (rFonts em qualquer xml do word/) ──
+    usadas = set(re.findall(r'w:(?:ascii|hAnsi|cs)="([^"]+)"', corpo))
+    usadas = {f for f in usadas if not f.startswith(("major", "minor"))}
+    problemas_reescrita, avisos_fonte = [], []
+    for fam in sorted(usadas):
+        if fam in REESCREVER:
+            # criterio e compatibilidade com WINDOWS: reescrever SEMPRE,
+            # mesmo que a fonte exista neste Linux (ex.: Fira Mono local)
+            problemas_reescrita.append((fam, REESCREVER[fam]))
+            continue
+        resolvida = fc_match(fam)
+        if resolvida.lower() == fam.lower():
+            continue  # instalada de verdade
+        elif fam in METRICA_LINUX:
+            met = METRICA_LINUX[fam]
+            ok = fc_match(met).lower() == met.lower() or resolvida.lower() == met.lower()
+            status = "OK (alias/métrica ativa)" if ok else f"instale '{met}' ou crie alias fontconfig"
+            avisos_fonte.append(f"'{fam}' (Windows-stock, docx intacto): {status}")
+        else:
+            avisos_fonte.append(f"'{fam}' ausente e sem regra conhecida -> renderiza como '{resolvida}'. "
+                                f"Considere adicionar ao REESCREVER do docx_doctor.")
+
+    # ── 2. logos com alfa (PNG pequeno) ──
+    logos_alfa = []
+    for n in z.namelist():
+        if n.startswith("word/media/") and n.lower().endswith(".png"):
+            data = z.read(n)
+            m = re.match(rb'\x89PNG\r\n\x1a\n.{4}IHDR(.{13})', data, re.S)
+            if not m:
+                continue
+            larg = int.from_bytes(m.group(1)[0:4], "big")
+            alt = int.from_bytes(m.group(1)[4:8], "big")
+            cor = m.group(1)[9]
+            tem_alfa = cor in (4, 6) or b'tRNS' in data[:4096]
+            if tem_alfa and larg * alt <= 600 * 600:
+                logos_alfa.append((n, larg, alt))
+
+    # ── 3. placeholders ──
+    textos = re.findall(r'<w:t[^>]*>([^<]*)</w:t>', corpo)
+    phs = sorted({t.strip() for t in textos
+                  if re.fullmatch(r'\s*&lt;[^&]{2,50}&gt;\s*', t)})
+
+    # ── relatório ──
+    print(f"== docx_doctor: {os.path.basename(docx)} ==")
+    if problemas_reescrita:
+        print(f"[FONTES] {len(problemas_reescrita)} família(s) sem versão livre (reescrever):")
+        for de, para in problemas_reescrita:
+            print(f"  - {de} -> {para}")
+    for a in avisos_fonte:
+        print(f"[FONTES] {a}")
+    if logos_alfa:
+        print(f"[LOGOS] {len(logos_alfa)} PNG pequeno(s) com transparência (quadrado cinza no pdf.js):")
+        for n, w, h in logos_alfa:
+            print(f"  - {n} ({w}x{h})" + ("" if logos else "  [use --logos para achatar]"))
+    for p in phs:
+        print(f"[PLACEHOLDER] texto de template esquecido: {p}")
+    if not problemas_reescrita and not logos_alfa and not phs and not avisos_fonte:
+        print("  sem problemas conhecidos — docx saudável")
+        return
+
+    if not aplicar:
+        print("\n(diagnóstico apenas; rode com --aplicar para tratar)")
+        return
+
+    # ── aplicar ──
+    shutil.copy2(docx, docx + ".bak_doctor")
+    trocas = 0
+    achatados = {}
+    if logos and logos_alfa:
+        tmpd = tempfile.mkdtemp()
+        for n, _, _ in logos_alfa:
+            bruto = os.path.join(tmpd, "b.png"); plano = os.path.join(tmpd, "f.png")
+            open(bruto, "wb").write(z.read(n))
+            r = subprocess.run(["convert", bruto, "-background", "white",
+                                "-alpha", "remove", "-alpha", "off", plano],
+                               capture_output=True)
+            if r.returncode == 0:
+                achatados[n] = open(plano, "rb").read()
+    with zipfile.ZipFile(docx + ".tmp", "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in z.infolist():
+            data = z.read(item.filename)
+            if item.filename in xmls:
+                txt = xmls[item.filename]
+                for de, para in REESCREVER.items():
+                    if any(de == d for d, _ in problemas_reescrita):
+                        # so em contexto de ATRIBUTO de fonte (nunca texto do documento)
+                        padrao = r'((?:w:(?:ascii|hAnsi|cs|eastAsia)|w:name|a:latin[^>]*?typeface)=)"' + re.escape(de) + '"'
+                        txt, n_ = re.subn(padrao, r'\1"' + para + '"', txt)
+                        trocas += n_
+                data = txt.encode("utf8")
+            elif item.filename in achatados:
+                data = achatados[item.filename]
+            zout.writestr(item, data)
+    os.replace(docx + ".tmp", docx)
+    print(f"\nAPLICADO: {trocas} referência(s) de fonte reescrita(s), "
+          f"{len(achatados)} logo(s) achatado(s). Backup: {os.path.basename(docx)}.bak_doctor")
+    if phs:
+        print("ATENÇÃO: placeholders NÃO são corrigidos automaticamente — edite no OnlyOffice.")
+
+main()

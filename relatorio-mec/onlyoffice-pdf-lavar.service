@@ -1,0 +1,6 @@
+[Unit]
+Description=Lava automaticamente PDFs exportados do OnlyOffice (dialeto CID -> universal)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/pdf_lavar_watch

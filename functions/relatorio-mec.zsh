@@ -3,13 +3,13 @@
 # -- Relatório de Serviço MEC/G4F: pipeline universal --
 # Fluxo mensal: relatorio novo -> editar no OnlyOffice -> exportar PDF ->
 #               relatorio pdf <arquivo.pdf> -> assinar no gov.br
-# Payload canônico (scripts/fontes/aliases): Dracula_OS-Theme, módulo relatorio-mec
-# (instalar_relatorio_mec.sh é idempotente e autocurativo — `relatorio check` reaplica).
+# Payload canônico (scripts/fontes/aliases): Spellbook, pasta relatorio-mec/
+# (relatorio-mec/instalar.sh é idempotente e autocurativo — `relatorio check` reaplica).
 
 __RELATORIO_VAULT="${RELATORIO_VAULT:-${HOME}/Controle de Bordo/Trabalho/Andre/G4F/Relatorios}"
 __RELATORIO_TEMPLATE="${__RELATORIO_VAULT}/template_relatorio_servico_universal.docx"
 __RELATORIO_MENSAIS="${__RELATORIO_VAULT}/Mensais"
-__RELATORIO_DRACULA="${DRACULA_OS_ROOT:-${HOME}/Desenvolvimento/Dracula_OS-Theme}"
+__RELATORIO_SRC="${HOME}/.config/zsh/relatorio-mec"
 __RELATORIO_NOME_BASE="Relatório MEC - G4F - André da Silva Analista de BI"
 
 __relatorio_ajuda() {
@@ -23,10 +23,9 @@ __relatorio_ajuda() {
 }
 
 __relatorio_check() {
-    local instalador="${__RELATORIO_DRACULA}/scripts/instalar_relatorio_mec.sh"
+    local instalador="${__RELATORIO_SRC}/instalar.sh"
     if [[ ! -x "$instalador" ]]; then
-        echo -e "  ${D_RED}!!${D_RESET} Dracula_OS-Theme não encontrado em ${__RELATORIO_DRACULA}" >&2
-        echo -e "  ${D_COMMENT}   clone o repo ou exporte DRACULA_OS_ROOT${D_RESET}" >&2
+        echo -e "  ${D_RED}!!${D_RESET} instalador do relatório não encontrado em ${__RELATORIO_SRC}" >&2
         return 1
     fi
     "$instalador" "$@"

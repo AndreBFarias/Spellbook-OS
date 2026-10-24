@@ -1,0 +1,10 @@
+[Unit]
+Description=Observa pastas de export de PDF do OnlyOffice
+
+[Path]
+PathChanged=%h/Desktop
+PathChanged=%h/Downloads
+PathChanged=%h/Controle de Bordo/Trabalho/Andre/G4F/Relatorios/Mensais
+
+[Install]
+WantedBy=default.target
