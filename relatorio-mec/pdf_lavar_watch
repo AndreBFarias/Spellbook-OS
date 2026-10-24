@@ -7,8 +7,8 @@
 #   pág. 1 (fallback p/ fluxo MEC), com BACKUP prévio em ~/.cache/pdf_lavar_backups
 # Throttle no script (flock + intervalo mínimo) — TriggerLimit* não existe no systemd 249.
 set -uo pipefail
-LOCK="/tmp/pdf_lavar_watch.lock"
-exec 9>"$LOCK"; flock -n 9 || exit 0            # já tem um rodando
+LOCK="${XDG_RUNTIME_DIR:-$HOME/.cache}/pdf_lavar_watch.lock"   # pasta só sua: no /tmp, outro usuário plantaria um link
+exec 9>>"$LOCK"; flock -n 9 || exit 0            # já tem um rodando
 MARCA="$HOME/.cache/pdf_lavar_watch.ultima"
 agora=$(date +%s)
 ultima=$(cat "$MARCA" 2>/dev/null || echo 0)
